@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>سجل الوقت</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232F6F62'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23F7F3EA' stroke-width='4'/%3E%3Cline x1='32' y1='32' x2='32' y2='18' stroke='%23F7F3EA' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='32' y1='32' x2='43' y2='37' stroke='%23F7F3EA' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -293,7 +294,21 @@
   <footer class="note">البيانات محفوظة تلقائيًا على جهازك، وترجع تلاقيها في أي وقت</footer>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDwxMNlPwN1OzCEHr_9szajTOBvZIBKkfQ",
+  authDomain: "time-log-ad714.firebaseapp.com",
+  projectId: "time-log-ad714",
+  storageBucket: "time-log-ad714.firebasestorage.app",
+  messagingSenderId: "334822322788",
+  appId: "1:334822322788:web:e4522aca1292420404e571"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
 const HOURS = [
   ["5am","٥ صباحًا"],["6am","٦ صباحًا"],["7am","٧ صباحًا"],["8am","٨ صباحًا"],
   ["9am","٩ صباحًا"],["10am","١٠ صباحًا"],["11am","١١ صباحًا"],["12pm","١٢ ظهرًا"],
@@ -336,19 +351,20 @@ function emptyDay(){
   return {hours, priorities};
 }
 
-function weekKey(ws){ return "week:" + isoDate(ws); }
+function weekKey(ws){ return isoDate(ws); }
 
 async function loadWeek(ws){
   const key = weekKey(ws);
   try{
-    const res = await window.storage.get(key, false);
-    if(res && res.value){
-      weekData = JSON.parse(res.value);
+    const snap = await getDoc(doc(db, "weeks", key));
+    if(snap.exists() && snap.data().json){
+      weekData = JSON.parse(snap.data().json);
     } else {
       weekData = {days:{}};
     }
   }catch(e){
     weekData = {days:{}};
+    document.getElementById("saveStatus").textContent = "تعذّر الاتصال";
   }
 }
 
@@ -364,11 +380,11 @@ function scheduleSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async ()=>{
     try{
-      await window.storage.set(weekKey(weekStart), JSON.stringify(weekData), false);
+      await setDoc(doc(db, "weeks", weekKey(weekStart)), { json: JSON.stringify(weekData) });
       el.textContent = "تم الحفظ";
       setTimeout(()=>{ el.style.opacity = "0"; }, 1500);
     }catch(e){
-      el.textContent = "تعذّر الحفظ";
+      el.textContent = "تعذّر الحفظ - تأكد من الاتصال";
     }
   }, 500);
 }
