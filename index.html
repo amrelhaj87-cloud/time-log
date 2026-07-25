@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سجل الوقت</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232F6F62'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23F7F3EA' stroke-width='4'/%3E%3Cline x1='32' y1='32' x2='32' y2='18' stroke='%23F7F3EA' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='32' y1='32' x2='43' y2='37' stroke='%23F7F3EA' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEE9DF;
+    --card:#FFFFFF;
+    --ink:#23262B;
+    --ink-soft:#5B6169;
+    --ink-faint:#9A968C;
+    --line:#DDD5C6;
+    --teal:#2F6F62;
+    --teal-dark:#1F4B41;
+    --teal-tint:#E3EEEA;
+    --amber:#C97B2E;
+    --amber-tint:#F8ECDC;
+    --blue:#4F7398;
+    --blue-tint:#E7EDF2;
+    --sage:#6E8F5C;
+    --sage-tint:#ECF1E7;
+    --rose:#B5657A;
+    --rose-tint:#F5E9EC;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Cairo',sans-serif;
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .brand{
+    font-family:'Markazi Text',serif;
+    font-weight:700;
+    font-size:34px;
+    color:var(--teal-dark);
+    letter-spacing:0.5px;
+  }
+  .save-status{
+    font-size:13px;
+    color:var(--ink-faint);
+    min-width:80px;
+    text-align:left;
+    transition:opacity .3s;
+  }
+
+  .nav-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .nav-btn{
+    background:none;
+    border:1px solid var(--line);
+    border-radius:10px;
+    width:38px;height:38px;
+    font-size:18px;
+    color:var(--teal-dark);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .nav-btn:hover{background:var(--teal-tint);}
+  .date-block{text-align:center;flex:1;}
+  .date-day{font-size:17px;font-weight:600;color:var(--ink);}
+  .date-sub{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .today-btn{
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:8px 14px;
+    font-family:'Cairo',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    flex:none;
+  }
+  .today-btn:hover{background:var(--teal-dark);}
+  .date-pick{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:7px 8px;
+    font-family:'Cairo',sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    background:#fff;
+    flex:none;
+  }
+
+  .week-strip{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:6px;
+    margin-bottom:20px;
+  }
+  .week-day{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 4px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .week-day.active{
+    border-color:var(--teal);
+    background:var(--teal-tint);
+  }
+  .week-day .wd-name{font-size:12px;color:var(--ink-soft);}
+  .week-day.active .wd-name{color:var(--teal-dark);font-weight:700;}
+  .week-day .wd-num{font-size:13px;font-weight:600;margin:3px 0;}
+  .week-fill{
+    height:4px;border-radius:2px;background:var(--line);overflow:hidden;
+  }
+  .week-fill-bar{height:100%;background:var(--teal);}
+
+  .ring-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    margin-bottom:20px;
+  }
+  .ring-svg{flex:none;}
+  .ring-text{flex:1;}
+  .ring-count{font-size:20px;font-weight:700;color:var(--teal-dark);}
+  .ring-label{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+
+  section.card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 18px 8px;
+    margin-bottom:18px;
+  }
+  h2.section-title{
+    font-family:'Markazi Text',serif;
+    font-size:22px;
+    font-weight:700;
+    color:var(--teal-dark);
+    margin:0 0 10px;
+  }
+
+  .hour-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:7px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .hour-row:last-child{border-bottom:none;}
+  .hour-label{
+    width:78px;
+    flex:none;
+    font-size:13px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
+  .hour-input{
+    flex:1;
+    border:none;
+    border-bottom:1px solid transparent;
+    background:transparent;
+    font-family:'Cairo',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    padding:6px 4px;
+    outline:none;
+  }
+  .hour-input:focus{border-bottom:1px solid var(--teal);}
+  .hour-input::placeholder{color:var(--ink-faint);}
+
+  .quad-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  @media(max-width:560px){.quad-grid{grid-template-columns:1fr;}}
+  .quad{
+    border-radius:14px;
+    padding:14px 16px;
+    border:1px solid var(--line);
+  }
+  .quad.q1{background:var(--amber-tint);}
+  .quad.q2{background:var(--rose-tint);}
+  .quad.q3{background:var(--blue-tint);}
+  .quad.q4{background:var(--sage-tint);}
+  .quad-title{
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .quad.q1 .quad-title{color:var(--amber);}
+  .quad.q2 .quad-title{color:var(--rose);}
+  .quad.q3 .quad-title{color:var(--blue);}
+  .quad.q4 .quad-title{color:var(--sage);}
+  .quad-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:5px;
+  }
+  .quad-item input[type=checkbox]{
+    width:16px;height:16px;flex:none;accent-color:var(--teal);
+  }
+  .quad-item input[type=text]{
+    flex:1;
+    border:none;
+    border-bottom:1px solid rgba(0,0,0,0.12);
+    background:transparent;
+    font-family:'Cairo',sans-serif;
+    font-size:13px;
+    padding:4px 2px;
+    color:var(--ink);
+    outline:none;
+  }
+  .quad-item input[type=text]:focus{border-bottom:1px solid var(--ink);}
+  .quad-item.done input[type=text]{
+    text-decoration:line-through;
+    color:var(--ink-faint);
+  }
+
+  footer.note{
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-faint);
+    margin-top:10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">سجل الوقت</div>
+    <div class="save-status" id="saveStatus"></div>
+  </header>
+
+  <div class="nav-card">
+    <button class="nav-btn" id="prevDay" aria-label="اليوم السابق">‹</button>
+    <div class="date-block">
+      <div class="date-day" id="dayName">—</div>
+      <div class="date-sub" id="dayDate">—</div>
+    </div>
+    <button class="nav-btn" id="nextDay" aria-label="اليوم التالي">›</button>
+    <input type="date" class="date-pick" id="datePick">
+    <button class="today-btn" id="todayBtn">اليوم</button>
+  </div>
+
+  <div class="week-strip" id="weekStrip"></div>
+
+  <div class="ring-card">
+    <svg class="ring-svg" id="ringSvg" width="72" height="72" viewBox="0 0 72 72"></svg>
+    <div class="ring-text">
+      <div class="ring-count" id="ringCount">٠ من ١٩ ساعة مسجّلة</div>
+      <div class="ring-label">كل ما تسجّل أكتر، كل ما بتوعى أكتر بوقتك</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2 class="section-title">ساعات اليوم</h2>
+    <div id="hoursList"></div>
+  </section>
+
+  <h2 class="section-title" style="margin:0 0 10px;">الأولويات</h2>
+  <div class="quad-grid" id="quadGrid"></div>
+
+  <footer class="note">البيانات محفوظة تلقائيًا على جهازك، وترجع تلاقيها في أي وقت</footer>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDwxMNlPwN1OzCEHr_9szajTOBvZIBKkfQ",
+  authDomain: "time-log-ad714.firebaseapp.com",
+  projectId: "time-log-ad714",
+  storageBucket: "time-log-ad714.firebasestorage.app",
+  messagingSenderId: "334822322788",
+  appId: "1:334822322788:web:e4522aca1292420404e571"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+const HOURS = [
+  ["5am","٥ صباحًا"],["6am","٦ صباحًا"],["7am","٧ صباحًا"],["8am","٨ صباحًا"],
+  ["9am","٩ صباحًا"],["10am","١٠ صباحًا"],["11am","١١ صباحًا"],["12pm","١٢ ظهرًا"],
+  ["1pm","١ ظهرًا"],["2pm","٢ عصرًا"],["3pm","٣ عصرًا"],["4pm","٤ عصرًا"],
+  ["5pm","٥ عصرًا"],["6pm","٦ مساءً"],["7pm","٧ مساءً"],["8pm","٨ مساءً"],
+  ["9pm","٩ مساءً"],["10pm","١٠ مساءً"],["11pm","١١ مساءً"],["bed","وقت النوم"]
+];
+const QUADS = [
+  {key:"q1", cls:"q1", title:"عاجل ومهم"},
+  {key:"q2", cls:"q2", title:"عاجل - أقل أهمية"},
+  {key:"q3", cls:"q3", title:"مهم - غير عاجل"},
+  {key:"q4", cls:"q4", title:"غير عاجل - أقل أهمية"}
+];
+const DAY_NAMES = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const MONTH_NAMES = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+function pad(n){ return n<10 ? "0"+n : ""+n; }
+function isoDate(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function mondayOf(d){
+  const day = d.getDay();
+  const diff = (day+6)%7;
+  const m = new Date(d);
+  m.setDate(d.getDate()-diff);
+  m.setHours(0,0,0,0);
+  return m;
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+let weekStart = mondayOf(currentDate);
+let weekData = null;
+let saveTimer = null;
+
+function emptyDay(){
+  const hours = {};
+  HOURS.forEach(h => hours[h[0]] = "");
+  const priorities = {};
+  QUADS.forEach(q => priorities[q.key] = Array.from({length:7}, () => ({text:"", done:false})));
+  return {hours, priorities};
+}
+
+function weekKey(ws){ return isoDate(ws); }
+
+async function loadWeek(ws){
+  const key = weekKey(ws);
+  try{
+    const snap = await getDoc(doc(db, "weeks", key));
+    if(snap.exists() && snap.data().json){
+      weekData = JSON.parse(snap.data().json);
+    } else {
+      weekData = {days:{}};
+    }
+  }catch(e){
+    weekData = {days:{}};
+    document.getElementById("saveStatus").textContent = "تعذّر الاتصال";
+  }
+}
+
+function getDayData(dateStr){
+  if(!weekData.days[dateStr]) weekData.days[dateStr] = emptyDay();
+  return weekData.days[dateStr];
+}
+
+function scheduleSave(){
+  const el = document.getElementById("saveStatus");
+  el.textContent = "جارٍ الحفظ...";
+  el.style.opacity = "1";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      await setDoc(doc(db, "weeks", weekKey(weekStart)), { json: JSON.stringify(weekData) });
+      el.textContent = "تم الحفظ";
+      setTimeout(()=>{ el.style.opacity = "0"; }, 1500);
+    }catch(e){
+      el.textContent = "تعذّر الحفظ - تأكد من الاتصال";
+    }
+  }, 500);
+}
+
+function renderRing(dateStr){
+  const day = getDayData(dateStr);
+  const filled = HOURS.filter(h => day.hours[h[0]].trim() !== "").length;
+  const total = HOURS.length;
+  const pct = filled/total;
+  const svg = document.getElementById("ringSvg");
+  const r = 30, cx=36, cy=36, circ = 2*Math.PI*r;
+  svg.innerHTML = `
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line)" stroke-width="8"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--teal)" stroke-width="8"
+      stroke-linecap="round"
+      stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-pct)}"
+      transform="rotate(-90 ${cx} ${cy})"/>
+  `;
+  document.getElementById("ringCount").textContent = toArabicNum(filled) + " من " + toArabicNum(total) + " ساعة مسجّلة";
+}
+
+function toArabicNum(n){
+  const map = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+  return String(n).split("").map(c => map[+c] ?? c).join("");
+}
+
+function renderHeader(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  document.getElementById("dayName").textContent = DAY_NAMES[d.getDay()];
+  document.getElementById("dayDate").textContent = d.getDate()+" "+MONTH_NAMES[d.getMonth()]+" "+d.getFullYear();
+  document.getElementById("datePick").value = dateStr;
+}
+
+function renderWeekStrip(dateStr){
+  const strip = document.getElementById("weekStrip");
+  strip.innerHTML = "";
+  for(let i=0;i<7;i++){
+    const d = addDays(weekStart, i);
+    const ds = isoDate(d);
+    const dayInfo = weekData.days[ds];
+    const filled = dayInfo ? HOURS.filter(h => dayInfo.hours[h[0]].trim() !== "").length : 0;
+    const pct = Math.round((filled/HOURS.length)*100);
+    const div = document.createElement("div");
+    div.className = "week-day" + (ds===dateStr ? " active" : "");
+    div.innerHTML = `
+      <div class="wd-name">${DAY_NAMES[d.getDay()].slice(0,4)}</div>
+      <div class="wd-num">${d.getDate()}</div>
+      <div class="week-fill"><div class="week-fill-bar" style="width:${pct}%"></div></div>
+    `;
+    div.addEventListener("click", ()=> goToDate(d));
+    strip.appendChild(div);
+  }
+}
+
+function renderHours(dateStr){
+  const list = document.getElementById("hoursList");
+  list.innerHTML = "";
+  const day = getDayData(dateStr);
+  HOURS.forEach(([key,label])=>{
+    const row = document.createElement("div");
+    row.className = "hour-row";
+    row.innerHTML = `
+      <div class="hour-label">${label}</div>
+      <input class="hour-input" type="text" placeholder="سجّل إيه اللي عملته..." value="${escapeAttr(day.hours[key])}">
+    `;
+    const input = row.querySelector("input");
+    input.addEventListener("input", (e)=>{
+      day.hours[key] = e.target.value;
+      renderRing(dateStr);
+      renderWeekStrip(dateStr);
+      scheduleSave();
+    });
+    list.appendChild(row);
+  });
+}
+
+function renderQuads(dateStr){
+  const grid = document.getElementById("quadGrid");
+  grid.innerHTML = "";
+  const day = getDayData(dateStr);
+  QUADS.forEach(q=>{
+    const box = document.createElement("div");
+    box.className = "quad " + q.cls;
+    let itemsHtml = "";
+    day.priorities[q.key].forEach((item, idx)=>{
+      itemsHtml += `
+        <div class="quad-item ${item.done ? "done":""}" data-idx="${idx}">
+          <input type="checkbox" ${item.done?"checked":""}>
+          <input type="text" value="${escapeAttr(item.text)}" placeholder="أولوية #${idx+1}">
+        </div>
+      `;
+    });
+    box.innerHTML = `<div class="quad-title">${q.title}</div>${itemsHtml}`;
+    box.querySelectorAll(".quad-item").forEach(rowEl=>{
+      const idx = +rowEl.dataset.idx;
+      const cb = rowEl.querySelector("input[type=checkbox]");
+      const tx = rowEl.querySelector("input[type=text]");
+      cb.addEventListener("change", ()=>{
+        day.priorities[q.key][idx].done = cb.checked;
+        rowEl.classList.toggle("done", cb.checked);
+        scheduleSave();
+      });
+      tx.addEventListener("input", ()=>{
+        day.priorities[q.key][idx].text = tx.value;
+        scheduleSave();
+      });
+    });
+    grid.appendChild(box);
+  });
+}
+
+function escapeAttr(s){
+  return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+}
+
+async function renderAll(){
+  const dateStr = isoDate(currentDate);
+  const ws = mondayOf(currentDate);
+  if(isoDate(ws) !== isoDate(weekStart) || weekData === null){
+    weekStart = ws;
+    await loadWeek(weekStart);
+  }
+  renderHeader(dateStr);
+  renderRing(dateStr);
+  renderWeekStrip(dateStr);
+  renderHours(dateStr);
+  renderQuads(dateStr);
+}
+
+function goToDate(d){
+  currentDate = new Date(d);
+  currentDate.setHours(0,0,0,0);
+  renderAll();
+}
+
+document.getElementById("prevDay").addEventListener("click", ()=> goToDate(addDays(currentDate,-1)));
+document.getElementById("nextDay").addEventListener("click", ()=> goToDate(addDays(currentDate,1)));
+document.getElementById("todayBtn").addEventListener("click", ()=> goToDate(new Date()));
+document.getElementById("datePick").addEventListener("change", (e)=>{
+  if(e.target.value) goToDate(new Date(e.target.value+"T00:00:00"));
+});
+
+renderAll();
+</script>
+</body>
+</html>
