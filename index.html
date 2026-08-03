@@ -19,6 +19,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
     </script>
 
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "xwolvpwl59");
+    </script>
+
     <style>
         :root {
             --bg: #EEE9DF;
@@ -1778,24 +1787,42 @@
                 font-size: 10px;
                 min-width: 16px;
             }
+
+            /* ===== تكبير أزرار التاجات في التلفون (شاشات 560px) ===== */
             .tag-picker-btn {
-                width: 40px;
-                font-size: 9px;
+                width: 46px;
+                font-size: 12px;
+                padding: 4px 2px;
+                min-height: 34px;
             }
             .tag-picker-btn.tag-picker-btn-sm {
-                width: 34px;
-                font-size: 8px;
+                width: 40px;
+                font-size: 10px;
+                padding: 3px 2px;
+                min-height: 30px;
             }
             .tag-picker-menu {
                 grid-template-columns: repeat(4, 1fr);
-                min-width: 140px;
+                min-width: 160px;
+                gap: 6px;
+                padding: 10px;
+            }
+            .tag-picker-option {
+                font-size: 12px;
+                padding: 8px 2px;
+                min-height: 36px;
+                border-radius: 8px;
             }
         }
 
         /* Hide copy button on very small screens to free space */
         @media (max-width: 420px) {
+            /* ===== إظهار زر النسخ (بدل ما كان مخفي) ===== */
             .copy-down-btn {
-                display: none !important;
+                display: inline-flex !important;
+                font-size: 9px;
+                padding: 1px 3px;
+                flex-shrink: 0.5;
             }
             .hour-label {
                 width: 30px;
@@ -1804,24 +1831,30 @@
             .hour-input {
                 font-size: 9px;
             }
+
+            /* ===== تكبير أزرار التاجات في الشاشات الصغيرة جداً (420px) ===== */
             .tag-picker-btn {
-                width: 34px;
-                font-size: 8px;
-                padding: 1px 2px;
+                width: 40px;
+                font-size: 11px;
+                padding: 2px 2px;
+                min-height: 32px;
             }
             .tag-picker-btn.tag-picker-btn-sm {
-                width: 30px;
-                font-size: 7px;
+                width: 36px;
+                font-size: 9px;
+                min-height: 28px;
+                padding: 2px 1px;
             }
             .tag-picker-menu {
                 grid-template-columns: repeat(4, 1fr);
-                min-width: 120px;
-                gap: 3px;
-                padding: 6px;
+                min-width: 140px;
+                gap: 5px;
+                padding: 8px;
             }
             .tag-picker-option {
-                font-size: 9px;
-                padding: 4px 1px;
+                font-size: 11px;
+                padding: 6px 1px;
+                min-height: 32px;
             }
         }
 
