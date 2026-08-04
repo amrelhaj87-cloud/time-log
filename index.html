@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>سجل الوقت</title>
 
+    <!-- CSP لتعزيز الأمان -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://www.clarity.ms https://*.firebaseio.com https://*.firebaseapp.com https://*.googleapis.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://ui-avatars.com https://placehold.co https://*.googleusercontent.com; connect-src 'self' https://*.firebaseio.com https://*.firebaseapp.com https://*.googleapis.com https://api.emailjs.com https://www.clarity.ms; frame-src 'self' https://*.firebaseapp.com;">
+
     <!-- PWA & Mobile Web App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -51,6 +54,9 @@
             --ai-tint: #F4EFEA;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             --radius: 14px;
+            --sc-color: #7C5CBF;
+            --sl-color: #2E3A6B;
+            --placeholder-color: var(--ink-faint);
         }
 
         body.dark-mode {
@@ -74,6 +80,9 @@
             --ai-purple: #C89968;
             --ai-tint: #2B2118;
             --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            --sc-color: #A78BEA;
+            --sl-color: #6B7AA8;
+            --placeholder-color: var(--ink-soft);
         }
 
         .bday-banner {
@@ -958,8 +967,8 @@
             border-bottom: 1px solid var(--teal);
         }
         .hour-input::placeholder {
-            color: var(--teal);
-            opacity: 0.4;
+            color: var(--placeholder-color);
+            opacity: 0.8;
             font-style: italic;
             font-weight: 500;
         }
@@ -1975,30 +1984,30 @@
             </div>
 
             <div class="header-actions">
-                <button class="view-toggle-btn" id="viewToggleBtn" type="button">
+                <button class="view-toggle-btn" id="viewToggleBtn" type="button" aria-label="تبديل عرض التفاصيل">
                     <span id="viewToggleIcon">⯅</span>
                     <span id="viewToggleText">عرض تفصيلي</span>
                 </button>
 
                 <div class="user-menu-wrapper">
                     <div id="authContainer" style="display:inline-flex;align-items:center;">
-                        <button class="icon-btn" id="loginBtn" type="button" style="background:var(--teal-tint);color:var(--teal-dark);border-color:var(--teal);">
+                        <button class="icon-btn" id="loginBtn" type="button" style="background:var(--teal-tint);color:var(--teal-dark);border-color:var(--teal);" aria-label="تسجيل الدخول">
                             <svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                             <span id="loginBtnText">تسجيل الدخول</span>
                             <span style="font-size:9px;margin-inline-start:2px;">⯆</span>
                         </button>
                     </div>
 
-                    <div class="user-dropdown-menu" id="userDropdownMenu">
-                        <button class="dropdown-item-btn" id="menuAuthActionBtn" type="button">
+                    <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+                        <button class="dropdown-item-btn" id="menuAuthActionBtn" type="button" role="menuitem">
                             <span id="menuAuthActionText">🔑 تسجيل الدخول</span>
                         </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item-btn" id="darkModeBtn" type="button">
+                        <button class="dropdown-item-btn" id="darkModeBtn" type="button" role="menuitem">
                             <span id="menuThemeText">الوضع الليلي</span>
                             <span id="darkModeIcon">🌙</span>
                         </button>
-                        <button class="dropdown-item-btn" id="langBtn" type="button">
+                        <button class="dropdown-item-btn" id="langBtn" type="button" role="menuitem">
                             <span id="menuLangText">اللغة</span>
                             <span id="menuLangBadge" style="font-weight:800;color:var(--teal-dark);">English</span>
                         </button>
@@ -2020,13 +2029,13 @@
                 <!-- Box 1: Week Strip with Navigation -->
                 <div class="dash-card week-nav-box">
                     <div class="week-nav-header">
-                        <button class="week-arrow-btn" id="weekPrevBtn" type="button">⯇</button>
+                        <button class="week-arrow-btn" id="weekPrevBtn" type="button" aria-label="الأسبوع السابق">⯇</button>
                         <div class="week-nav-center">
-                            <button class="week-today-btn" id="weekTodayBtn" type="button">
+                            <button class="week-today-btn" id="weekTodayBtn" type="button" aria-label="العودة لليوم الحالي">
                                 <span id="weekTodayBtnText">اليوم</span>
                             </button>
                         </div>
-                        <button class="week-arrow-btn" id="weekNextBtn" type="button">⯈</button>
+                        <button class="week-arrow-btn" id="weekNextBtn" type="button" aria-label="الأسبوع التالي">⯈</button>
                     </div>
                     <div class="week-strip" id="weekStrip"></div>
                 </div>
@@ -2040,20 +2049,20 @@
 
             <!-- Advanced Tools Toggle -->
             <div id="advancedToolsSection" style="display:none;margin-bottom:12px;">
-                <button type="button" id="advancedToolsToggle" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;cursor:pointer;font-family:'Cairo',sans-serif;">
+                <button type="button" id="advancedToolsToggle" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;cursor:pointer;font-family:'Cairo',sans-serif;" aria-label="تبديل الأدوات المتقدمة">
                     <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--teal-dark);">
                         <span>⚙️</span> <span id="advancedToolsToggleText">الأدوات المتقدمة والتحليل</span>
                     </span>
                     <span id="advancedToolsToggleIcon" style="color:var(--ink-faint);">⯆</span>
                 </button>
                 <div class="action-toolbar" id="actionToolbar" style="display:none;margin-top:6px;margin-bottom:0;">
-                    <button class="action-card-btn ai-btn" id="aiBtn" type="button">
-                        <span>✨</span> <span id="txtAiBtn">تحليل الذكاء الاصطناعي</span>
+                    <button class="action-card-btn ai-btn" id="aiBtn" type="button" aria-label="ملخص اليوم الإحصائي">
+                        <span>✨</span> <span id="txtAiBtn">ملخص اليوم الإحصائي</span>
                     </button>
-                    <button class="action-card-btn" id="chartsBtn" type="button">
+                    <button class="action-card-btn" id="chartsBtn" type="button" aria-label="إحصائيات الأسبوع والشهر">
                         <span>📊</span> <span id="txtChartsBtn">إحصائيات الأسبوع والشهر</span>
                     </button>
-                    <button class="action-card-btn" id="exportBtn" type="button">
+                    <button class="action-card-btn" id="exportBtn" type="button" aria-label="تصدير وطباعة">
                         <span>📥</span> <span id="txtExportBtn">تصدير وطباعة</span>
                     </button>
                 </div>
@@ -2065,14 +2074,14 @@
         <section class="card" id="hoursSection">
             <div class="section-header-flex">
                 <h2 class="section-title" id="hoursTitle">ساعات اليوم</h2>
-                <button class="icon-btn collapse-btn" id="toggleHoursBtn" type="button">
+                <button class="icon-btn collapse-btn" id="toggleHoursBtn" type="button" aria-label="طي الساعات">
                     <span id="toggleHoursIcon">⯅</span>
                     <span id="toggleHoursText">طي الساعات</span>
                 </button>
             </div>
 
             <div id="timerBar" style="display:none;margin-bottom:12px;">
-                <button class="action-card-btn" id="timerStartBtn" type="button" style="background:var(--teal-tint);border-color:var(--teal);color:var(--teal-dark);justify-content:center;padding:8px;width:100%;">
+                <button class="action-card-btn" id="timerStartBtn" type="button" style="background:var(--teal-tint);border-color:var(--teal);color:var(--teal-dark);justify-content:center;padding:8px;width:100%;" aria-label="بدء تايمر لنشاط جديد">
                     <span>⏱️</span> <span id="timerStartBtnText">بدء تايمر لنشاط جديد</span>
                 </button>
                 <div id="timerRunningBox" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--amber-tint);border:1px solid var(--amber);border-radius:10px;padding:8px 12px;">
@@ -2080,10 +2089,10 @@
                         <span>⏱️</span> <span id="timerElapsed" style="direction:ltr;font-variant-numeric:tabular-nums;">00:00:00</span>
                     </span>
                     <span style="display:flex;gap:6px;">
-                        <button class="action-card-btn" id="timerStopBtn" type="button" style="background:var(--teal);color:#fff;border:none;padding:6px 12px;font-size:12px;">
+                        <button class="action-card-btn" id="timerStopBtn" type="button" style="background:var(--teal);color:#fff;border:none;padding:6px 12px;font-size:12px;" aria-label="إيقاف وتسجيل">
                             <span id="timerStopBtnText">إيقاف وتسجيل</span>
                         </button>
-                        <button class="icon-btn" id="timerCancelBtn" type="button" title="إلغاء" style="padding:6px 10px;">✕</button>
+                        <button class="icon-btn" id="timerCancelBtn" type="button" title="إلغاء" style="padding:6px 10px;" aria-label="إلغاء التايمر">✕</button>
                     </span>
                 </div>
             </div>
@@ -2098,9 +2107,10 @@
             <div class="golden-goal-card" id="goldenGoalWrap">
                 <div class="golden-title" id="goldenTitle">🌟 الهدف الذهبي لليوم (The One Thing)</div>
                 <div class="golden-row">
-                    <input type="checkbox" id="goldenCb">
-                    <input class="golden-input" type="text" id="goldenInput" enterkeyhint="done" placeholder="أهم مهمة إذا أنجزتها يُعتبر يومك ناجحاً...">
+                    <input type="checkbox" id="goldenCb" aria-label="تحديد الهدف الذهبي كمُنجز">
+                    <input class="golden-input" type="text" id="goldenInput" enterkeyhint="done" placeholder="أهم مهمة إذا أنجزتها يُعتبر يومك ناجحاً..." aria-label="الهدف الذهبي">
                     <span class="tag-picker-slot" id="goldenTagSlot"></span>
+                    <button class="icon-btn" id="clearGoldenGoalBtn" style="padding:2px 4px; font-size:12px; color:var(--rose);" title="حذف الهدف الذهبي" aria-label="حذف الهدف الذهبي">✕</button>
                 </div>
             </div>
 
@@ -2117,7 +2127,7 @@
             <div class="quad-grid" id="quadGrid"></div>
 
             <div class="rollover-btn-wrap">
-                <button class="rollover-btn" id="rolloverBtn" type="button">
+                <button class="rollover-btn" id="rolloverBtn" type="button" aria-label="ترحيل المهام غير المنجزة للغد">
                     <span>➡️</span> <span id="txtRollover">ترحيل المهام غير المنجزة للغد</span>
                 </button>
             </div>
@@ -2131,7 +2141,7 @@
 
         <!-- ===== SETTINGS & SUPPORT ===== -->
         <section class="card" style="margin-top:12px;">
-            <button type="button" id="settingsSupportToggle" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:0;">
+            <button type="button" id="settingsSupportToggle" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;font-family:'Cairo',sans-serif;padding:0;" aria-label="تبديل الإعدادات والدعم">
                 <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:var(--teal-dark);">
                     <span>⚙️</span> <span id="settingsSupportToggleText">الإعدادات والدعم الفني</span>
                 </span>
@@ -2161,7 +2171,7 @@
                         </div>
                         <div class="setting-sub" id="ageSettingsSub">تحديد تاريخ ميلادك وحساب العمر بالأيام والسنين المتبقية</div>
                     </div>
-                    <button class="action-card-btn" id="ageBtn" type="button" style="padding:4px 10px;font-size:11px;">
+                    <button class="action-card-btn" id="ageBtn" type="button" style="padding:4px 10px;font-size:11px;" aria-label="إعدادات العمر">
                         <span>🎂</span> <span id="ageBtnText">إعدادات العمر</span>
                     </button>
                 </div>
@@ -2175,7 +2185,7 @@
                         <div class="setting-sub" id="calSyncSub">قراءة المواعيد المحجوزة في تقويم جوجل واقتراحها شفافة بالساعة الحالية</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;">
-                        <button class="action-card-btn" id="btnConnectGCal" type="button" style="background:var(--teal-tint);border-color:var(--teal);color:var(--teal-dark);padding:4px 8px;font-size:10px;">
+                        <button class="action-card-btn" id="btnConnectGCal" type="button" style="background:var(--teal-tint);border-color:var(--teal);color:var(--teal-dark);padding:4px 8px;font-size:10px;" aria-label="ربط تقويم جوجل">
                             <span>📅</span> <span id="txtConnectGCal">ربط تقويم جوجل</span>
                         </button>
                         <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;font-weight:700;color:var(--ink);">
@@ -2193,7 +2203,7 @@
                         </div>
                         <div class="setting-sub" id="appInstallSectionSub">استخدم التطبيق بشكل أسرع ومتاح دائماً من شاشة هاتفك الرئيسية</div>
                     </div>
-                    <button class="action-card-btn" id="pwaInstallBtn" type="button" style="background:var(--amber-tint);border-color:var(--amber);color:var(--amber);padding:4px 10px;font-size:11px;">
+                    <button class="action-card-btn" id="pwaInstallBtn" type="button" style="background:var(--amber-tint);border-color:var(--amber);color:var(--amber);padding:4px 10px;font-size:11px;" aria-label="تثبيت التطبيق">
                         <span>📱</span> <span id="pwaInstallBtnText">تثبيت</span>
                     </button>
                 </div>
@@ -2206,7 +2216,7 @@
                         </div>
                         <div class="setting-sub" id="guideSettingsSub">دليل شامل لاستخدام التطبيق وفلسفة التاقات الخمسة والتكامل مع أوراق الأهداف</div>
                     </div>
-                    <button class="guide-settings-btn" id="guideSettingsBtn" type="button" onclick="window.open('https://amrelhaj87-cloud.github.io/time_recording-guide/', '_blank')">
+                    <button class="guide-settings-btn" id="guideSettingsBtn" type="button" onclick="window.open('https://amrelhaj87-cloud.github.io/time_recording-guide/', '_blank', 'noopener,noreferrer')" aria-label="فتح الدليل">
                         <span>📖</span> <span id="txtGuideSettingsBtn">فتح الدليل</span>
                     </button>
                 </div>
@@ -2226,7 +2236,7 @@
                             <textarea id="contactMessage" required rows="2" placeholder="اكتب اقتراحك، استفسارك، أو مشكلتك هنا..." style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-family:'Cairo',sans-serif;background:var(--card);color:var(--ink);font-size:11px;outline:none;resize:vertical;"></textarea>
                         </div>
                         <div style="display:flex;justify-content:flex-end;">
-                            <button class="action-card-btn" type="submit" style="background:var(--teal);color:#fff;border:none;padding:4px 14px;font-size:11px;">
+                            <button class="action-card-btn" type="submit" style="background:var(--teal);color:#fff;border:none;padding:4px 14px;font-size:11px;" aria-label="إرسال الرسالة">
                                 <span>✉️</span> <span id="btnSendContactText">إرسال الرسالة</span>
                             </button>
                         </div>
@@ -2243,11 +2253,11 @@
     <!-- ===== MODALS ===== -->
 
     <!-- PWA Modal -->
-    <div class="modal-overlay" id="pwaModal">
+    <div class="modal-overlay" id="pwaModal" role="dialog" aria-label="تثبيت التطبيق">
         <div class="modal-card" style="max-width:480px;">
             <div class="modal-header">
                 <div class="modal-title"><span>📱</span> <span id="pwaModalTitle">تثبيت التطبيق على الهاتف</span></div>
-                <button class="close-modal-btn" data-close="pwaModal">&times;</button>
+                <button class="close-modal-btn" data-close="pwaModal" aria-label="إغلاق">&times;</button>
             </div>
             <div style="font-size:12px;line-height:1.7;color:var(--ink);margin-top:8px;">
                 <p id="pwaModalDesc">يمكنك إضافة هذا التطبيق مباشرة إلى شاشة هاتفك الرئيسية كـ تطبيق بدون الحاجة لمتجر:</p>
@@ -2264,11 +2274,11 @@
     </div>
 
     <!-- AI Modal -->
-    <div class="modal-overlay" id="aiModal">
+    <div class="modal-overlay" id="aiModal" role="dialog" aria-label="ملخص اليوم الإحصائي">
         <div class="modal-card">
             <div class="modal-header">
-                <div class="modal-title"><span>✨</span> <span id="aiModalTitle">تحليل Gemini الذكي لليوم</span></div>
-                <button class="close-modal-btn" data-close="aiModal">&times;</button>
+                <div class="modal-title"><span>✨</span> <span id="aiModalTitle">ملخص اليوم الإحصائي</span></div>
+                <button class="close-modal-btn" data-close="aiModal" aria-label="إغلاق">&times;</button>
             </div>
             <div id="aiSummaryPills"></div>
             <div class="ai-report-box" id="aiReportContent">جاري توليد التقرير...</div>
@@ -2276,16 +2286,16 @@
     </div>
 
     <!-- Charts Modal -->
-    <div class="modal-overlay" id="chartsModal">
+    <div class="modal-overlay" id="chartsModal" role="dialog" aria-label="إحصائيات وتوزيع الوقت">
         <div class="modal-card">
             <div class="modal-header">
                 <div class="modal-title"><span>📊</span> <span id="chartsModalTitle">إحصائيات وتوزيع الوقت</span></div>
-                <button class="close-modal-btn" data-close="chartsModal">&times;</button>
+                <button class="close-modal-btn" data-close="chartsModal" aria-label="إغلاق">&times;</button>
             </div>
 
             <div style="display:flex;gap:4px;margin-top:8px;border-bottom:1px solid var(--line);padding-bottom:6px;">
-                <button class="auth-tab-btn active" id="statsTabWeekBtn" type="button">إحصائيات الأسبوع</button>
-                <button class="auth-tab-btn" id="statsTabMonthBtn" type="button">إحصائيات الشهر</button>
+                <button class="auth-tab-btn active" id="statsTabWeekBtn" type="button" aria-label="إحصائيات الأسبوع">إحصائيات الأسبوع</button>
+                <button class="auth-tab-btn" id="statsTabMonthBtn" type="button" aria-label="إحصائيات الشهر">إحصائيات الشهر</button>
             </div>
 
             <div id="chartsContent" style="margin-top:10px;"></div>
@@ -2298,31 +2308,31 @@
     </div>
 
     <!-- 24-Hour Distribution Modal -->
-    <div class="modal-overlay" id="dayDistModal">
+    <div class="modal-overlay" id="dayDistModal" role="dialog" aria-label="توزيع اليوم الكامل">
         <div class="modal-card" style="max-width:480px;">
             <div class="modal-header">
                 <div class="modal-title"><span>📊</span> <span id="dayDistModalTitle">توزيع اليوم الكامل</span></div>
-                <button class="close-modal-btn" data-close="dayDistModal">&times;</button>
+                <button class="close-modal-btn" data-close="dayDistModal" aria-label="إغلاق">&times;</button>
             </div>
             <div id="dayDistContent"></div>
         </div>
     </div>
 
     <!-- Export Modal -->
-    <div class="modal-overlay" id="exportModal">
+    <div class="modal-overlay" id="exportModal" role="dialog" aria-label="تصدير وتنسيق البيانات">
         <div class="modal-card">
             <div class="modal-header">
                 <div class="modal-title"><span>📥</span> <span id="exportModalTitle">تصدير وتنسيق البيانات</span></div>
-                <button class="close-modal-btn" data-close="exportModal">&times;</button>
+                <button class="close-modal-btn" data-close="exportModal" aria-label="إغلاق">&times;</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-                <button class="action-card-btn" id="printPdfBtn" style="justify-content:flex-start;">
+                <button class="action-card-btn" id="printPdfBtn" style="justify-content:flex-start;" aria-label="طباعة / حفظ كـ PDF">
                     <span>🖨️</span> <span id="txtPrintPdf">طباعة / حفظ كـ PDF مرتب</span>
                 </button>
-                <button class="action-card-btn" id="exportCsvBtn" style="justify-content:flex-start;">
+                <button class="action-card-btn" id="exportCsvBtn" style="justify-content:flex-start;" aria-label="تصدير CSV">
                     <span>📊</span> <span id="txtExportCsv">تصدير ملف CSV (Excel)</span>
                 </button>
-                <button class="action-card-btn" id="backupJsonBtn" style="justify-content:flex-start;">
+                <button class="action-card-btn" id="backupJsonBtn" style="justify-content:flex-start;" aria-label="حفظ نسخة احتياطية JSON">
                     <span>💾</span> <span id="txtBackupJson">حفظ نسخة احتياطية (JSON)</span>
                 </button>
             </div>
@@ -2330,18 +2340,18 @@
     </div>
 
     <!-- Timer Describe Modal -->
-    <div class="modal-overlay" id="timerDescribeModal">
+    <div class="modal-overlay" id="timerDescribeModal" role="dialog" aria-label="اكتب اللي حصل">
         <div class="modal-card" style="max-width:420px;">
             <div class="modal-header">
                 <div class="modal-title"><span>⏱️</span> <span id="timerModalTitle">اكتب اللي حصل</span></div>
-                <button class="close-modal-btn" data-close="timerDescribeModal">&times;</button>
+                <button class="close-modal-btn" data-close="timerDescribeModal" aria-label="إغلاق">&times;</button>
             </div>
             <div style="margin-top:6px;font-size:12px;color:var(--ink-soft);" id="timerModalRangeText"></div>
             <div style="margin-top:10px;">
                 <input type="text" id="timerDescribeInput" placeholder="مثلاً: اشتغلت على تقرير العمل" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:'Cairo',sans-serif;background:var(--card);color:var(--ink);font-size:13px;">
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-                <button class="action-card-btn" id="timerSaveBtn" type="button" style="background:var(--teal);color:#fff;border:none;">
+                <button class="action-card-btn" id="timerSaveBtn" type="button" style="background:var(--teal);color:#fff;border:none;" aria-label="حفظ في الساعات">
                     <span id="timerSaveBtnText">حفظ في الساعات</span>
                 </button>
             </div>
@@ -2349,11 +2359,11 @@
     </div>
 
     <!-- Age Modal -->
-    <div class="modal-overlay" id="ageModal">
+    <div class="modal-overlay" id="ageModal" role="dialog" aria-label="حساب وعرض العمر">
         <div class="modal-card">
             <div class="modal-header">
                 <div class="modal-title"><span>🎂</span> <span id="ageModalTitle">حساب وعرض العمر</span></div>
-                <button class="close-modal-btn" data-close="ageModal">&times;</button>
+                <button class="close-modal-btn" data-close="ageModal" aria-label="إغلاق">&times;</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:6px;">
                 <div>
@@ -2378,7 +2388,7 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-                    <button class="action-card-btn" id="saveAgeBtn" style="background:var(--teal);color:#fff;border:none;">
+                    <button class="action-card-btn" id="saveAgeBtn" style="background:var(--teal);color:#fff;border:none;" aria-label="حفظ وإظهار">
                         <span id="txtSaveAge">حفظ وإظهار</span>
                     </button>
                 </div>
@@ -2387,22 +2397,22 @@
     </div>
 
     <!-- Auth Modal -->
-    <div class="modal-overlay" id="authModal">
+    <div class="modal-overlay" id="authModal" role="dialog" aria-label="تسجيل الدخول">
         <div class="modal-card" style="max-width:440px;">
             <div class="modal-header">
                 <div class="modal-title"><span>🔑</span> <span id="authModalTitle">تسجيل الدخول</span></div>
-                <button class="close-modal-btn" data-close="authModal">&times;</button>
+                <button class="close-modal-btn" data-close="authModal" aria-label="إغلاق">&times;</button>
             </div>
             <div id="authGlobalError" style="display:none;font-size:11px;font-weight:700;color:var(--rose);background:var(--rose-tint);border:1px solid var(--rose);border-radius:8px;padding:6px 10px;margin-top:6px;line-height:1.5;text-align:center;"></div>
 
             <div style="display:flex;gap:3px;margin-top:8px;border-bottom:1px solid var(--line);padding-bottom:6px;">
-                <button class="auth-tab-btn active" id="authTabGoogleBtn" data-tab="google" type="button">Google</button>
-                <button class="auth-tab-btn" id="authTabEmailBtn" data-tab="email" type="button">البريد الإلكتروني</button>
+                <button class="auth-tab-btn active" id="authTabGoogleBtn" data-tab="google" type="button" aria-label="Google">Google</button>
+                <button class="auth-tab-btn" id="authTabEmailBtn" data-tab="email" type="button" aria-label="البريد الإلكتروني">البريد الإلكتروني</button>
             </div>
 
             <!-- Google -->
             <div class="auth-pane" id="authPaneGoogle" style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-                <button class="action-card-btn" id="googleSignInBtn" type="button" style="background:var(--card);border:1px solid var(--line);justify-content:center;padding:7px;">
+                <button class="action-card-btn" id="googleSignInBtn" type="button" style="background:var(--card);border:1px solid var(--line);justify-content:center;padding:7px;" aria-label="الدخول بحساب Google">
                     <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                     <span id="btnGoogleSignInText">الدخول بحساب Google</span>
                 </button>
@@ -2422,12 +2432,12 @@
                     <label class="auth-field-label" id="passwordLabelText">كلمة المرور:</label>
                     <input type="password" id="emailAuthPassword" placeholder="••••••••" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-family:'Cairo',sans-serif;background:var(--card);color:var(--ink);font-size:12px;">
                 </div>
-                <button class="action-card-btn" id="emailAuthSubmitBtn" type="button" style="background:var(--teal);color:#fff;border:none;justify-content:center;padding:7px;">
+                <button class="action-card-btn" id="emailAuthSubmitBtn" type="button" style="background:var(--teal);color:#fff;border:none;justify-content:center;padding:7px;" aria-label="دخول">
                     <span id="emailAuthSubmitText">دخول</span>
                 </button>
                 <div style="display:flex;justify-content:space-between;font-size:10px;">
-                    <button id="emailAuthSwitchModeBtn" type="button" style="background:none;border:none;color:var(--teal-dark);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;">معندكش حساب؟ اعمل واحد</button>
-                    <button id="emailAuthForgotBtn" type="button" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;">نسيت كلمة المرور؟</button>
+                    <button id="emailAuthSwitchModeBtn" type="button" style="background:none;border:none;color:var(--teal-dark);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;" aria-label="تبديل وضع الحساب">معندكش حساب؟ اعمل واحد</button>
+                    <button id="emailAuthForgotBtn" type="button" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;" aria-label="نسيت كلمة المرور">نسيت كلمة المرور؟</button>
                 </div>
             </div>
         </div>
@@ -2438,7 +2448,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // Firebase Config
+        // Firebase Config (public keys are acceptable for Firebase projects)
         const firebaseConfig = {
             apiKey: ["AIzaSyDwxMNlPwN1OzCEHr_", "9szajTOBvZIBKkfQ"].join(""),
             authDomain: "time-log-ad714.firebaseapp.com",
@@ -2449,7 +2459,7 @@
         };
 
         let app, auth, db, googleProvider;
-        let gcalAccessToken = localStorage.getItem("gcal_access_token") || null;
+        let gcalAccessToken = sessionStorage.getItem("gcal_access_token") || null; // Use sessionStorage for better security
         let googleCalendarEvents = {};
 
         try {
@@ -2462,7 +2472,7 @@
             console.warn("Firebase initialization skipped, local fallback enabled:", e);
         }
 
-        // EmailJS Config
+        // EmailJS Config (public key is safe for client-side usage)
         const EMAILJS_PUBLIC_KEY = "U3YIVSY5kZ8NUz4GK";
         const EMAILJS_SERVICE_ID = "service_bt4mtzr";
         const EMAILJS_TEMPLATE_ID = "template_hk89o2i";
@@ -2492,7 +2502,7 @@
         let ageDisplayOpt = localStorage.getItem("ageDisplayOpt") || "days";
         let isDevToolsEnabled = localStorage.getItem("isDevToolsEnabled") === "true";
         let isCalSyncEnabled = localStorage.getItem("isCalSyncEnabled") !== "false";
-        let dismissedSuggestions = {};
+        let dismissedSuggestions = JSON.parse(localStorage.getItem("dismissedSuggestions") || "{}");
 
         // ===== 24 HOURS CONFIGURATION (STARTING FROM 5AM) =====
         const HOURS = [
@@ -2597,14 +2607,14 @@
         ];
 
         const DIST_COLORS = {
-            E: "#1F8A5F",
-            V: "#D68A34",
-            R: "#3B82C4",
-            S: "#C2447D",
-            SC: "#7C5CBF",
-            SL: "#2E3A6B",
-            unassigned: "#9CA3AF",
-            empty: "#E5E7EB"
+            E: "var(--teal)",
+            V: "var(--amber)",
+            R: "var(--blue)",
+            S: "var(--rose)",
+            SC: "var(--sc-color, #7C5CBF)",
+            SL: "var(--sl-color, #2E3A6B)",
+            unassigned: "var(--ink-faint)",
+            empty: "var(--line)"
         };
 
         const DAY_NAMES = {
@@ -2643,10 +2653,6 @@
         const SLEEP_ALLOWED_KEYS = ["10pm", "11pm", "12am", "1am", "2am", "3am", "4am", "5am", "6am"];
 
         // ===== Custom Tag Picker (button + popup menu, replaces native <select>) =====
-        // A single shared popup element is reused for every picker so that pressing
-        // Enter can open it programmatically on any platform (desktop Chrome, mobile
-        // Chrome, or an installed PWA/"web app"), unlike a native <select> which
-        // cannot be opened via script on most mobile browsers.
         let activeTagPickerBtn = null;
 
         function ensureGlobalTagMenu() {
@@ -2726,8 +2732,6 @@
         window.addEventListener("scroll", () => closeGlobalTagMenu(), true);
         window.addEventListener("resize", () => closeGlobalTagMenu());
 
-        // Builds a small button that shows the current tag and opens the shared
-        // popup menu when clicked (or when triggered programmatically via .click()).
         function buildTagPickerBtn({ getTag, setTag, small, onAfterChange, emptyTitle, getDisabledCodes }) {
             const btn = document.createElement("button");
             btn.type = "button";
@@ -2756,23 +2760,17 @@
             return btn;
         }
 
-        // Lets pressing Enter inside a related text field open the tag picker
-        // instead of doing nothing / submitting — works the same on desktop
-        // Chrome, mobile Chrome, and an installed PWA, since it just triggers a
-        // normal click on our own button rather than trying to open a native <select>.
         function wireEnterOpensTagPicker(inputEl, tagBtn) {
             let lastTrigger = 0;
 
             function trigger() {
                 const now = Date.now();
-                if (now - lastTrigger < 250) return; // debounce: avoid double-open if
-                lastTrigger = now; // both listeners below fire for the same Enter press
+                if (now - lastTrigger < 250) return;
+                lastTrigger = now;
                 inputEl.blur();
                 setTimeout(() => tagBtn.click(), 60);
             }
 
-            // Desktop / physical keyboards: a normal keydown with a real Enter key
-            // that we can safely preventDefault() on.
             inputEl.addEventListener("keydown", (e) => {
                 if (e.isComposing) return;
                 if (e.key === "Enter" || e.keyCode === 13) {
@@ -2781,11 +2779,6 @@
                 }
             });
 
-            // Android virtual keyboards (Chrome, and installed PWAs) often route
-            // Enter through the IME pipeline, where keydown.preventDefault() doesn't
-            // reliably stop the default behavior. The input event's inputType
-            // "insertLineBreak" is the reliable signal there, so we catch it too and
-            // strip any stray line break from the (single-line) field.
             inputEl.addEventListener("input", (e) => {
                 if (e.inputType === "insertLineBreak") {
                     if (inputEl.value.indexOf("\n") !== -1) {
@@ -2826,10 +2819,10 @@
                 compactBtn: "عرض تفصيلي ⯆",
                 expandedBtn: "عرض مدمج ⯅",
                 pwaInstallBtn: "تثبيت التطبيق",
-                txtAiBtn: "تحليل الذكاء الاصطناعي",
+                txtAiBtn: "ملخص اليوم الإحصائي",
                 txtChartsBtn: "إحصائيات الأسبوع والشهر",
                 txtExportBtn: "تصدير وطباعة",
-                aiModalTitle: "تحليل Gemini الذكي لليوم",
+                aiModalTitle: "ملخص اليوم الإحصائي",
                 chartsModalTitle: "إحصائيات وتوزيع الوقت",
                 exportModalTitle: "تصدير وتنسيق البيانات",
                 pwaModalTitle: "تثبيت التطبيق على الهاتف",
@@ -2926,10 +2919,10 @@
                 compactBtn: "Detailed View ⯆",
                 expandedBtn: "Compact View ⯅",
                 pwaInstallBtn: "Install App",
-                txtAiBtn: "AI Analysis",
+                txtAiBtn: "Daily Statistical Summary",
                 txtChartsBtn: "Weekly & Monthly Stats",
                 txtExportBtn: "Export & Print",
-                aiModalTitle: "Gemini AI Daily Analysis",
+                aiModalTitle: "Daily Statistical Summary",
                 chartsModalTitle: "Time Statistics & Distribution",
                 exportModalTitle: "Export Data",
                 pwaModalTitle: "Install Mobile App",
@@ -3008,9 +3001,37 @@
         };
 
         // ===== UTILITY FUNCTIONS =====
-        function openModal(id) { const el = document.getElementById(id); if (el) el.classList.add("open"); }
+        function openModal(id) { const el = document.getElementById(id); if (el) el.classList.add("open"); focusTrap(el); }
 
-        function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove("open"); }
+        function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove("open"); releaseFocusTrap(el); }
+
+        // Simple focus trap for modals
+        let trappedElement = null;
+        function focusTrap(modal) {
+            if (!modal) return;
+            trappedElement = modal;
+            const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable.length) focusable[0].focus();
+            modal.addEventListener('keydown', trapHandler);
+        }
+        function releaseFocusTrap(modal) {
+            if (modal) modal.removeEventListener('keydown', trapHandler);
+            trappedElement = null;
+        }
+        function trapHandler(e) {
+            if (e.key !== 'Tab' || !trappedElement) return;
+            const focusable = trappedElement.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
 
         function setAuthTab(tab) {
             const errEl = document.getElementById("authGlobalError");
@@ -3085,7 +3106,7 @@
                     `https://ui-avatars.com/api/?name=${initial}&background=2F6F62&color=ffffff`;
 
                 container.innerHTML = `
-              <button class="icon-btn" id="userMenuBtn" type="button" style="background:var(--card);border:1px solid var(--line);padding:2px 6px;border-radius:18px;">
+              <button class="icon-btn" id="userMenuBtn" type="button" style="background:var(--card);border:1px solid var(--line);padding:2px 6px;border-radius:18px;" aria-label="قائمة المستخدم">
                 <img src="${photo}" alt="user" style="width:18px;height:18px;border-radius:50%;object-fit:cover;" onerror="this.src='https://placehold.co/18x18/2F6F62/ffffff?text=U'">
                 <span style="font-size:11px;font-weight:700;color:var(--ink);">${escapeAttr(name)}</span>
                 <span style="font-size:9px;color:var(--ink-soft);margin-inline-start:1px;">⯆</span>
@@ -3095,7 +3116,7 @@
                 "🚪 Sign Out";
             } else {
                 container.innerHTML = `
-              <button class="icon-btn" id="userMenuBtn" type="button" style="background:var(--teal-tint);color:var(--teal-dark);border-color:var(--teal);">
+              <button class="icon-btn" id="userMenuBtn" type="button" style="background:var(--teal-tint);color:var(--teal-dark);border-color:var(--teal);" aria-label="تسجيل الدخول">
                 <svg width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 <span id="loginBtnText">${STR[lang].loginBtn}</span>
                 <span style="font-size:9px;margin-inline-start:1px;">⯆</span>
@@ -3125,6 +3146,14 @@
                     `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${startOfDay}&timeMax=${endOfDay}&singleEvents=true&orderBy=startTime`, {
                         headers: { Authorization: `Bearer ${gcalAccessToken}` }
                     });
+                if (res.status === 401) {
+                    // Token expired, clear it and notify user
+                    sessionStorage.removeItem("gcal_access_token");
+                    gcalAccessToken = null;
+                    updateGCalBtnUI();
+                    showAuthError(lang === "ar" ? "انتهت صلاحية رابط تقويم جوجل، يرجى إعادة الربط." : "Google Calendar token expired, please reconnect.");
+                    return;
+                }
                 if (res.ok) {
                     const data = await res.json();
                     googleCalendarEvents = {};
@@ -3158,7 +3187,7 @@
                         const credential = GoogleAuthProvider.credentialFromResult(res);
                         if (credential && credential.accessToken) {
                             gcalAccessToken = credential.accessToken;
-                            localStorage.setItem("gcal_access_token", gcalAccessToken);
+                            sessionStorage.setItem("gcal_access_token", gcalAccessToken);
                             updateGCalBtnUI();
                             fetchGoogleCalendarEventsForToday();
                         }
@@ -3198,7 +3227,8 @@
             else if (hNum === 13) prevKey = `12pm`;
             else if (hNum >= 14 && hNum <= 23) prevKey = `${hNum - 13}pm`;
             if (key !== currentKey && key !== prevKey) return null;
-            if (dismissedSuggestions[key]) return null;
+            const suggestionKey = `${isoDate(now)}_${key}`;
+            if (dismissedSuggestions[suggestionKey]) return null;
             if (googleCalendarEvents && googleCalendarEvents[key]) return googleCalendarEvents[key];
             return null;
         }
@@ -3248,7 +3278,6 @@
         function getDocPath(ws) {
             const wk = weekKey(ws || weekStart);
             if (currentUser) return `artifacts/time-log-app/users/${currentUser.uid}/weeks/${wk}`;
-            // No signed-in user: work locally only, never touch Firestore.
             return null;
         }
 
@@ -3548,7 +3577,7 @@
               <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 2px;border-bottom:1px solid var(--line);font-size:12px;">
                 <span style="display:flex;align-items:center;gap:6px;">
                   <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>
-                  <span>${t.fullTitle[lang]}</span>
+                  <span>${escapeAttr(t.fullTitle[lang])}</span>
                 </span>
                 <span style="display:flex;align-items:center;gap:8px;">
                   <span style="font-weight:700;">${curPct.toFixed(0)}٪</span>
@@ -3647,8 +3676,9 @@
                     } catch (e) {}
                 }
             }
+            const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
             const avg = { E: 0, V: 0, R: 0, S: 0, SC: 0, SL: 0, unassigned: 0, empty: 0 };
-            const days = daysCount || 1;
+            const days = daysInMonth;
             Object.keys(totals).forEach(k => { avg[k] = totals[k] / days; });
             return { counts: avg, totalSlots: HOURS.length, loggedTotal: Math.round(Object.values(avg).reduce((a, b) => a +
                     b, 0)) };
@@ -3841,13 +3871,7 @@
                 applyToDay(endDateStr, 0, endHour);
             }
 
-            if (isoDate(currentDate) === startDateStr || isoDate(currentDate) === endDateStr) {
-                const dateStr = isoDate(currentDate);
-                renderHours(dateStr);
-                renderRing(dateStr);
-                renderWeekStrip(dateStr);
-                updatePeriodSummary(dateStr);
-            }
+            renderAll();
             scheduleSave();
         }
 
@@ -3857,6 +3881,7 @@
             bar.style.display = (isoDate(new Date()) === dateStr) ? "block" : "none";
         }
 
+        // Debounced save to reduce CPU usage
         function scheduleSave() {
             const el = document.getElementById("saveStatus");
             el.textContent = STR[lang].saving;
@@ -4051,7 +4076,7 @@
                 const t = TAGS[code];
                 const pill = document.createElement("div");
                 pill.className = `tag-pill tag-${code}`;
-                pill.innerHTML = `<span>${t.fullTitle[lang]}</span><span class="tag-tip">${t.desc[lang]}</span>`;
+                pill.innerHTML = `<span>${escapeAttr(t.fullTitle[lang])}</span><span class="tag-tip">${escapeAttr(t.desc[lang])}</span>`;
                 pill.addEventListener("click", (e) => {
                     e.stopPropagation();
                     const wasActive = pill.classList.contains("tip-active");
@@ -4086,9 +4111,9 @@
               <div class="hour-input-wrap">
                 <input class="hour-input" data-hour-key="${key}" type="text" enterkeyhint="done" placeholder="${STR[lang].hourPlaceholder}" value="${escapeAttr(hourData.text)}">
                 ${calSuggestion ? `
-                  <div class="cal-suggestion-chip" id="chip_${key}" title="${lang === 'ar' ? 'اضغط لإدراج الموعد من تقويم جوجل' : 'Click to insert event from Google Calendar'}">
+                  <div class="cal-suggestion-chip" data-suggestion-key="${isoDate(new Date())}_${key}" title="${lang === 'ar' ? 'اضغط لإدراج الموعد من تقويم جوجل' : 'Click to insert event from Google Calendar'}">
                     <span>${escapeAttr(calSuggestion.text)}</span>
-                    <span class="cal-suggestion-dismiss" id="dismiss_${key}" title="${lang === 'ar' ? 'إلغاء' : 'Dismiss'}">✕</span>
+                    <span class="cal-suggestion-dismiss" data-suggestion-key="${isoDate(new Date())}_${key}" title="${lang === 'ar' ? 'إلغاء' : 'Dismiss'}">✕</span>
                   </div>
                 ` : ''}
               </div>
@@ -4102,7 +4127,6 @@
             const tagSlot = row.querySelector(".tag-picker-slot");
             const copyBtn = row.querySelector(`#copy_down_${key}`);
 
-            // ===== Custom tag-picker button (replaces native <select>) =====
             const tagBtn = buildTagPickerBtn({
                 getTag: () => getHourData(day.hours[key]).tag,
                 setTag: (code) => {
@@ -4125,40 +4149,42 @@
             });
             tagSlot.appendChild(tagBtn);
 
-            // ===== ENTER KEY: opens the tag picker =====
-            // Works on desktop Chrome, mobile Chrome, and an installed PWA/web app,
-            // since it just clicks our own button instead of a native <select>.
             wireEnterOpensTagPicker(input, tagBtn);
 
             const sleepKeywords = ['نوم', 'نام', 'انام', 'ينوم', 'نمت', 'النوم'];
 
+            // Debounced input handler to reduce CPU usage
+            let inputTimer = null;
             input.addEventListener("input", (e) => {
-                const val = e.target.value;
-                const trimmedVal = val.trim();
-                const curData = getHourData(day.hours[key]);
-                let newTag = curData.tag;
+                clearTimeout(inputTimer);
+                inputTimer = setTimeout(() => {
+                    const val = e.target.value;
+                    const trimmedVal = val.trim();
+                    const curData = getHourData(day.hours[key]);
+                    let newTag = curData.tag;
 
-                if (trimmedVal !== '') {
-                    const isSleep = sleepKeywords.some(kw => trimmedVal.includes(kw));
-                    if (isSleep) {
-                        if (!curData.tag || curData.tag === 'SC') {
-                            newTag = 'SC';
-                        }
-                    } else {
-                        if (curData.tag === 'SC' && curData.text && sleepKeywords.some(kw => curData.text.trim()
-                                .includes(kw))) {
-                            newTag = '';
+                    if (trimmedVal !== '') {
+                        const isSleep = sleepKeywords.some(kw => trimmedVal.includes(kw));
+                        if (isSleep) {
+                            if (!curData.tag || curData.tag === 'SC') {
+                                newTag = 'SC';
+                            }
+                        } else {
+                            if (curData.tag === 'SC' && curData.text && sleepKeywords.some(kw => curData.text
+                                    .trim().includes(kw))) {
+                                newTag = '';
+                            }
                         }
                     }
-                }
 
-                day.hours[key] = { text: val, tag: newTag };
-                tagBtn.refresh();
+                    day.hours[key] = { text: val, tag: newTag };
+                    tagBtn.refresh();
 
-                renderRing(dateStr);
-                renderWeekStrip(dateStr);
-                updatePeriodSummary(dateStr);
-                scheduleSave();
+                    renderRing(dateStr);
+                    renderWeekStrip(dateStr);
+                    updatePeriodSummary(dateStr);
+                    scheduleSave();
+                }, 300);
             });
 
             if (copyBtn && hasNextHour) {
@@ -4182,8 +4208,8 @@
             }
 
             if (calSuggestion) {
-                const chip = row.querySelector(`#chip_${key}`);
-                const dismissBtn = row.querySelector(`#dismiss_${key}`);
+                const chip = row.querySelector(`.cal-suggestion-chip`);
+                const dismissBtn = row.querySelector(`.cal-suggestion-dismiss`);
                 if (chip) {
                     chip.addEventListener("click", (e) => {
                         if (e.target === dismissBtn) return;
@@ -4199,7 +4225,11 @@
                 if (dismissBtn) {
                     dismissBtn.addEventListener("click", (e) => {
                         e.stopPropagation();
-                        dismissedSuggestions[key] = true;
+                        const suggestionKey = dismissBtn.dataset.suggestionKey;
+                        if (suggestionKey) {
+                            dismissedSuggestions[suggestionKey] = true;
+                            localStorage.setItem("dismissedSuggestions", JSON.stringify(dismissedSuggestions));
+                        }
                         chip.remove();
                     });
                 }
@@ -4258,7 +4288,6 @@
                   <span class="hour-period-chevron">${collapsed ? "⯆" : "⯅"}</span>
                 `;
 
-                // ===== Sleep Button (appears in Night period) =====
                 if (period.keys.includes('12am')) {
                     const fillBtn = document.createElement('button');
                     fillBtn.type = 'button';
@@ -4314,12 +4343,12 @@
             const goldenInput = document.getElementById("goldenInput");
             const goldenCb = document.getElementById("goldenCb");
             const goldenTagSlot = document.getElementById("goldenTagSlot");
+            const clearGoldenBtn = document.getElementById("clearGoldenGoalBtn");
 
             goldenInput.placeholder = STR[lang].goldenPlaceholder;
             goldenInput.value = day.goldenGoal.text || "";
             goldenCb.checked = !!day.goldenGoal.done;
 
-            // ===== Golden goal custom tag picker (replaces native <select>) =====
             goldenTagSlot.innerHTML = "";
             const goldenTagBtn = buildTagPickerBtn({
                 small: true,
@@ -4330,6 +4359,15 @@
             });
             goldenTagSlot.appendChild(goldenTagBtn);
 
+            clearGoldenBtn.onclick = function(e) {
+                e.stopPropagation();
+                if (confirm(lang === 'ar' ? 'هل أنت متأكد من حذف الهدف الذهبي؟' : 'Are you sure you want to delete the Golden Goal?')) {
+                    day.goldenGoal = { text: "", done: false, tag: "" };
+                    renderQuads(dateStr);
+                    scheduleSave();
+                }
+            };
+
             goldenInput.oninput = (e) => { day.goldenGoal.text = e.target.value;
                 updatePrioritiesProgress(day);
                 scheduleSave(); };
@@ -4337,7 +4375,6 @@
                 updatePrioritiesProgress(day);
                 scheduleSave(); };
 
-            // ===== ENTER KEY on golden goal: opens its tag picker =====
             wireEnterOpensTagPicker(goldenInput, goldenTagBtn);
 
             QUADS.forEach(q => {
@@ -4381,7 +4418,6 @@
                     const delBtn = rowEl.querySelector(".del-item-btn");
                     const promoteBtn = rowEl.querySelector(".promote-to-golden-btn");
 
-                    // ===== Priority item custom tag picker (replaces native <select>) =====
                     const itemTagBtn = buildTagPickerBtn({
                         small: true,
                         getTag: () => day.priorities[q.key][idx].tag,
@@ -4403,7 +4439,6 @@
                         scheduleSave();
                     });
 
-                    // ===== ENTER KEY on priority text: opens its tag picker =====
                     wireEnterOpensTagPicker(tx, itemTagBtn);
 
                     if (delBtn) {
@@ -4418,7 +4453,14 @@
                             e.stopPropagation();
 
                             if (day.goldenGoal.text && day.goldenGoal.text.trim() !== "") {
-                                alert(STR[lang].goldenNotEmpty);
+                                // Replace alert with custom modal (using existing modal)
+                                const modal = document.getElementById("goldenNotifyModal");
+                                if (modal) {
+                                    document.getElementById("goldenNotifyMsg").textContent = STR[lang].goldenNotEmpty;
+                                    openModal("goldenNotifyModal");
+                                } else {
+                                    alert(STR[lang].goldenNotEmpty);
+                                }
                                 return;
                             }
 
@@ -4448,6 +4490,35 @@
 
             updatePrioritiesProgress(day);
         }
+
+        // Simple custom modal for notifications (replaces alert)
+        // Added dynamically
+        (function createNotificationModal() {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.id = 'goldenNotifyModal';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-label', 'تنبيه');
+            overlay.innerHTML = `
+                <div class="modal-card" style="max-width:400px;">
+                    <div class="modal-header">
+                        <div class="modal-title"><span>⚠️</span> تنبيه</div>
+                        <button class="close-modal-btn" data-close="goldenNotifyModal" aria-label="إغلاق">&times;</button>
+                    </div>
+                    <div id="goldenNotifyMsg" style="font-size:14px;padding:10px 0;"></div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+                        <button class="action-card-btn" data-close="goldenNotifyModal" style="background:var(--teal);color:#fff;border:none;">حسناً</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.querySelectorAll('[data-close]').forEach(btn => {
+                btn.addEventListener('click', () => closeModal('goldenNotifyModal'));
+            });
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) closeModal('goldenNotifyModal');
+            });
+        })();
 
         function updatePrioritiesProgress(day) {
             let total = 0,
@@ -4579,7 +4650,7 @@
                 html += `
               <div class="chart-bar-wrap">
                 <div class="chart-bar-header">
-                  <span>${t.fullTitle[lang]}</span>
+                  <span>${escapeAttr(t.fullTitle[lang])}</span>
                   <span style="color:${color}">${count}h (${pct}%)</span>
                 </div>
                 <div class="chart-bar-bg">
@@ -4667,7 +4738,7 @@
             }
             const activeDaysCount = Object.keys(activeDaysMap).length;
             const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-            const avgPerDay = (totalMonthlyLogged / (activeDaysCount || 1)).toFixed(1);
+            const avgPerDay = (totalMonthlyLogged / (daysInMonth || 1)).toFixed(1);
 
             let html = `
             <div style="text-align:center;font-size:11px;font-weight:700;color:var(--teal-dark);margin-bottom:6px;">
@@ -4697,7 +4768,7 @@
                 html += `
               <div class="chart-bar-wrap">
                 <div class="chart-bar-header">
-                  <span>${t.fullTitle[lang]}</span>
+                  <span>${escapeAttr(t.fullTitle[lang])}</span>
                   <span style="color:${color}">${count}h (${pct}%)</span>
                 </div>
                 <div class="chart-bar-bg">
@@ -4784,7 +4855,10 @@
             HOURS.forEach(([key]) => {
                 const label = HOUR_LABELS['en'][key];
                 const data = getHourData(day.hours[key]);
-                const cleanText = `"${data.text.replace(/"/g, '""')}"`;
+                let text = data.text;
+                // CSV Injection protection
+                if (text.match(/^[=+\-@]/)) text = ' ' + text;
+                const cleanText = `"${text.replace(/"/g, '""')}"`;
                 csvContent += `${label},${cleanText},${data.tag}\n`;
             });
             const encodedUri = encodeURI(csvContent);
@@ -5036,12 +5110,9 @@
             document.getElementById("dayDistModalTitle").textContent = STR[lang].dayDistModalTitle;
             document.getElementById("statsDistTitle").textContent = STR[lang].statsDistTitle;
 
-            // ===== FIX ARROW DIRECTIONS BASED ON LANGUAGE =====
             const prevBtn = document.getElementById("weekPrevBtn");
             const nextBtn = document.getElementById("weekNextBtn");
             if (prevBtn && nextBtn) {
-                // RTL: left arrow means next week, right arrow means prev week
-                // LTR: left arrow means prev week, right arrow means next week
                 if (lang === 'ar') {
                     prevBtn.innerHTML = '⯈';
                     nextBtn.innerHTML = '⯇';
@@ -5227,7 +5298,12 @@
             document.getElementById("headerDateClick").addEventListener("click", () => {
                 const picker = document.getElementById("hiddenDatePicker");
                 if (picker) {
-                    picker.showPicker ? picker.showPicker() : picker.click();
+                    try {
+                        picker.showPicker ? picker.showPicker() : picker.click();
+                    } catch (e) {
+                        // Fallback for Safari
+                        picker.click();
+                    }
                 }
             });
 
@@ -5303,7 +5379,7 @@
                             const credential = GoogleAuthProvider.credentialFromResult(res);
                             if (credential && credential.accessToken) {
                                 gcalAccessToken = credential.accessToken;
-                                localStorage.setItem("gcal_access_token", gcalAccessToken);
+                                sessionStorage.setItem("gcal_access_token", gcalAccessToken);
                                 updateGCalBtnUI();
                                 fetchGoogleCalendarEventsForToday();
                             }
@@ -5463,7 +5539,6 @@
                 }
             });
 
-            // Local-name login was removed; clear out any leftover session from before the change.
             localStorage.removeItem("saved_local_user");
 
             if (auth) {
