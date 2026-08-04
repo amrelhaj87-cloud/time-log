@@ -2398,7 +2398,6 @@
             <div style="display:flex;gap:3px;margin-top:8px;border-bottom:1px solid var(--line);padding-bottom:6px;">
                 <button class="auth-tab-btn active" id="authTabGoogleBtn" data-tab="google" type="button">Google</button>
                 <button class="auth-tab-btn" id="authTabEmailBtn" data-tab="email" type="button">البريد الإلكتروني</button>
-                <button class="auth-tab-btn" id="authTabLocalBtn" data-tab="local" type="button">تسجيل محلي</button>
             </div>
 
             <!-- Google -->
@@ -2430,18 +2429,6 @@
                     <button id="emailAuthSwitchModeBtn" type="button" style="background:none;border:none;color:var(--teal-dark);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;">معندكش حساب؟ اعمل واحد</button>
                     <button id="emailAuthForgotBtn" type="button" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:0;font-family:'Cairo',sans-serif;">نسيت كلمة المرور؟</button>
                 </div>
-            </div>
-
-            <!-- Local -->
-            <div class="auth-pane" id="authPaneLocal" style="display:none;flex-direction:column;gap:8px;margin-top:10px;">
-                <p id="localDescText" style="font-size:10px;color:var(--ink-soft);margin:0;line-height:1.4;">اسم بسيط بيفصل بياناتك من غير باسورد أو إيميل - مناسب لو انت وعائلتك بتستخدموا نفس الجهاز.</p>
-                <div>
-                    <label class="auth-field-label" id="localNameLabelText">اسم الدخول / الاسم الكامل:</label>
-                    <input type="text" id="manualUserName" placeholder="مثال: أحمد علي" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-family:'Cairo',sans-serif;background:var(--card);color:var(--ink);font-size:12px;">
-                </div>
-                <button class="action-card-btn" id="submitLocalAuthBtn" type="button" style="background:var(--teal);color:#fff;border:none;justify-content:center;padding:8px;font-size:12px;">
-                    <span>✅</span> <span id="submitLocalBtnText">دخول بالاسم المحلي</span>
-                </button>
             </div>
         </div>
     </div>
@@ -2878,7 +2865,6 @@
                 authModalTitle: "تسجيل الدخول",
                 tabGoogle: "Google",
                 tabEmail: "البريد الإلكتروني",
-                tabLocal: "تسجيل محلي",
                 emailLabel: "البريد الإلكتروني:",
                 passwordLabel: "كلمة المرور:",
                 nameLabel: "الاسم (اختياري):",
@@ -2887,10 +2873,6 @@
                 switchToSignUp: "معندكش حساب؟ اعمل واحد",
                 switchToSignIn: "عندك حساب بالفعل؟ ادخل",
                 forgotPassword: "نسيت كلمة المرور؟",
-                localDesc: "اسم بسيط بيفصل بياناتك من غير باسورد أو إيميل - مناسب لو انت وعائلتك بتستخدموا نفس الجهاز.",
-                localNameLabelText: "اسم الدخول / الاسم الكامل:",
-                localNamePlaceholder: "مثال: أحمد علي...",
-                submitLocalBtnText: "دخول بالاسم المحلي",
                 btnGoogleSignIn: "الدخول بحساب Google",
                 appInstallSectionTitle: "تثبيت التطبيق على جهازك",
                 appInstallSectionSub: "استخدم التطبيق بشكل أسرع ومتاح دائماً من شاشة هاتفك الرئيسية",
@@ -2983,7 +2965,6 @@
                 authModalTitle: "Sign in",
                 tabGoogle: "Google",
                 tabEmail: "Email",
-                tabLocal: "Local Sign-in",
                 emailLabel: "Email:",
                 passwordLabel: "Password:",
                 nameLabel: "Name (optional):",
@@ -2992,10 +2973,6 @@
                 switchToSignUp: "No account? Create one",
                 switchToSignIn: "Already have an account? Sign in",
                 forgotPassword: "Forgot password?",
-                localDesc: "A simple name that separates your data with no password or email needed.",
-                localNameLabelText: "Username / Display Name:",
-                localNamePlaceholder: "e.g. Ahmed, Alex...",
-                submitLocalBtnText: "Sign in with Name",
                 btnGoogleSignIn: "Sign in with Google",
                 appInstallSectionTitle: "Install App on Your Device",
                 appInstallSectionSub: "Access the app faster and anytime directly from your mobile home screen",
@@ -3038,7 +3015,7 @@
         function setAuthTab(tab) {
             const errEl = document.getElementById("authGlobalError");
             if (errEl) errEl.style.display = "none";
-            ["google", "email", "local"].forEach(t => {
+            ["google", "email"].forEach(t => {
                 const pane = document.getElementById("authPane" + t.charAt(0).toUpperCase() + t.slice(1));
                 const btn = document.getElementById("authTab" + t.charAt(0).toUpperCase() + t.slice(1) + "Btn");
                 if (pane) pane.style.display = (t === tab) ? "flex" : "none";
@@ -3091,17 +3068,6 @@
 
         function openAuthModalGlobal() { setAuthTab("google");
             openModal("authModal"); }
-
-        function setCustomUserByName(name) {
-            const cleanName = name.trim();
-            const uid = "usr_" + btoa(encodeURIComponent(cleanName.toLowerCase())).replace(/[^a-zA-Z0-9]/g, "").substring(0,
-                16);
-            currentUser = { uid, displayName: cleanName, email: `${uid}@local.user`, photoURL: null };
-            localStorage.setItem("saved_local_user", JSON.stringify(currentUser));
-            renderAuthUI();
-            weekData = null;
-            renderAll();
-        }
 
         function renderAuthUI() {
             const container = document.getElementById("authContainer");
@@ -3282,13 +3248,14 @@
         function getDocPath(ws) {
             const wk = weekKey(ws || weekStart);
             if (currentUser) return `artifacts/time-log-app/users/${currentUser.uid}/weeks/${wk}`;
-            return `artifacts/time-log-app/public_weeks/${wk}`;
+            // No signed-in user: work locally only, never touch Firestore.
+            return null;
         }
 
         async function loadWeek(ws) {
             const wk = weekKey(ws);
             const localKey = `time_log_week_${currentUser ? currentUser.uid : 'guest'}_${wk}`;
-            if (db) {
+            if (db && currentUser) {
                 try {
                     const path = getDocPath();
                     const parts = path.split('/');
@@ -3469,7 +3436,7 @@
         async function fetchWeekDaysFromCloud(ws) {
             const wk = weekKey(ws);
             const localKey = `time_log_week_${currentUser ? currentUser.uid : 'guest'}_${wk}`;
-            if (db) {
+            if (db && currentUser) {
                 try {
                     const path = getDocPath(ws);
                     const parts = path.split('/');
@@ -3888,7 +3855,7 @@
             localStorage.setItem(localKey, JSON.stringify(weekData));
             saveTimer = setTimeout(async () => {
                 try {
-                    if (db) {
+                    if (db && currentUser) {
                         const path = getDocPath();
                         const parts = path.split('/');
                         await setDoc(doc(db, parts[0], ...parts.slice(1)), { json: JSON.stringify(
@@ -5046,16 +5013,11 @@
             document.getElementById("authModalTitle").textContent = STR[lang].authModalTitle;
             document.getElementById("authTabGoogleBtn").textContent = STR[lang].tabGoogle;
             document.getElementById("authTabEmailBtn").textContent = STR[lang].tabEmail;
-            document.getElementById("authTabLocalBtn").textContent = STR[lang].tabLocal;
             document.getElementById("btnGoogleSignInText").textContent = STR[lang].btnGoogleSignIn;
             document.getElementById("nameLabelText").textContent = STR[lang].nameLabel;
             document.getElementById("emailLabelText").textContent = STR[lang].emailLabel;
             document.getElementById("passwordLabelText").textContent = STR[lang].passwordLabel;
             document.getElementById("emailAuthForgotBtn").textContent = STR[lang].forgotPassword;
-            document.getElementById("localDescText").textContent = STR[lang].localDesc;
-            document.getElementById("localNameLabelText").textContent = STR[lang].localNameLabelText;
-            document.getElementById("manualUserName").placeholder = STR[lang].localNamePlaceholder;
-            document.getElementById("submitLocalBtnText").textContent = STR[lang].submitLocalBtnText;
 
             document.getElementById("ageHeaderLabel").textContent = STR[lang].ageLabel;
             document.getElementById("dayDistModalTitle").textContent = STR[lang].dayDistModalTitle;
@@ -5181,6 +5143,8 @@
                 if (currentUser) {
                     currentUser = null;
                     localStorage.removeItem("saved_local_user");
+                    localStorage.removeItem("gcal_access_token");
+                    gcalAccessToken = null;
                     if (auth) signOut(auth).catch(() => {});
                     renderAuthUI();
                     weekData = null;
@@ -5316,7 +5280,6 @@
 
             document.getElementById("authTabGoogleBtn").addEventListener("click", () => setAuthTab("google"));
             document.getElementById("authTabEmailBtn").addEventListener("click", () => setAuthTab("email"));
-            document.getElementById("authTabLocalBtn").addEventListener("click", () => setAuthTab("local"));
 
             document.getElementById("googleSignInBtn").addEventListener("click", () => {
                 if (auth && googleProvider) {
@@ -5405,17 +5368,6 @@
                 }
             });
 
-            document.getElementById("submitLocalAuthBtn").addEventListener("click", () => {
-                const name = document.getElementById("manualUserName").value.trim();
-                if (name) {
-                    setCustomUserByName(name);
-                    closeModal("authModal");
-                } else {
-                    showAuthError(lang === "ar" ? "يرجى كتابة اسمك أو اسم الدخول للبدء" :
-                        "Please enter a username or display name to begin");
-                }
-            });
-
             document.getElementById("contactForm").addEventListener("submit", (e) => {
                 e.preventDefault();
                 const userEmail = document.getElementById("contactEmail").value.trim();
@@ -5424,6 +5376,21 @@
                 const submitBtn = document.getElementById("btnSendContactText");
 
                 if (!userEmail || !userMsg) return;
+
+                const CONTACT_COOLDOWN_MS = 60 * 1000;
+                const lastSendTs = parseInt(localStorage.getItem("lastContactSendTs") || "0", 10);
+                const msSinceLastSend = Date.now() - lastSendTs;
+                if (msSinceLastSend < CONTACT_COOLDOWN_MS) {
+                    const waitSec = Math.ceil((CONTACT_COOLDOWN_MS - msSinceLastSend) / 1000);
+                    statusEl.style.display = "block";
+                    statusEl.style.background = "var(--rose-tint)";
+                    statusEl.style.borderColor = "var(--rose)";
+                    statusEl.style.color = "var(--rose)";
+                    statusEl.textContent = lang === "ar" ?
+                        `من فضلك استنى ${waitSec} ثانية قبل ما تبعت رسالة تانية.` :
+                        `Please wait ${waitSec} seconds before sending another message.`;
+                    return;
+                }
 
                 if (!window.emailjs || EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
                     statusEl.style.display = "block";
@@ -5438,6 +5405,7 @@
 
                 const originalBtnText = submitBtn.textContent;
                 submitBtn.textContent = lang === "ar" ? "جارٍ الإرسال..." : "Sending...";
+                localStorage.setItem("lastContactSendTs", String(Date.now()));
 
                 window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
                     name: userEmail.split("@")[0],
@@ -5482,8 +5450,8 @@
                 }
             });
 
-            const savedLocalUser = localStorage.getItem("saved_local_user");
-            if (savedLocalUser) { try { currentUser = JSON.parse(savedLocalUser); } catch (e) {} }
+            // Local-name login was removed; clear out any leftover session from before the change.
+            localStorage.removeItem("saved_local_user");
 
             if (auth) {
                 onAuthStateChanged(auth, async (u) => {
