@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --card-subtle: #F1F5F9;
+    --ink: #0F172A;
+    --ink-soft: #475569;
+    --ink-faint: #94A3B8;
+    --line: #E2E8F0;
+    --line-subtle: #F1F5F9;
+    --teal: #4F46E5;
+    --teal-dark: #1E293B;
+    --teal-tint: #EEF2FF;
+    --amber: #D97706;
+    --amber-tint: #FFFBEB;
+    --blue: #0284C7;
+    --blue-tint: #F0F9FF;
+    --sage: #059669;
+    --sage-tint: #ECFDF5;
+    --rose: #E11D48;
+    --rose-tint: #FFF1F2;
+    --ai-purple: #4F46E5;
+    --ai-tint: #EEF2FF;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --radius: 12px;
+    --sc-color: #7C3AED;
+    --sl-color: #475569;
+    --sleep-block-bg: #F8FAFC;
+    --sleep-block-border: #CBD5E1;
+  }
+
+  .dark {
+    --bg: #090A0F;
+    --card: #12151E;
+    --card-subtle: #0C0E15;
+    --ink: #F9FAFB;
+    --ink-soft: #94A3B8;
+    --ink-faint: #64748B;
+    --line: #222634;
+    --line-subtle: #171A24;
+    --teal: #6366F1;
+    --teal-dark: #A5B4FC;
+    --teal-tint: #181938;
+    --amber: #F59E0B;
+    --amber-tint: #382006;
+    --blue: #38BDF8;
+    --blue-tint: #07253B;
+    --sage: #10B981;
+    --sage-tint: #06392B;
+    --rose: #FB7185;
+    --rose-tint: #3B0A17;
+    --ai-purple: #818CF8;
+    --ai-tint: #1C1D42;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --sc-color: #A78BFA;
+    --sl-color: #94A3B8;
+    --sleep-block-bg: #0E1018;
+    --sleep-block-border: #222634;
+  }
+
+  html, body, input, button, textarea, select {
+    font-family: 'Cairo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .font-brand {
+    font-family: 'Cairo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@keyframes pulseBday {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+.bday-banner {
+  animation: pulseBday 2.5s infinite ease-in-out;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}
