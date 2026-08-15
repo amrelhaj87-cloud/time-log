@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import React, { useState } from 'react';
 import {
   auth,
   googleProvider,
@@ -10,12 +8,10 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
-  sendEmailVerification,
-  signInWithCredential,
-  GoogleAuthProvider
+  sendEmailVerification
 } from '../../services/firebase';
 import { STRINGS } from '../../constants/config';
-import { X, LogIn, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle2, RefreshCw, Smartphone } from 'lucide-react';
+import { X, LogIn, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -30,8 +26,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSuccess,
   lang
 }) => {
-  const isNative = Capacitor.isNativePlatform();
-  const [activeTab, setActiveTab] = useState<'google' | 'email'>(isNative ? 'email' : 'google');
+  const [activeTab, setActiveTab] = useState<'google' | 'email'>('google');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,20 +39,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const t = STRINGS[lang];
 
-  useEffect(() => {
-    if (isNative) {
-      try {
-        GoogleAuth.initialize();
-      } catch (e) {
-        console.warn('Capacitor GoogleAuth initialization:', e);
-      }
-    }
-  }, [isNative]);
-
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
-    if (!auth) {
+    if (!auth || !googleProvider) {
       setErrorMsg(
         lang === 'ar'
           ? 'خدمة تسجيل الدخول غير مهيأة حالياً'
@@ -69,56 +54,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
     setUnverifiedUser(null);
     setLoading(true);
-
     try {
-      if (isNative) {
-        // Native Capacitor Android / iOS flow
-        try {
-          const googleUser = await GoogleAuth.signIn();
-          const idToken = googleUser?.authentication?.idToken;
-          if (!idToken) {
-            throw new Error(
-              lang === 'ar'
-                ? 'تعذر استلام رمز الدخول من Google'
-                : 'No ID token returned from Google'
-            );
-          }
-          const credential = GoogleAuthProvider.credential(idToken);
-          await signInWithCredential(auth, credential);
-          onSuccess();
-          onClose();
-        } catch (nativeErr: any) {
-          console.warn('Native Google Auth error:', nativeErr);
-          const errStr = String(nativeErr?.message || nativeErr || '');
-          if (errStr.includes('canceled') || errStr.includes('popup_closed_by_user')) {
-            setErrorMsg(lang === 'ar' ? 'تم إلغاء تسجيل الدخول.' : 'Sign in cancelled.');
-          } else {
-            setErrorMsg(
-              lang === 'ar'
-                ? 'تعذر تسجيل الدخول بـ Google على هذا الجهاز. يرجى استخدام تبويب (البريد وكلمة المرور) للدخول الفوري والسلس.'
-                : 'Google Sign-In is unavailable on this device. Please use the Email & Password tab.'
-            );
-            // Switch to email tab for easier fallback
-            setActiveTab('email');
-          }
-        }
-      } else {
-        // Web / Browser flow
-        if (!googleProvider) {
-          throw new Error('Google Provider not available');
-        }
-        const cred = await signInWithPopup(auth, googleProvider);
-        const user = cred.user;
+      const cred = await signInWithPopup(auth, googleProvider);
+      const user = cred.user;
 
-        if (!user.email) {
-          await signOut(auth);
-          setErrorMsg(lang === 'ar' ? 'تعذر التحقق من بريدك الإلكتروني.' : 'Could not verify your email address.');
-          return;
-        }
-
-        onSuccess();
-        onClose();
+      if (!user.email) {
+        await signOut(auth);
+        setErrorMsg(lang === 'ar' ? 'تعذر التحقق من بريدك الإلكتروني.' : 'Could not verify your email address.');
+        return;
       }
+
+      onSuccess();
+      onClose();
     } catch (err: any) {
       const code = String(err?.code || err?.message || '');
       if (code.includes('unauthorized-domain')) {
@@ -155,7 +102,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (mode === 'signup') {
-        // 1. إنشاء الحساب
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const user = cred.user;
 
@@ -165,17 +111,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           } catch {}
         }
 
-        // 2. إرسال رابط تأكيد البريد الإلكتروني
         try {
           await sendEmailVerification(user);
         } catch (verErr: any) {
           console.warn('sendEmailVerification error:', verErr);
         }
 
-        // 3. تسجيل الخروج مباشرةً حتى يؤكد بريده
         await signOut(auth);
 
-        // 4. عرض رسالة التأكيد والتحويل لواجهة الدخول
         setSuccessMsg(
           lang === 'ar'
             ? 'تم إرسال إيميل تأكيد إلى بريدك، رجاءً افتحه وأكد بريدك قبل ما تقدر تستخدم التطبيق ✉️'
@@ -183,11 +126,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         );
         setMode('signin');
       } else {
-        // تسجيل الدخول
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
         const user = cred.user;
 
-        // 1. التحقق من تأكيد البريد الإلكتروني (emailVerified)
         if (!user.emailVerified) {
           setUnverifiedUser(user);
           await signOut(auth);
@@ -225,7 +166,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setResendingVerification(true);
     try {
-      // Sign in temporarily to get user object and resend
       let user = unverifiedUser;
       if (!user) {
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
