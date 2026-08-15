@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import {
   auth,
-  db,
   googleProvider,
   signInWithPopup,
   signOut,
-  doc,
-  getDoc,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -44,21 +41,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const checkWhitelist = async (userEmail: string): Promise<boolean> => {
-    if (!db) return true;
-    try {
-      const emailKey = userEmail.toLowerCase().trim();
-      let whitelistDoc = await getDoc(doc(db, 'allowed_users', emailKey));
-      if (!whitelistDoc.exists() && userEmail.trim() !== emailKey) {
-        whitelistDoc = await getDoc(doc(db, 'allowed_users', userEmail.trim()));
-      }
-      return whitelistDoc.exists();
-    } catch (err) {
-      console.warn('Error checking whitelist:', err);
-      return false;
-    }
-  };
-
   const handleGoogleSignIn = async () => {
     if (!auth || !googleProvider) {
       setErrorMsg(
@@ -79,18 +61,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (!user.email) {
         await signOut(auth);
         setErrorMsg(lang === 'ar' ? 'تعذر التحقق من بريدك الإلكتروني.' : 'Could not verify your email address.');
-        return;
-      }
-
-      // Check whitelist
-      const isAllowed = await checkWhitelist(user.email);
-      if (!isAllowed) {
-        await signOut(auth);
-        setErrorMsg(
-          lang === 'ar'
-            ? 'هذا الحساب غير مصرح له بالدخول حالياً (التطبيق متاح بدعوة فقط).'
-            : 'This account is not authorized (invite-only access).'
-        );
         return;
       }
 
@@ -174,20 +144,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               : 'You must verify your email address first before accessing the app.'
           );
           return;
-        }
-
-        // 2. التحقق من قائمة السماح (allowed_users) إذا كان البريد مؤكداً
-        if (user.email) {
-          const isAllowed = await checkWhitelist(user.email);
-          if (!isAllowed) {
-            await signOut(auth);
-            setErrorMsg(
-              lang === 'ar'
-                ? 'هذا الحساب غير مصرح له بالدخول حالياً (التطبيق متاح بدعوة فقط).'
-                : 'This account is not authorized (invite-only access).'
-            );
-            return;
-          }
         }
 
         onSuccess();
