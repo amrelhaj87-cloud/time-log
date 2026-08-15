@@ -9,6 +9,9 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   sendEmailVerification,
+  signInWithCredential,
+  signInWithRedirect,
+  getRedirectResult,
   Auth
 } from 'firebase/auth';
 import {
@@ -59,6 +62,10 @@ export {
   updateProfile,
   sendPasswordResetEmail,
   sendEmailVerification,
+  signInWithCredential,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
   doc,
   setDoc,
   getDoc
