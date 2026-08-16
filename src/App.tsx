@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider } from './services/firebase';
+import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider, Capacitor } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -733,6 +733,77 @@ export default function App() {
     );
     setTimeout(() => setSaveStatus(''), 3000);
   };
+
+  // Unified Android Back-Button (Capacitor) & Desktop Escape key handling
+  useEffect(() => {
+    const handleCloseTopModal = (): boolean => {
+      if (timerModalRange) { setTimerModalRange(null); return true; }
+      if (authModalOpen) { setAuthModalOpen(false); return true; }
+      if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
+      if (guideModalOpen) { setGuideModalOpen(false); return true; }
+      if (chartsModalOpen) { setChartsModalOpen(false); return true; }
+      if (dayDistModalOpen) { setDayDistModalOpen(false); return true; }
+      if (aiSummaryModalOpen) { setAiSummaryModalOpen(false); return true; }
+      if (exportModalOpen) { setExportModalOpen(false); return true; }
+      if (pwaModalOpen) { setPwaModalOpen(false); return true; }
+      if (ageModalOpen) { setAgeModalOpen(false); return true; }
+      if (sleepOnboardModalOpen) { setSleepOnboardModalOpen(false); return true; }
+      if (focusModeActive) { handleToggleFocusMode(false); return true; }
+      return false;
+    };
+
+    // 1. Desktop Escape key
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const closed = handleCloseTopModal();
+        if (closed) {
+          e.preventDefault();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 2. Capacitor Android Hardware Back Button
+    let backButtonHandle: { remove: () => void } | null = null;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/app').then(({ App: CapApp }) => {
+        CapApp.addListener('backButton', ({ canGoBack }) => {
+          const closed = handleCloseTopModal();
+          if (!closed) {
+            if (canGoBack) {
+              window.history.back();
+            } else {
+              CapApp.minimizeApp();
+            }
+          }
+        }).then((listener) => {
+          backButtonHandle = listener;
+        }).catch((err) => {
+          console.warn('Capacitor backButton listener init warning:', err);
+        });
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (backButtonHandle) {
+        backButtonHandle.remove();
+      }
+    };
+  }, [
+    authModalOpen,
+    settingsModalOpen,
+    dayDistModalOpen,
+    chartsModalOpen,
+    aiSummaryModalOpen,
+    exportModalOpen,
+    sleepOnboardModalOpen,
+    ageModalOpen,
+    pwaModalOpen,
+    guideModalOpen,
+    timerModalRange,
+    focusModeActive
+  ]);
 
   // Birthday reminder banner check (1 month, 1 week, same day)
   let bdayBannerText = '';
