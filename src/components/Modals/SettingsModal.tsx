@@ -24,7 +24,8 @@ import {
   Volume2,
   Bell,
   Flame,
-  Target
+  Target,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -37,6 +38,8 @@ interface SettingsModalProps {
   onSaveAge: (birthDate: string, opt: AgeDisplayOpt) => void;
   weekStartDay: WeekStartDay;
   onChangeWeekStartDay: (day: WeekStartDay) => void;
+  isDetailedView?: boolean;
+  onToggleDetailedView?: (enabled: boolean) => void;
   devToolsEnabled: boolean;
   onToggleDevTools: (enabled: boolean) => void;
   showStreakBadge?: boolean;
@@ -68,6 +71,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveAge,
   weekStartDay,
   onChangeWeekStartDay,
+  isDetailedView = false,
+  onToggleDetailedView,
   devToolsEnabled,
   onToggleDevTools,
   showStreakBadge = true,
@@ -336,6 +341,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
+            </div>
+
+            {/* Detailed View / Week Strip Toggle */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--ink)] block">
+                    {lang === 'ar' ? 'عرض شريط الأيام والإحصائيات (تفصيلي)' : 'Detailed Week & Tag Stats'}
+                  </h4>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {isDetailedView
+                      ? (lang === 'ar' ? 'مفعل (شريط الأسبوع ظاهر)' : 'Detailed (Visible)')
+                      : (lang === 'ar' ? 'معطل (مدمج - شريط الأسبوع مخفي)' : 'Compact (Hidden)')}
+                  </span>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isDetailedView}
+                  onChange={(e) => onToggleDetailedView?.(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
             </div>
 
             {/* Focus Mode Button Toggle */}

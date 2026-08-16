@@ -270,10 +270,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onToggleDetailedView}
-            className="bg-[var(--card)] border border-[var(--line)] rounded-lg p-2 text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer"
-            title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي' : 'Detailed View')}
+            className={`border rounded-lg p-2 transition-all shadow-xs cursor-pointer ${
+              isDetailedView
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 font-bold ring-1 ring-indigo-500/20'
+                : 'bg-[var(--card)] border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)]'
+            }`}
+            title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج (إخفاء شريط الأسبوع)' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي (إظهار شريط الأسبوع)' : 'Detailed View')}
           >
-            <SlidersHorizontal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <SlidersHorizontal className="w-4 h-4" />
           </button>
 
           {/* Settings Button */}
@@ -541,10 +545,14 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onToggleDetailedView}
-          className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] flex items-center gap-1.5 hover:bg-[var(--bg)] hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-xs cursor-pointer"
-          title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي' : 'Detailed View')}
+          className={`border rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+            isDetailedView
+              ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 font-bold ring-1 ring-indigo-500/20'
+              : 'bg-[var(--card)] border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)] hover:border-slate-300 dark:hover:border-slate-600'
+          }`}
+          title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج (إخفاء شريط الأسبوع)' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي (إظهار شريط الأسبوع)' : 'Detailed View')}
         >
-          <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden md:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
         </button>
 

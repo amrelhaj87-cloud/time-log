@@ -141,6 +141,18 @@ export default function App() {
   const [isDetailedView, setIsDetailedView] = useState<boolean>(() => {
     return localStorage.getItem('isDetailedView') === 'true';
   });
+
+  const handleToggleDetailedView = useCallback((explicitValue?: boolean) => {
+    setIsDetailedView((prev) => {
+      const next = explicitValue !== undefined ? explicitValue : !prev;
+      localStorage.setItem('isDetailedView', String(next));
+      if (db && currentUser) {
+        const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
+        setDoc(docRef, { isDetailedView: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
+      return next;
+    });
+  }, [currentUser]);
   const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => {
     return localStorage.getItem('devToolsEnabled') !== 'false';
   });
@@ -905,10 +917,7 @@ export default function App() {
         showStreak={showStreakBadge}
         weekStartDay={weekStartDay}
         isDetailedView={isDetailedView}
-        onToggleDetailedView={() => {
-          setIsDetailedView(!isDetailedView);
-          localStorage.setItem('isDetailedView', String(!isDetailedView));
-        }}
+        onToggleDetailedView={handleToggleDetailedView}
         currentUser={currentUser}
         onOpenAuth={() => setAuthModalOpen(true)}
         onSignOut={() => {
@@ -1179,6 +1188,8 @@ export default function App() {
         }}
         weekStartDay={weekStartDay}
         onChangeWeekStartDay={handleChangeWeekStartDay}
+        isDetailedView={isDetailedView}
+        onToggleDetailedView={handleToggleDetailedView}
         devToolsEnabled={devToolsEnabled}
         onToggleDevTools={(en) => {
           setDevToolsEnabled(en);
