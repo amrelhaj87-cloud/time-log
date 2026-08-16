@@ -3,7 +3,7 @@ import {
   getAuth,
   signInWithPopup,
   GoogleAuthProvider,
-  signOut,
+  signOut as firebaseSignOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
@@ -12,7 +12,8 @@ import {
   signInWithCredential,
   signInWithRedirect,
   getRedirectResult,
-  Auth
+  Auth,
+  UserCredential
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -21,6 +22,8 @@ import {
   getDoc,
   Firestore
 } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCHGBQ-RCIzDRBQqlaEBaH7bQQrredUzYk",
@@ -50,13 +53,67 @@ try {
   console.warn('Firebase initialization skipped or failed:', err);
 }
 
+/**
+ * Unified Google Sign-In helper:
+ * - Native Platform (Android / iOS via Capacitor): Uses `@codetrix-studio/capacitor-google-auth` to prompt
+ *   the native Google Sign-In dialog, retrieves the idToken, and signs in to Firebase with `signInWithCredential`.
+ * - Web Browser: Uses standard Firebase `signInWithPopup` flow with `googleProvider`.
+ */
+export const signInWithGoogle = async (): Promise<UserCredential> => {
+  if (!auth) {
+    throw new Error('Firebase Auth is not initialized');
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await GoogleAuth.initialize();
+    } catch (initErr) {
+      console.warn('GoogleAuth.initialize notice:', initErr);
+    }
+
+    const googleUser = await GoogleAuth.signIn();
+    const idToken = googleUser?.authentication?.idToken;
+
+    if (!idToken) {
+      throw new Error('No ID token received from Google Auth');
+    }
+
+    const credential = GoogleAuthProvider.credential(idToken);
+    return await signInWithCredential(auth, credential);
+  }
+
+  if (!googleProvider) {
+    throw new Error('Google Auth Provider is not initialized');
+  }
+
+  return await signInWithPopup(auth, googleProvider);
+};
+
+/**
+ * Unified Sign-Out helper:
+ * Signs out of Firebase Auth, and if running natively on Capacitor, also signs out of GoogleAuth
+ * to ensure fresh account selection on subsequent sign-ins.
+ */
+export const signOut = async (authInstance?: Auth | null): Promise<void> => {
+  const targetAuth = authInstance || auth;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await GoogleAuth.signOut();
+    } catch (err) {
+      console.warn('GoogleAuth.signOut native error:', err);
+    }
+  }
+  if (targetAuth) {
+    await firebaseSignOut(targetAuth);
+  }
+};
+
 export {
   app,
   auth,
   db,
   googleProvider,
   signInWithPopup,
-  signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
@@ -66,7 +123,10 @@ export {
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
+  GoogleAuth,
+  Capacitor,
   doc,
   setDoc,
   getDoc
 };
+

@@ -291,16 +291,15 @@ export default function App() {
   } catch {}
   const { streak: dailyStreak, hasToday: streakHasToday } = calculateDailyStreak(allDaysHours, allDaysGolden);
 
-  // Load Week Data from Firestore or LocalStorage
+  // Load Week Data from Firestore or LocalStorage (with fallback for legacy weeks)
   const loadWeekData = useCallback(async (ws: Date, user: User | null) => {
-    // Legacy & standard Firestore weekKey is the Monday of this week (YYYY-MM-DD)
     const monKey = isoDate(mondayOf(ws));
     const wsKey = isoDate(ws);
     const localKey = `time_log_week_${user ? user.uid : 'guest'}_${monKey}`;
 
     if (db && user) {
       try {
-        // 1. First try the standard Monday week key
+        // 1. First try the standard user-scoped path
         let docRef = doc(db, 'artifacts', 'time-log-app', 'users', user.uid, 'weeks', monKey);
         let snap = await getDoc(docRef);
 
@@ -308,6 +307,22 @@ export default function App() {
         if (!snap.exists() && wsKey !== monKey) {
           docRef = doc(db, 'artifacts', 'time-log-app', 'users', user.uid, 'weeks', wsKey);
           snap = await getDoc(docRef);
+        }
+
+        // 3. Fallback: Check legacy root collection /weeks and auto-migrate to user-scoped path
+        if (!snap.exists()) {
+          const oldDocRef = doc(db, 'weeks', monKey);
+          const oldSnap = await getDoc(oldDocRef);
+          if (oldSnap.exists()) {
+            snap = oldSnap;
+            const oldData = oldSnap.data();
+            if (oldData && oldData.json) {
+              setDoc(doc(db, 'artifacts', 'time-log-app', 'users', user.uid, 'weeks', monKey), {
+                json: oldData.json,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+            }
+          }
         }
 
         if (snap.exists()) {

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import {
   auth,
-  googleProvider,
-  signInWithPopup,
+  signInWithGoogle,
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -42,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
-    if (!auth || !googleProvider) {
+    if (!auth) {
       setErrorMsg(
         lang === 'ar'
           ? 'خدمة تسجيل الدخول غير مهيأة حالياً'
@@ -55,7 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setUnverifiedUser(null);
     setLoading(true);
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
+      const cred = await signInWithGoogle();
       const user = cred.user;
 
       if (!user.email) {
@@ -67,16 +66,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
       const code = String(err?.code || err?.message || '');
-      if (code.includes('unauthorized-domain')) {
+      const codeLower = code.toLowerCase();
+
+      if (codeLower.includes('unauthorized-domain')) {
         const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
         setErrorMsg(
           lang === 'ar'
             ? `نطاق التطبيق (${currentDomain}) غير مصرّح به في Firebase Console. يمكنك الدخول بـ (البريد وكلمة المرور) في التبويب المجاور، أو إضافة هذا النطاق في إعدادات Firebase Authentication -> Settings -> Authorized domains.`
             : `Current domain (${currentDomain}) is not authorized in Firebase Console. Please add it under Firebase Authentication -> Settings -> Authorized domains, or use Email/Password tab.`
         );
-      } else if (code.includes('popup-closed-by-user')) {
-        setErrorMsg(lang === 'ar' ? 'تم إغلاق نافذة تسجيل الدخول قبل الاكتمال.' : 'Sign in popup closed before finishing.');
+      } else if (
+        codeLower.includes('popup-closed-by-user') ||
+        codeLower.includes('cancelled-popup-request') ||
+        codeLower.includes('12501') ||
+        codeLower.includes('cancel')
+      ) {
+        setErrorMsg(lang === 'ar' ? 'تم إلغاء عملية تسجيل الدخول بـ Google.' : 'Google sign-in was cancelled.');
+      } else if (code.includes('10') || code.includes('DEVELOPER_ERROR')) {
+        setErrorMsg(
+          lang === 'ar'
+            ? 'خطأ في تهيئة Google Sign-In (تأكد من مطابقة SHA-1 و serverClientId في Firebase / Google Cloud Console).'
+            : 'Google Sign-In configuration error (verify SHA-1 and serverClientId in Firebase / Google Cloud Console).'
+        );
+      } else if (codeLower.includes('popup-blocked')) {
+        setErrorMsg(
+          lang === 'ar'
+            ? 'تم حظر النافذة المنبثقة من قِبل المتصفح. يرجى السماح بالنوافذ المنبثقة للموقع والمحاولة مجدداً.'
+            : 'Sign-in popup was blocked by the browser. Please allow popups and try again.'
+        );
+      } else if (codeLower.includes('network')) {
+        setErrorMsg(
+          lang === 'ar'
+            ? 'تعذر الاتصال بالشبكة، يرجى التحقق من اتصال الإنترنت.'
+            : 'Network connection failed, please check your internet connection.'
+        );
       } else {
         setErrorMsg(
           err?.message || (lang === 'ar' ? 'فشل تسجيل الدخول بـ Google' : 'Google sign in failed')

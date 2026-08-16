@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { WeekStartDay, ThemeMode } from '../types';
+import { WeekStartDay, ThemeMode, AgeDisplayOpt } from '../types';
 import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN } from '../constants/config';
 import { isoDate, focusCurrentHourInput } from '../utils/dateUtils';
 import {
@@ -26,7 +26,7 @@ interface HeaderProps {
   totalActiveHours: number;
   onOpenDayDist: () => void;
   userBirthDate: string;
-  ageDisplayOpt: 'days' | 'years' | 'compass';
+  ageDisplayOpt: AgeDisplayOpt;
   streak?: number;
   streakHasToday?: boolean;
   showStreak?: boolean;

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { WeekData, DayData, SleepSettings } from '../../types';
 import { STRINGS, HOUR_LABELS, HOURS_LIST, TAGS_CONFIG, DAY_NAMES, MONTH_NAMES } from '../../constants/config';
-import { isoDate } from '../../utils/dateUtils';
+import { isoDate, emptyDay } from '../../utils/dateUtils';
 import {
   X,
   Download,
@@ -50,7 +50,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   if (!isOpen) return null;
 
   const dateStr = isoDate(currentDate);
-  const currentDay = weekData.days[dateStr] || { hours: {}, priorities: { q1: [], q2: [], q3: [], q4: [] } };
+  const currentDay = weekData.days[dateStr] || emptyDay();
   const dayName = DAY_NAMES[lang][currentDate.getDay()];
   const monthName = MONTH_NAMES[lang][currentDate.getMonth()];
   const formattedFullDate = `${dayName}، ${currentDate.getDate()} ${monthName} ${currentDate.getFullYear()}`;
@@ -69,7 +69,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         const entry = currentDay.hours[key] || { text: '', tag: '' };
         const tagInfo = entry.tag ? TAGS_CONFIG[entry.tag] : null;
         const tagHtml = tagInfo
-          ? `<span style="display:inline-block; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:11px; color:#fff; background-color:${tagInfo.color};">${entry.tag} - ${tagInfo.title[lang]}</span>`
+          ? `<span style="display:inline-block; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:11px; color:#fff; background-color:${tagInfo.color};">${entry.tag} - ${tagInfo.fullTitle[lang]}</span>`
           : '<span style="color:#aaa;">—</span>';
 
         return `
