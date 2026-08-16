@@ -22,35 +22,38 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   onSelectDate,
   onOffsetWeek,
   onResetToday,
-  activeHoursKeys,
+  activeHoursKeys = [],
   lang
 }) => {
-  const t = STRINGS[lang];
+  const t = STRINGS[lang] || STRINGS['ar'];
   const todayStr = isoDate(new Date());
-  const selectedDateStr = isoDate(currentDate);
+  const selectedDateStr = isoDate(currentDate || new Date());
+
+  const safeWeekStart = weekStart instanceof Date && !isNaN(weekStart.getTime()) ? weekStart : new Date();
+  const safeDays = weekData?.days || {};
 
   const daysList = [];
   for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStart, i);
+    const d = addDays(safeWeekStart, i);
     const ds = isoDate(d);
-    const dayData = weekData.days[ds];
+    const dayData = safeDays[ds];
 
     let filledCount = 0;
     if (dayData && dayData.hours) {
-      filledCount = activeHoursKeys.filter((k) => {
-        const hour = dayData.hours[k];
+      filledCount = (activeHoursKeys || []).filter((k) => {
+        const hour = dayData.hours?.[k];
         return hour && hour.text && hour.text.trim() !== '';
       }).length;
     }
 
-    const total = activeHoursKeys.length || 1;
+    const total = (activeHoursKeys && activeHoursKeys.length) || 1;
     const pct = Math.min(100, Math.round((filledCount / total) * 100));
 
     daysList.push({
       date: d,
       dateStr: ds,
       dayNum: d.getDate(),
-      dayAbbr: DAY_ABBR_EN[d.getDay()],
+      dayAbbr: DAY_ABBR_EN[d.getDay()] || '',
       pct,
       isToday: ds === todayStr,
       isSelected: ds === selectedDateStr

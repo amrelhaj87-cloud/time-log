@@ -142,9 +142,9 @@ export default function App() {
     return localStorage.getItem('isDetailedView') === 'true';
   });
 
-  const handleToggleDetailedView = useCallback((explicitValue?: boolean) => {
+  const handleToggleDetailedView = useCallback((explicitValue?: unknown) => {
     setIsDetailedView((prev) => {
-      const next = explicitValue !== undefined ? explicitValue : !prev;
+      const next = typeof explicitValue === 'boolean' ? explicitValue : !prev;
       localStorage.setItem('isDetailedView', String(next));
       if (db && currentUser) {
         const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');

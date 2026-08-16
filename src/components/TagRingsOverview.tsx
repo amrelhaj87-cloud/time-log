@@ -11,10 +11,10 @@ interface TagRingsOverviewProps {
 }
 
 export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
-  tagCounts,
-  totalSlots,
+  tagCounts = { E: 0, V: 0, R: 0, S: 0, SC: 0, SL: 0, '': 0 },
+  totalSlots = 1,
   onOpenCharts,
-  lang,
+  lang = 'ar',
   hideSleepTag = false
 }) => {
   const allCodes: TagCode[] = ['E', 'V', 'R', 'S', 'SC', 'SL'];
@@ -34,7 +34,8 @@ export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
     >
       {codes.map((code) => {
         const info = TAGS_CONFIG[code];
-        const count = tagCounts[code] || 0;
+        if (!info) return null;
+        const count = tagCounts?.[code] || 0;
         const pct = totalSlots > 0 ? count / totalSlots : 0;
         const offset = tcirc * (1 - Math.min(pct, 1));
 
