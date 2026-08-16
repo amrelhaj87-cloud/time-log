@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   darkMode,
   onToggleDarkMode,
-  themeMode = 'system',
+  themeMode = 'light',
   isDarkEffective = false,
   onCycleThemeMode,
   lang,

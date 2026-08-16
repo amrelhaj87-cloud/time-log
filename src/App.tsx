@@ -80,7 +80,7 @@ export default function App() {
     return (localStorage.getItem('lang') as 'ar' | 'en') || 'ar';
   });
 
-  // 3-State Theme Mode ('system' | 'light' | 'dark'), default is 'system'
+  // 3-State Theme Mode ('system' | 'light' | 'dark'), default is 'light' (نهاري)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('themeMode');
     if (saved === 'system' || saved === 'light' || saved === 'dark') return saved as ThemeMode;
@@ -88,7 +88,7 @@ export default function App() {
     const legacy = localStorage.getItem('darkMode');
     if (legacy === 'true') return 'dark';
     if (legacy === 'false') return 'light';
-    return 'system';
+    return 'light';
   });
 
   const [systemIsDark, setSystemIsDark] = useState<boolean>(() => {
@@ -114,23 +114,32 @@ export default function App() {
   const handleCycleThemeMode = useCallback(() => {
     setThemeMode((prev) => {
       let next: ThemeMode;
-      if (prev === 'system') next = 'dark';
-      else if (prev === 'dark') next = 'light';
-      else next = 'system';
+      if (prev === 'light') next = 'dark';
+      else if (prev === 'dark') next = 'system';
+      else next = 'light';
       localStorage.setItem('themeMode', next);
       localStorage.setItem('darkMode', String(next === 'dark' || (next === 'system' && systemIsDark)));
+      if (db && currentUser) {
+        const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
+        setDoc(docRef, { themeMode: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
       return next;
     });
-  }, [systemIsDark]);
+  }, [systemIsDark, currentUser]);
 
   const handleChangeThemeMode = useCallback((mode: ThemeMode) => {
     setThemeMode(mode);
     localStorage.setItem('themeMode', mode);
     localStorage.setItem('darkMode', String(mode === 'dark' || (mode === 'system' && systemIsDark)));
-  }, [systemIsDark]);
+    if (db && currentUser) {
+      const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
+      setDoc(docRef, { themeMode: mode, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+    }
+  }, [systemIsDark, currentUser]);
 
+  // Default is Compact View (false/مدمج), unless user explicitly saved 'true'
   const [isDetailedView, setIsDetailedView] = useState<boolean>(() => {
-    return localStorage.getItem('isDetailedView') !== 'false';
+    return localStorage.getItem('isDetailedView') === 'true';
   });
   const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => {
     return localStorage.getItem('devToolsEnabled') !== 'false';
@@ -396,6 +405,7 @@ export default function App() {
       localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
       localStorage.setItem('themeMode', themeMode);
+      localStorage.setItem('isDetailedView', String(isDetailedView));
 
       if (db && user) {
         try {
@@ -412,6 +422,7 @@ export default function App() {
               showFocusModeButton,
               calSyncEnabled,
               themeMode,
+              isDetailedView,
               updatedAt: new Date().toISOString()
             },
             { merge: true }
@@ -421,7 +432,7 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, calSyncEnabled, themeMode]
+    [sleepSettings, userBirthDate, ageDisplayOpt, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, calSyncEnabled, themeMode, isDetailedView]
   );
 
   // Auth State Listener
@@ -442,6 +453,10 @@ export default function App() {
             if (data.themeMode) {
               setThemeMode(data.themeMode);
               localStorage.setItem('themeMode', data.themeMode);
+            }
+            if (data.isDetailedView !== undefined) {
+              setIsDetailedView(data.isDetailedView);
+              localStorage.setItem('isDetailedView', String(data.isDetailedView));
             }
             if (data.weekStartDay) {
               setWeekStartDay(data.weekStartDay);

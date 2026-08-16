@@ -53,7 +53,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   onClose,
   onLogToCurrentHour,
   goldenGoalText,
-  themeMode = 'system',
+  themeMode = 'light',
   isDarkEffective = false,
   onCycleThemeMode,
   lang

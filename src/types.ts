@@ -46,6 +46,7 @@ export interface UserPreferences {
   calSyncEnabled: boolean;
   darkMode: boolean;
   themeMode?: ThemeMode;
+  isDetailedView?: boolean;
   lang: 'ar' | 'en';
 }
 

@@ -82,7 +82,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenGuide,
   darkMode,
   onToggleDarkMode,
-  themeMode = 'system',
+  themeMode = 'light',
   isDarkEffective = false,
   onChangeThemeMode,
   lang,
