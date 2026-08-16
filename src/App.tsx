@@ -492,12 +492,7 @@ export default function App() {
             el.focus();
           }
         } else {
-          const currentHour = getCurrentHourKey();
-          const el = document.getElementById(`hour-input-${currentHour}`);
-          if (el) {
-            el.focus();
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          focusCurrentHourInput();
         }
       }, 250);
     }
@@ -580,43 +575,67 @@ export default function App() {
     setTimeout(() => setSaveStatus(''), 2500);
   };
 
-  const handleRollover = () => {
+  const handleRollover = async () => {
     const tomorrowDate = addDays(currentDate, 1);
     const tomorrowStr = isoDate(tomorrowDate);
     const updatedDays = { ...weekData.days };
     const tomorrowDay = updatedDays[tomorrowStr] || emptyDay();
 
     let movedCount = 0;
+
+    // 1. Roll over incomplete Golden Goal
     if (
+      currentDayData.goldenGoal &&
       currentDayData.goldenGoal.text &&
       currentDayData.goldenGoal.text.trim() !== '' &&
       !currentDayData.goldenGoal.done
     ) {
-      if (!tomorrowDay.goldenGoal.text) {
-        tomorrowDay.goldenGoal = { ...currentDayData.goldenGoal };
+      const cleanGolden = currentDayData.goldenGoal.text.trim();
+      if (!tomorrowDay.goldenGoal.text || tomorrowDay.goldenGoal.text.trim() === '') {
+        tomorrowDay.goldenGoal = {
+          text: cleanGolden,
+          done: false,
+          tag: currentDayData.goldenGoal.tag || ''
+        };
         movedCount++;
+      } else if (tomorrowDay.goldenGoal.text.trim() !== cleanGolden) {
+        // If tomorrow's golden goal is already occupied, ensure it's transferred to Q1
+        const tomorrowQ1 = tomorrowDay.priorities.q1 || [];
+        const existsInQ1 = tomorrowQ1.some((t) => t.text.trim() === cleanGolden);
+        if (!existsInQ1) {
+          const emptyIdx = tomorrowQ1.findIndex((t) => (!t.text || t.text.trim() === '') && !t.done);
+          if (emptyIdx !== -1) {
+            tomorrowQ1[emptyIdx] = { text: cleanGolden, done: false, tag: currentDayData.goldenGoal.tag || '' };
+          } else {
+            tomorrowQ1.push({ text: cleanGolden, done: false, tag: currentDayData.goldenGoal.tag || '' });
+          }
+          tomorrowDay.priorities.q1 = tomorrowQ1;
+          movedCount++;
+        }
       }
     }
 
+    // 2. Roll over incomplete items from the 4 priority quadrants (Q1, Q2, Q3, Q4)
     (['q1', 'q2', 'q3', 'q4'] as const).forEach((q) => {
       const todayList = currentDayData.priorities[q] || [];
-      const tomorrowList = tomorrowDay.priorities[q] || [];
+      const tomorrowList = [...(tomorrowDay.priorities[q] || [])];
 
       todayList.forEach((item) => {
         if (item.text && item.text.trim() !== '' && !item.done) {
-          const exists = tomorrowList.some((t) => t.text.trim() === item.text.trim());
+          const cleanText = item.text.trim();
+          const exists = tomorrowList.some((t) => t.text.trim() === cleanText);
           if (!exists) {
             const emptyIdx = tomorrowList.findIndex((t) => (!t.text || t.text.trim() === '') && !t.done);
             if (emptyIdx !== -1) {
-              tomorrowList[emptyIdx] = { text: item.text, done: false, tag: item.tag || '' };
+              tomorrowList[emptyIdx] = { text: cleanText, done: false, tag: item.tag || '' };
             } else {
-              tomorrowList.push({ text: item.text, done: false, tag: item.tag || '' });
+              tomorrowList.push({ text: cleanText, done: false, tag: item.tag || '' });
             }
             movedCount++;
           }
         }
       });
-      tomorrowDay.priorities[q] = tomorrowList;
+      tomorrowDay.priorities[q] = tomorrowList.length > 0 ? tomorrowList : [{ text: '', done: false, tag: '' }];
     });
 
     updatedDays[tomorrowStr] = tomorrowDay;
@@ -624,12 +643,46 @@ export default function App() {
     setWeekData(newWeek);
     saveWeekData(newWeek, weekStart, currentUser);
 
-    setSaveStatus(
-      movedCount > 0
-        ? STRINGS[lang].rolloverSuccess(movedCount)
-        : STRINGS[lang].noPendingRollover
-    );
-    setTimeout(() => setSaveStatus(''), 2500);
+    // If tomorrow falls in the next week, also sync to the next week's storage document
+    const currentMonKey = isoDate(mondayOf(currentDate));
+    const tomorrowMonKey = isoDate(mondayOf(tomorrowDate));
+    if (tomorrowMonKey !== currentMonKey) {
+      const localKeyNext = `time_log_week_${currentUser ? currentUser.uid : 'guest'}_${tomorrowMonKey}`;
+      let nextWeekObj: WeekData = { days: {} };
+      const rawNext = localStorage.getItem(localKeyNext);
+      if (rawNext) {
+        try {
+          nextWeekObj = JSON.parse(rawNext);
+        } catch {}
+      }
+      nextWeekObj.days = nextWeekObj.days || {};
+      nextWeekObj.days[tomorrowStr] = tomorrowDay;
+      localStorage.setItem(localKeyNext, JSON.stringify(nextWeekObj));
+
+      if (db && currentUser) {
+        try {
+          const nextDocRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'weeks', tomorrowMonKey);
+          setDoc(nextDocRef, { json: JSON.stringify(nextWeekObj), updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (err) {
+          console.warn('Firestore next week sync error on rollover:', err);
+        }
+      }
+    }
+
+    if (movedCount > 0) {
+      try {
+        confetti({
+          particleCount: 35,
+          spread: 60,
+          origin: { y: 0.85 },
+          disableForReducedMotion: true
+        });
+      } catch {}
+      setSaveStatus(STRINGS[lang].rolloverSuccess(movedCount));
+    } else {
+      setSaveStatus(STRINGS[lang].noPendingRollover);
+    }
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   const handleToggleFocusMode = (enabled?: boolean) => {

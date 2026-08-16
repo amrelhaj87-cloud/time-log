@@ -3,6 +3,7 @@ import { GoalItem, TagCode } from '../types';
 import { QUADS_CONFIG, STRINGS } from '../constants/config';
 import { TagPicker } from './TagPicker';
 import { Target, ArrowRight, Trash2, Plus, Star } from 'lucide-react';
+import { focusCurrentHourInput } from '../utils/dateUtils';
 
 interface PrioritiesSectionProps {
   goldenGoal: GoalItem;
@@ -103,8 +104,16 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
 
           <TagPicker
             buttonId="tag-picker-btn-golden"
+            returnFocusId="golden-goal-input"
             currentTag={goldenGoal.tag}
-            onSelect={(tag) => onChangeGoldenGoal({ ...goldenGoal, tag })}
+            onSelect={(tag) => {
+              onChangeGoldenGoal({ ...goldenGoal, tag });
+              focusCurrentHourInput();
+            }}
+            onClose={() => {
+              const el = document.getElementById('golden-goal-input');
+              el?.focus();
+            }}
             small
             lang={lang}
           />
@@ -276,13 +285,14 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
       </div>
 
       {/* Rollover to Tomorrow Button */}
-      <div className="flex justify-center pt-1">
+      <div className="flex items-center justify-center pt-1">
         <button
           type="button"
           onClick={onRollover}
-          className="bg-[var(--card)] hover:bg-indigo-600 hover:text-white border border-[var(--line)] hover:border-indigo-600 text-[var(--ink-soft)] px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-xs"
+          className="bg-[var(--card)] hover:bg-indigo-600 hover:text-white border border-[var(--line)] hover:border-indigo-600 text-[var(--ink)] hover:text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 select-none"
+          title={lang === 'ar' ? 'ترحيل جميع المهام غير المنجزة (الهدف الذهبي والمربعات الأربعة) إلى الغد' : 'Rollover all incomplete priorities & golden goal to tomorrow'}
         >
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className={`w-3.5 h-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
           <span>{t.txtRollover}</span>
         </button>
       </div>

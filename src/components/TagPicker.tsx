@@ -5,22 +5,26 @@ import { TAGS_CONFIG, TAG_CODES_ORDER } from '../constants/config';
 interface TagPickerProps {
   currentTag: TagCode;
   onSelect: (tag: TagCode) => void;
+  onClose?: () => void;
   disabledCodes?: TagCode[];
   hideSleepTag?: boolean;
   small?: boolean;
   emptyTitle?: string;
   buttonId?: string;
+  returnFocusId?: string;
   lang: 'ar' | 'en';
 }
 
 export const TagPicker: React.FC<TagPickerProps> = ({
   currentTag,
   onSelect,
+  onClose,
   disabledCodes = [],
   hideSleepTag = false,
   small = false,
   emptyTitle,
   buttonId,
+  returnFocusId,
   lang
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +43,11 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         !menuRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        onClose?.();
+        if (returnFocusId) {
+          const returnEl = document.getElementById(returnFocusId);
+          returnEl?.focus();
+        }
       }
     }
 
@@ -57,7 +66,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose, returnFocusId]);
 
   const handleSelect = (code: TagCode) => {
     onSelect(code);
@@ -68,8 +77,24 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     if (e.key === 'Escape') {
       e.preventDefault();
       setIsOpen(false);
-      const triggerBtn = buttonId ? document.getElementById(buttonId) : null;
-      triggerBtn?.focus();
+      onClose?.();
+      const returnEl = returnFocusId
+        ? document.getElementById(returnFocusId)
+        : buttonId
+        ? document.getElementById(buttonId)
+        : null;
+      returnEl?.focus();
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const buttons = menuRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+      if (buttons && buttons.length > 0) {
+        const btnArray = Array.from(buttons);
+        const currentIndex = btnArray.indexOf(document.activeElement as HTMLButtonElement);
+        const isRTL = lang === 'ar';
+        const direction = e.key === 'ArrowRight' ? (isRTL ? -1 : 1) : (isRTL ? 1 : -1);
+        const nextIndex = (currentIndex + direction + btnArray.length) % btnArray.length;
+        btnArray[nextIndex]?.focus();
+      }
     }
   };
 

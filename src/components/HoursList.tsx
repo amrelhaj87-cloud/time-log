@@ -49,10 +49,10 @@ export const HoursList: React.FC<HoursListProps> = ({
     return 'morning';
   };
 
-  // State for which periods are collapsed
+  // State for which periods are collapsed (all collapsed by default in all cases)
   const [collapsedPeriods, setCollapsedPeriods] = useState<Record<string, boolean>>(() => {
-    // Only on initial render: if has golden goal, collapse other periods
-    if (hasGoldenGoal) {
+    // Only if today and already has golden goal on startup, open only current period
+    if (isToday && hasGoldenGoal) {
       const activePeriodId = getCurrentPeriodId();
       return {
         morning: activePeriodId !== 'morning',
@@ -61,32 +61,21 @@ export const HoursList: React.FC<HoursListProps> = ({
         night: activePeriodId !== 'night'
       };
     }
+    // In all other cases (e.g. no golden goal or another day), all periods are collapsed
     return {
-      morning: false,
-      noon: false,
-      evening: false,
-      night: false
+      morning: true,
+      noon: true,
+      evening: true,
+      night: true
     };
   });
 
   // Track if initial collapse has been executed
   const initialCollapseDoneRef = useRef(false);
 
-  // If focus mode activated, uncollapse the active period
+  // If focus mode activated, uncollapse ONLY the active period, collapse all others
   useEffect(() => {
     if (isFocusMode && isToday) {
-      const activePeriodId = getCurrentPeriodId();
-      setCollapsedPeriods((prev) => ({
-        ...prev,
-        [activePeriodId]: false
-      }));
-    }
-  }, [isFocusMode, isToday]);
-
-  useEffect(() => {
-    if (initialCollapseDoneRef.current) return;
-    if (isToday && hasGoldenGoal) {
-      initialCollapseDoneRef.current = true;
       const activePeriodId = getCurrentPeriodId();
       setCollapsedPeriods({
         morning: activePeriodId !== 'morning',
@@ -95,23 +84,53 @@ export const HoursList: React.FC<HoursListProps> = ({
         night: activePeriodId !== 'night'
       });
     }
+  }, [isFocusMode, isToday]);
+
+  useEffect(() => {
+    if (initialCollapseDoneRef.current) return;
+    if (isToday) {
+      initialCollapseDoneRef.current = true;
+      if (hasGoldenGoal) {
+        const activePeriodId = getCurrentPeriodId();
+        setCollapsedPeriods({
+          morning: activePeriodId !== 'morning',
+          noon: activePeriodId !== 'noon',
+          evening: activePeriodId !== 'evening',
+          night: activePeriodId !== 'night'
+        });
+      } else {
+        setCollapsedPeriods({
+          morning: true,
+          noon: true,
+          evening: true,
+          night: true
+        });
+      }
+    }
   }, [isToday, hasGoldenGoal]);
 
-  // Listen for custom trigger to expand period and focus current hour
+  // Listen for custom trigger to expand current period (keeping others collapsed) and focus current hour
   useEffect(() => {
     const handleExpandAndFocus = (e: Event) => {
       const customEvt = e as CustomEvent<{ hourKey?: string }>;
       const targetKey = customEvt.detail?.hourKey || getCurrentHourKey();
 
-      // Find period of targetKey and uncollapse it
+      // Find period of targetKey, uncollapse ONLY this period, and ensure other periods are collapsed
+      let targetPeriodId = '';
       for (const p of HOUR_PERIODS) {
         if (p.keys.includes(targetKey)) {
-          setCollapsedPeriods((prev) => ({
-            ...prev,
-            [p.id]: false
-          }));
+          targetPeriodId = p.id;
           break;
         }
+      }
+
+      if (targetPeriodId) {
+        setCollapsedPeriods({
+          morning: targetPeriodId !== 'morning',
+          noon: targetPeriodId !== 'noon',
+          evening: targetPeriodId !== 'evening',
+          night: targetPeriodId !== 'night'
+        });
       }
 
       // Focus input
@@ -121,7 +140,7 @@ export const HoursList: React.FC<HoursListProps> = ({
           inputEl.focus();
           inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 50);
+      }, 60);
     };
 
     window.addEventListener('expand-and-focus-hour', handleExpandAndFocus);
