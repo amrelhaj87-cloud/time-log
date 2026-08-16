@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "sync": "vite build && npx cap sync android"
+    "sync": "vite build && npx cap sync android",
+    "push": "git push",
+    "deploy": "git add -A && git commit -m \"update: deploy changes\" && git push"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
