@@ -348,7 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-2 px-1">
                 <button
                   type="button"
-                  onClick={lang === 'ar' ? handleNextMonth : handlePrevMonth}
+                  onClick={handlePrevMonth}
                   className="p-1.5 rounded-lg hover:bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] transition-all cursor-pointer"
                   title={lang === 'ar' ? 'الشهر السابق' : 'Previous Month'}
                 >
@@ -362,7 +362,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   type="button"
-                  onClick={lang === 'ar' ? handlePrevMonth : handleNextMonth}
+                  onClick={handleNextMonth}
                   className="p-1.5 rounded-lg hover:bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] transition-all cursor-pointer"
                   title={lang === 'ar' ? 'الشهر التالي' : 'Next Month'}
                 >

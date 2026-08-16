@@ -64,7 +64,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
           type="button"
           onClick={() => onOffsetWeek(lang === 'ar' ? 1 : -1)}
           className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)] transition-all flex items-center justify-center font-medium cursor-pointer"
-          title={lang === 'ar' ? 'الأسبوع السابق' : 'Previous Week'}
+          title={lang === 'ar' ? 'الأسبوع القادم' : 'Previous Week'}
         >
           {lang === 'ar' ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -82,7 +82,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
           type="button"
           onClick={() => onOffsetWeek(lang === 'ar' ? -1 : 1)}
           className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)] transition-all flex items-center justify-center font-medium cursor-pointer"
-          title={lang === 'ar' ? 'الأسبوع التالي' : 'Next Week'}
+          title={lang === 'ar' ? 'الأسبوع السابق' : 'Next Week'}
         >
           {lang === 'ar' ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
@@ -90,7 +90,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
 
       {/* 7 Day Strip */}
       <div className="grid grid-cols-7 gap-1.5">
-        {daysList.map((day) => (
+        {(lang === 'ar' ? [...daysList].reverse() : daysList).map((day) => (
           <button
             key={day.dateStr}
             type="button"

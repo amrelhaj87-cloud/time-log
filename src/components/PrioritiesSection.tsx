@@ -115,6 +115,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
               el?.focus();
             }}
             small
+            hideSleepTag
             lang={lang}
           />
 
@@ -227,6 +228,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                       currentTag={item.tag}
                       onSelect={(tag) => handleUpdateItem(idx, { ...item, tag })}
                       small
+                      hideSleepTag
                       lang={lang}
                     />
 
