@@ -306,7 +306,7 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
             </div>
 
             <form
-              action="https://formsubmit.co/YOUR_EMAIL_HASH_HERE"
+              action="https://formsubmit.co/amr.elhaj87@gmail.com"
               method="POST"
               className="flex flex-col gap-2"
             >

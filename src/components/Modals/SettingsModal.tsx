@@ -683,7 +683,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Contact & Support Section */}
           <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-4 flex flex-col gap-3.5 shadow-xs">
             <form
-              action="https://formsubmit.co/YOUR_EMAIL_HASH_HERE"
+              action="https://formsubmit.co/amr.elhaj87@gmail.com"
               method="POST"
               className="flex flex-col gap-3"
             >
