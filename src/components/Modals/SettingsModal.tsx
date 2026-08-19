@@ -697,8 +697,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <h4 className="font-bold text-sm text-[var(--ink)]">{t.contactSectionTitle}</h4>
                   <p className="text-xs text-[var(--ink-soft)] leading-relaxed mt-0.5">
                     {lang === 'ar'
-                      ? 'أرسل لنا اقتراحك أو استفسارك وسيتم الرد عليك في أسرع وقت'
-                      : 'Send us feedback or inquiries and we will respond promptly'}
+                      ? 'التطبيق يكبر بأفكاركم ودعمكم المستمر. يسعدنا معرفة رأيك أو ما يجول في خاطرك.'
+                      : 'Time Log grows with your ideas and kind support. We would love to hear your thoughts!'}
                   </p>
                 </div>
               </div>
