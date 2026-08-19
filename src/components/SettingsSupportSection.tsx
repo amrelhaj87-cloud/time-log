@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SleepSettings } from '../types';
 import { STRINGS } from '../constants/config';
-import emailjs from '@emailjs/browser';
+import KofiButton from './KofiButton';
 import {
   Settings,
   ChevronDown,
@@ -11,9 +11,7 @@ import {
   Calendar,
   Smartphone,
   BookOpen,
-  Mail,
-  CheckCircle,
-  AlertCircle
+  Mail
 } from 'lucide-react';
 
 interface SettingsSupportSectionProps {
@@ -44,10 +42,6 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
   lang
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isSending, setIsSending] = useState(false);
 
   const t = STRINGS[lang];
 
@@ -61,60 +55,6 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
     ? (sleepSettings.end - sleepSettings.start + 24) % 24 || 0
     : 0;
   const activeHours = 24 - sleepHours;
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactEmail.trim() || !contactMessage.trim()) return;
-
-    const CONTACT_COOLDOWN_MS = 60 * 1000;
-    const lastSendTs = parseInt(localStorage.getItem('lastContactSendTs') || '0', 10);
-    const msSinceLastSend = Date.now() - lastSendTs;
-
-    if (msSinceLastSend < CONTACT_COOLDOWN_MS) {
-      const waitSec = Math.ceil((CONTACT_COOLDOWN_MS - msSinceLastSend) / 1000);
-      setContactStatus({
-        type: 'error',
-        message:
-          lang === 'ar'
-            ? `يرجى الانتظار ${waitSec} ثانية قبل إرسال رسالة أخرى.`
-            : `Please wait ${waitSec} seconds before sending another message.`
-      });
-      return;
-    }
-
-    setIsSending(true);
-    localStorage.setItem('lastContactSendTs', String(Date.now()));
-
-    try {
-      await emailjs.send(
-        'service_bt4mtzr',
-        'template_hk89o2i',
-        {
-          name: contactEmail.split('@')[0],
-          email: contactEmail,
-          message: contactMessage,
-          title: lang === 'ar' ? 'رسالة دعم من تطبيق سجل الوقت' : 'Support message from Time Log'
-        },
-        'U3YIVSY5kZ8NUz4GK'
-      );
-
-      setContactStatus({
-        type: 'success',
-        message: lang === 'ar' ? 'تم إرسال رسالتك بنجاح ✅' : 'Your message has been sent successfully ✅'
-      });
-      setContactMessage('');
-    } catch {
-      setContactStatus({
-        type: 'error',
-        message:
-          lang === 'ar'
-            ? 'تعذر إرسال الرسالة، يرجى المحاولة لاحقاً.'
-            : 'Could not send the message, please try again later.'
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   return (
     <section className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-3.5 md:p-4 shadow-xs mt-3.5">
@@ -342,23 +282,56 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
             </div>
           </div>
 
-          {/* 6. Contact & Support Message Form */}
+          {/* 6. Ko-fi Support */}
+          <div className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">☕</span>
+              <div>
+                <div className="font-bold text-xs text-[var(--ink)]">
+                  {lang === 'ar' ? 'ادعم استمرار وتطوير التطبيق' : 'Support on Ko-fi'}
+                </div>
+                <div className="text-[10px] text-[var(--ink-soft)]">
+                  {lang === 'ar' ? 'مساهمتك تساعدنا على التطوير المستمر' : 'Your support helps us keep improving'}
+                </div>
+              </div>
+            </div>
+            <KofiButton username="zerocold" />
+          </div>
+
+          {/* 7. Contact & Support Message Form */}
           <div className="p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex flex-col gap-2.5 shadow-xs">
             <div className="font-bold text-[var(--ink)] flex items-center gap-1.5">
               <Mail className="w-4 h-4 text-indigo-600" />
               <span>{t.contactSectionTitle}</span>
             </div>
 
-            <form onSubmit={handleContactSubmit} className="flex flex-col gap-2">
+            <form
+              action="https://formsubmit.co/YOUR_EMAIL_HASH_HERE"
+              method="POST"
+              className="flex flex-col gap-2"
+            >
+              <input type="hidden" name="_subject" value="[سجل الوقت] رسالة جديدة" />
+
+              <div>
+                <label className="block text-[10px] font-semibold text-[var(--ink-soft)] mb-0.5">
+                  {lang === 'ar' ? 'الاسم (اختياري):' : 'Name (optional):'}
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder={lang === 'ar' ? 'اسمك الكريم...' : 'Your name...'}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs text-[var(--ink)] outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
               <div>
                 <label className="block text-[10px] font-semibold text-[var(--ink-soft)] mb-0.5">
                   {t.lblContactEmail}
                 </label>
                 <input
                   type="email"
+                  name="email"
                   required
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
                   placeholder={t.contactEmailPlaceholder}
                   className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs text-[var(--ink)] outline-hidden focus:border-indigo-500"
                 />
@@ -369,38 +342,21 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
                   {t.lblContactMessage}
                 </label>
                 <textarea
+                  name="message"
                   required
                   rows={2}
-                  value={contactMessage}
-                  onChange={(e) => setContactMessage(e.target.value)}
                   placeholder={t.contactMessagePlaceholder}
                   className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs text-[var(--ink)] outline-hidden focus:border-indigo-500 resize-y"
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {contactStatus && (
-                  <span
-                    className={`text-[11px] font-semibold flex items-center gap-1 ${
-                      contactStatus.type === 'success' ? 'text-emerald-600' : 'text-rose-600'
-                    }`}
-                  >
-                    {contactStatus.type === 'success' ? (
-                      <CheckCircle className="w-3.5 h-3.5" />
-                    ) : (
-                      <AlertCircle className="w-3.5 h-3.5" />
-                    )}
-                    {contactStatus.message}
-                  </span>
-                )}
-
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="submit"
-                  disabled={isSending}
-                  className="ms-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg font-semibold transition-all text-xs flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                  className="ms-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg font-semibold transition-all text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  <span>{isSending ? (lang === 'ar' ? 'جارٍ الإرسال...' : 'Sending...') : t.btnSendContactText}</span>
+                  <span>{t.btnSendContactText}</span>
                 </button>
               </div>
             </form>

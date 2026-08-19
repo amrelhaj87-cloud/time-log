@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode } from '../../types';
 import { STRINGS } from '../../constants/config';
-import emailjs from '@emailjs/browser';
 import { soundManager } from '../../utils/soundEffects';
+import KofiButton from '../KofiButton';
 import {
   X,
   Settings,
@@ -13,8 +13,6 @@ import {
   Calendar,
   Smartphone,
   Mail,
-  CheckCircle,
-  AlertCircle,
   Sparkles,
   Globe,
   Check,
@@ -96,10 +94,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [soundEnabled, setSoundEnabled] = useState(() => soundManager.isEnabled());
   const [birthDateInput, setBirthDateInput] = useState(userBirthDate);
   const [ageOptInput, setAgeOptInput] = useState<AgeDisplayOpt>(ageDisplayOpt);
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isSending, setIsSending] = useState(false);
 
   const t = STRINGS[lang];
 
@@ -118,60 +112,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSaveAgeSettings = () => {
     onSaveAge(birthDateInput, ageOptInput);
-  };
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactEmail.trim() || !contactMessage.trim()) return;
-
-    const CONTACT_COOLDOWN_MS = 60 * 1000;
-    const lastSendTs = parseInt(localStorage.getItem('lastContactSendTs') || '0', 10);
-    const msSinceLastSend = Date.now() - lastSendTs;
-
-    if (msSinceLastSend < CONTACT_COOLDOWN_MS) {
-      const waitSec = Math.ceil((CONTACT_COOLDOWN_MS - msSinceLastSend) / 1000);
-      setContactStatus({
-        type: 'error',
-        message:
-          lang === 'ar'
-            ? `يرجى الانتظار ${waitSec} ثانية قبل إرسال رسالة أخرى.`
-            : `Please wait ${waitSec} seconds before sending another message.`
-      });
-      return;
-    }
-
-    setIsSending(true);
-    localStorage.setItem('lastContactSendTs', String(Date.now()));
-
-    try {
-      await emailjs.send(
-        'service_bt4mtzr',
-        'template_hk89o2i',
-        {
-          name: contactEmail.split('@')[0],
-          email: contactEmail,
-          message: contactMessage,
-          title: lang === 'ar' ? 'رسالة دعم من تطبيق سجل الوقت' : 'Support message from Time Log'
-        },
-        'U3YIVSY5kZ8NUz4GK'
-      );
-
-      setContactStatus({
-        type: 'success',
-        message: lang === 'ar' ? 'تم إرسال رسالتك بنجاح ✅' : 'Your message has been sent successfully ✅'
-      });
-      setContactMessage('');
-    } catch {
-      setContactStatus({
-        type: 'error',
-        message:
-          lang === 'ar'
-            ? 'تعذر إرسال الرسالة، يرجى المحاولة لاحقاً.'
-            : 'Could not send the message, please try again later.'
-      });
-    } finally {
-      setIsSending(false);
-    }
   };
 
   return (
@@ -720,11 +660,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {/* Ko-fi Support Card */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs sm:col-span-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-[#ff5e5b]/10 text-[#ff5e5b] shrink-0">
+                  <span className="text-base">☕</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--ink)] block">
+                    {lang === 'ar' ? 'ادعم استمرار وتطوير التطبيق' : 'Support App Development'}
+                  </h4>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {lang === 'ar' ? 'عبر منصة Ko-fi' : 'via Ko-fi'}
+                  </span>
+                </div>
+              </div>
+              <KofiButton username="zerocold" />
+            </div>
           </div>
 
           {/* Contact & Support Section */}
           <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-4 flex flex-col gap-3.5 shadow-xs">
-            <form onSubmit={handleContactSubmit} className="flex flex-col gap-3">
+            <form
+              action="https://formsubmit.co/YOUR_EMAIL_HASH_HERE"
+              method="POST"
+              className="flex flex-col gap-3"
+            >
+              <input type="hidden" name="_subject" value="[سجل الوقت] رسالة جديدة" />
+
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
                   <Mail className="w-4 h-4" />
@@ -742,13 +706,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex flex-col gap-3 pt-3 border-t border-[var(--line)]">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--ink-soft)] mb-1">
+                    {lang === 'ar' ? 'الاسم (اختياري):' : 'Name (optional):'}
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder={lang === 'ar' ? 'اسمك الكريم...' : 'Your name...'}
+                    className="w-full bg-[var(--card)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--ink)] focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--ink-soft)] mb-1">
                     {t.lblContactEmail}
                   </label>
                   <input
                     type="email"
+                    name="email"
                     required
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
                     placeholder={t.contactEmailPlaceholder}
                     className="w-full bg-[var(--card)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--ink)] focus:outline-none focus:border-indigo-500"
                   />
@@ -759,39 +734,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {t.lblContactMessage}
                   </label>
                   <textarea
+                    name="message"
                     required
                     rows={3}
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
                     placeholder={t.contactMessagePlaceholder}
                     className="w-full bg-[var(--card)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs text-[var(--ink)] focus:outline-none focus:border-indigo-500 resize-none"
                   />
                 </div>
 
-                {contactStatus && (
-                  <div
-                    className={`p-2.5 rounded-xl flex items-center gap-2 font-medium text-xs ${
-                      contactStatus.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                        : 'bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'
-                    }`}
-                  >
-                    {contactStatus.type === 'success' ? (
-                      <CheckCircle className="w-4 h-4 shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                    )}
-                    <span>{contactStatus.message}</span>
-                  </div>
-                )}
-
                 <button
                   type="submit"
-                  disabled={isSending}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
                 >
                   <Mail className="w-4 h-4" />
-                  <span>{isSending ? (lang === 'ar' ? 'جاري الإرسال...' : 'Sending...') : t.btnSendContactText}</span>
+                  <span>{t.btnSendContactText}</span>
                 </button>
               </div>
             </form>
