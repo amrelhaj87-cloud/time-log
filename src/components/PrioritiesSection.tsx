@@ -2,7 +2,7 @@ import React from 'react';
 import { GoalItem, TagCode } from '../types';
 import { QUADS_CONFIG, STRINGS } from '../constants/config';
 import { TagPicker } from './TagPicker';
-import { Target, ArrowRight, Trash2, Plus, Star } from 'lucide-react';
+import { Target, ArrowRight, Trash2, Plus, Star, Inbox } from 'lucide-react';
 import { focusCurrentHourInput } from '../utils/dateUtils';
 
 interface PrioritiesSectionProps {
@@ -17,6 +17,8 @@ interface PrioritiesSectionProps {
   onChangePriorities: (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[]) => void;
   onPromoteToGolden: (item: GoalItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4', itemIdx: number) => void;
   onRollover: () => void;
+  onOpenTodoInbox?: () => void;
+  todoCount?: number;
   lang: 'ar' | 'en';
 }
 
@@ -27,6 +29,8 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
   onChangePriorities,
   onPromoteToGolden,
   onRollover,
+  onOpenTodoInbox,
+  todoCount,
   lang
 }) => {
   const t = STRINGS[lang];
@@ -56,14 +60,32 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
 
   return (
     <section className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-4 shadow-xs flex flex-col gap-3.5">
-      <div className="flex items-center justify-between pb-1 border-b border-[var(--line)]">
+      <div className="flex items-center justify-between pb-1 border-b border-[var(--line)] flex-wrap gap-2">
         <h2 className="font-bold text-base text-[var(--ink)] flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
           {t.priorTitle}
         </h2>
-        <span className="text-[11px] font-medium text-[var(--ink-soft)]">
-          {t.priorProgress(doneCount, totalCount, completionPct)}
-        </span>
+        <div className="flex items-center gap-2.5">
+          {onOpenTodoInbox && (
+            <button
+              type="button"
+              onClick={onOpenTodoInbox}
+              className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-95"
+              title={lang === 'ar' ? 'فتح صندوق الأفكار والمهام (Brain Dump)' : 'Open Brain Dump & Todo Inbox'}
+            >
+              <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>{lang === 'ar' ? 'صندوق الأفكار والمهام' : 'Brain Dump'}</span>
+              {typeof todoCount === 'number' && todoCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-indigo-600 text-white text-[10px] font-mono font-bold">
+                  {todoCount}
+                </span>
+              )}
+            </button>
+          )}
+          <span className="text-[11px] font-medium text-[var(--ink-soft)]">
+            {t.priorProgress(doneCount, totalCount, completionPct)}
+          </span>
+        </div>
       </div>
 
       {/* Golden Goal Card */}

@@ -15,7 +15,8 @@ import {
   Cake,
   Settings,
   RotateCcw,
-  WifiOff
+  WifiOff,
+  Inbox
 } from 'lucide-react';
 import { subscribeOnlineStatus } from '../services/pwaService';
 
@@ -45,6 +46,8 @@ interface HeaderProps {
   lang: 'ar' | 'en';
   onToggleLang: () => void;
   saveStatus: string;
+  onOpenTodoInbox?: () => void;
+  todoCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -72,7 +75,9 @@ export const Header: React.FC<HeaderProps> = ({
   onCycleThemeMode,
   lang,
   onToggleLang,
-  saveStatus
+  saveStatus,
+  onOpenTodoInbox,
+  todoCount
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -489,6 +494,23 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="tracking-tight whitespace-nowrap text-[11px]">{liveTime}</span>
         </div>
 
+        {/* Brain Dump / Inbox Button on Mobile */}
+        {onOpenTodoInbox && (
+          <button
+            type="button"
+            onClick={onOpenTodoInbox}
+            title={lang === 'ar' ? 'صندوق الأفكار والمهام' : 'Brain Dump & Inbox'}
+            className="flex md:hidden bg-[var(--card)] border border-[var(--line)] rounded-lg p-1.5 items-center justify-center text-[var(--ink)] hover:border-indigo-400 cursor-pointer shadow-xs relative shrink-0"
+          >
+            <Inbox className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            {typeof todoCount === 'number' && todoCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-mono font-bold flex items-center justify-center ring-1 ring-white dark:ring-slate-900">
+                {todoCount}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Mini Completion Ring */}
         <button
           type="button"
@@ -555,6 +577,24 @@ export const Header: React.FC<HeaderProps> = ({
           <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden md:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
         </button>
+
+        {/* Brain Dump & Todo Inbox Button on Desktop */}
+        {onOpenTodoInbox && (
+          <button
+            type="button"
+            onClick={onOpenTodoInbox}
+            className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer relative"
+            title={lang === 'ar' ? 'صندوق تفريغ الأفكار والمهام (Brain Dump)' : 'Brain Dump & Tasks'}
+          >
+            <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الأفكار والمهام' : 'Inbox'}</span>
+            {typeof todoCount === 'number' && todoCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-mono font-bold flex items-center justify-center">
+                {todoCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Settings Button */}
         <button

@@ -1,5 +1,13 @@
 export type TagCode = '' | 'E' | 'V' | 'R' | 'S' | 'SC' | 'SL';
 
+export interface TodoItem {
+  id: string;
+  text: string;
+  tag: TagCode;
+  done: boolean;
+  createdAt: number;
+}
+
 export interface HourEntry {
   text: string;
   tag: TagCode;

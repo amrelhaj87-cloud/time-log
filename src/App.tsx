@@ -4,6 +4,7 @@ import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider
 import {
   TagCode,
   GoalItem,
+  TodoItem,
   DayData,
   WeekData,
   SleepSettings,
@@ -46,6 +47,7 @@ import { TimerModal } from './components/Modals/TimerModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { GuideModal } from './components/Modals/GuideModal';
 import { FocusPomodoroView } from './components/FocusPomodoroView';
+import { TodoInboxDrawer } from './components/Modals/TodoInboxDrawer';
 
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
@@ -55,7 +57,18 @@ export default function App() {
     return (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
   });
 
-  // 1. Core Date & Data State
+  // 0.1 Brain Dump & Todo Inbox State
+  const [todoInbox, setTodoInbox] = useState<TodoItem[]>(() => {
+    try {
+      const local = localStorage.getItem('time_log_todo_inbox');
+      return local ? JSON.parse(local) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
+
+    // 1. Core Date & Data State
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [weekStart, setWeekStart] = useState<Date>(() => {
     const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
@@ -560,7 +573,77 @@ export default function App() {
     localStorage.setItem('sleepExceptionDays', JSON.stringify(updated));
   };
 
-  // Handlers for Priorities
+  // Brain Dump & Todo Inbox Handlers
+  const saveTodoInbox = useCallback(
+    (items: TodoItem[]) => {
+      setTodoInbox(items);
+      localStorage.setItem('time_log_todo_inbox', JSON.stringify(items));
+      if (db && currentUser) {
+        try {
+          const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
+          setDoc(docRef, { items, updatedAt: new Date().toISOString() });
+        } catch (err) {
+          console.warn('Failed to sync todo inbox to Firestore:', err);
+        }
+      }
+    },
+    [currentUser]
+  );
+
+  const handleAddTodo = (text: string, tag: TagCode) => {
+    const newItem: TodoItem = {
+      id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      text,
+      tag,
+      done: false,
+      createdAt: Date.now()
+    };
+    const updated = [newItem, ...todoInbox];
+    saveTodoInbox(updated);
+    setSaveStatus(lang === 'ar' ? '✨ تمت إضافة الفكرة للصندوق' : '✨ Added to Brain Dump Inbox');
+    setTimeout(() => setSaveStatus(''), 2500);
+  };
+
+  const handleToggleTodo = (id: string) => {
+    const updated = todoInbox.map((item) =>
+      item.id === id ? { ...item, done: !item.done } : item
+    );
+    saveTodoInbox(updated);
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    const updated = todoInbox.filter((item) => item.id !== id);
+    saveTodoInbox(updated);
+  };
+
+  const handlePromoteTodoToGolden = (todo: TodoItem) => {
+    handleChangeGoldenGoal({ text: todo.text, done: false, tag: todo.tag || '' });
+    const updated = todoInbox.map((item) =>
+      item.id === todo.id ? { ...item, done: true } : item
+    );
+    saveTodoInbox(updated);
+    setSaveStatus(lang === 'ar' ? '⭐ تم التعيين كهدف ذهبي لليوم!' : '⭐ Promoted to Golden Goal for today!');
+    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+  const handlePromoteTodoToQuad = (todo: TodoItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4') => {
+    const existingList = currentDayData.priorities[quadKey] || [];
+    const cleanList = existingList.filter((item) => item.text.trim() !== '');
+    const updatedList = [...cleanList, { text: todo.text, done: false, tag: todo.tag || '' }];
+    handleChangePriorities(quadKey, updatedList);
+    const updated = todoInbox.map((item) =>
+      item.id === todo.id ? { ...item, done: true } : item
+    );
+    saveTodoInbox(updated);
+    setSaveStatus(
+      lang === 'ar'
+        ? `🎯 تم التوجيه إلى مربع الأولويات (${quadKey.toUpperCase()}) بنجاح!`
+        : `🎯 Sent to Priority Quadrant (${quadKey.toUpperCase()}) successfully!`
+    );
+    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+    // Handlers for Priorities
   const handleChangeGoldenGoal = (item: GoalItem) => {
     const updatedDays = { ...weekData.days };
     const currentDay = updatedDays[dateStr] || emptyDay();
@@ -743,6 +826,7 @@ export default function App() {
   // Unified Android Back-Button (Capacitor) & Desktop Escape key handling
   useEffect(() => {
     const handleCloseTopModal = (): boolean => {
+      if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
       if (timerModalRange) { setTimerModalRange(null); return true; }
       if (authModalOpen) { setAuthModalOpen(false); return true; }
       if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
@@ -1042,6 +1126,8 @@ export default function App() {
           localStorage.setItem('lang', next);
         }}
         saveStatus={saveStatus}
+        onOpenTodoInbox={() => setTodoDrawerOpen(true)}
+        todoCount={todoInbox.filter((t) => !t.done).length}
       />
 
       {/* Detailed View: Week Navigator + Tag Rings */}
@@ -1254,6 +1340,8 @@ export default function App() {
           onChangePriorities={handleChangePriorities}
           onPromoteToGolden={handlePromoteToGolden}
           onRollover={handleRollover}
+          onOpenTodoInbox={() => setTodoDrawerOpen(true)}
+          todoCount={todoInbox.filter((t) => !t.done).length}
           lang={lang}
         />
 
@@ -1470,6 +1558,20 @@ export default function App() {
         themeMode={themeMode}
         isDarkEffective={isDarkEffective}
         onCycleThemeMode={handleCycleThemeMode}
+        lang={lang}
+      />
+
+      
+      {/* Brain Dump & Todo Inbox Slide-over Drawer */}
+      <TodoInboxDrawer
+        isOpen={todoDrawerOpen}
+        onClose={() => setTodoDrawerOpen(false)}
+        todos={todoInbox}
+        onAddTodo={handleAddTodo}
+        onToggleTodo={handleToggleTodo}
+        onDeleteTodo={handleDeleteTodo}
+        onPromoteToGolden={handlePromoteTodoToGolden}
+        onPromoteToQuad={handlePromoteTodoToQuad}
         lang={lang}
       />
 
