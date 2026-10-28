@@ -917,18 +917,45 @@ export default function App() {
     if (!auth || !googleProvider) return;
     try {
       const res = await signInWithPopup(auth, googleProvider);
-      const credential = (res as any)._tokenResponse?.oauthAccessToken;
+      let credential: string | null = null;
+      try {
+        const googleCred = GoogleAuthProvider.credentialFromResult(res);
+        credential = googleCred?.accessToken || null;
+      } catch {}
+      if (!credential) {
+        credential = (res as any)._tokenResponse?.oauthAccessToken || null;
+      }
+
       if (credential) {
         setGcalAccessToken(credential);
+        localStorage.setItem('gcal_access_token', credential);
         sessionStorage.setItem('gcal_access_token', credential);
         setCalSyncEnabled(true);
         localStorage.setItem('calSyncEnabled', 'true');
-        setSaveStatus(lang === 'ar' ? '✓ تم ربط Google Calendar بنجاح' : '✓ Google Calendar connected successfully');
-        setTimeout(() => setSaveStatus(''), 3000);
+        setSaveStatus(lang === 'ar' ? '🎉 تم ربط Google Calendar بنجاح' : '🎉 Google Calendar connected successfully');
+        setTimeout(() => setSaveStatus(''), 4000);
+      } else {
+        setCalSyncEnabled(true);
+        localStorage.setItem('calSyncEnabled', 'true');
+        setSaveStatus(lang === 'ar' ? '✅ تم الاتصال بحساب Google' : '✅ Connected to Google account');
+        setTimeout(() => setSaveStatus(''), 4000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Google calendar connect failed:', err);
+      const msg = err?.code === 'auth/popup-blocked'
+        ? (lang === 'ar' ? '⚠️ المتصفح حجب النافذة، يرجى السماح بالنوافذ المنبثقة' : '⚠️ Popup blocked by browser')
+        : (lang === 'ar' ? '⚠️ تعذر ربط الحساب، يرجى المحاولة مرة أخرى' : '⚠️ Failed to connect account');
+      setSaveStatus(msg);
+      setTimeout(() => setSaveStatus(''), 4000);
     }
+  };
+
+  const handleDisconnectGCal = () => {
+    setGcalAccessToken(null);
+    localStorage.removeItem('gcal_access_token');
+    sessionStorage.removeItem('gcal_access_token');
+    setSaveStatus(lang === 'ar' ? 'تم فصل حساب تقويم Google' : 'Google Calendar disconnected');
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   // Date Navigation
