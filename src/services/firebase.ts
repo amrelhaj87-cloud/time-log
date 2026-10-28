@@ -20,6 +20,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  onSnapshot,
   Firestore
 } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
@@ -136,6 +137,7 @@ export {
   Capacitor,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  onSnapshot
 };
 

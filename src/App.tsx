@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor } from './services/firebase';
+import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -67,6 +67,32 @@ export default function App() {
     }
   });
   const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
+
+  // Real-time synchronization of Brain Dump / Todo Inbox with Firestore
+  useEffect(() => {
+    if (!db || !currentUser) return;
+    try {
+      const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data && Array.isArray(data.items)) {
+              setTodoInbox(data.items);
+              localStorage.setItem('time_log_todo_inbox', JSON.stringify(data.items));
+            }
+          }
+        },
+        (err) => {
+          console.warn('Error syncing todo inbox from Firestore:', err);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Failed to attach todo inbox listener:', err);
+    }
+  }, [currentUser]);
 
     // 1. Core Date & Data State
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());

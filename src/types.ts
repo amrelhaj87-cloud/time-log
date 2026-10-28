@@ -6,6 +6,9 @@ export interface TodoItem {
   tag: TagCode;
   done: boolean;
   createdAt: number;
+  promotedTo?: 'golden' | 'quad';
+  promotedQuad?: 'q1' | 'q2' | 'q3' | 'q4';
+  promotedAt?: number;
 }
 
 export interface HourEntry {

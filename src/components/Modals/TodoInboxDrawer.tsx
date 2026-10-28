@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Circle,
   ChevronDown,
-  Layers
+  Layers,
+  RotateCcw
 } from 'lucide-react';
 
 interface TodoInboxDrawerProps {
@@ -27,7 +28,8 @@ interface TodoInboxDrawerProps {
   lang: 'ar' | 'en';
 }
 
-const AVAILABLE_TAGS: TagCode[] = ['E', 'V', 'SC', 'S', 'R', 'W', 'SL'];
+// 5 core life dimensions (Sleep and Waste removed per user request)
+const AVAILABLE_TAGS: TagCode[] = ['E', 'V', 'R', 'S', 'SC'];
 
 export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
   isOpen,
@@ -41,12 +43,17 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
   lang
 }) => {
   const [inputText, setInputText] = useState('');
-  const [selectedTag, setSelectedTag] = useState<TagCode>('E');
   const [filterTag, setFilterTag] = useState<string>('all'); // 'all', 'active', 'done', or specific TagCode
   const [activeQuadMenuId, setActiveQuadMenuId] = useState<string | null>(null);
+  const [quadMenuDirection, setQuadMenuDirection] = useState<Record<string, 'up' | 'down'>>({});
+
+  // Tag selection modal upon pressing Enter
+  const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
+  const [pendingTodoText, setPendingTodoText] = useState('');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   // Focus input on drawer open
   useEffect(() => {
@@ -54,6 +61,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
       setTimeout(() => inputRef.current?.focus(), 150);
     } else {
       setActiveQuadMenuId(null);
+      setIsTagPickerOpen(false);
     }
   }, [isOpen]);
 
@@ -70,34 +78,70 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [activeQuadMenuId]);
 
-  // Close on Escape key
+  // Keyboard navigation & Shortcuts (Esc to close, 1-5 for tags in picker)
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        if (activeQuadMenuId) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === 'Escape') {
+        if (isTagPickerOpen) {
+          setIsTagPickerOpen(false);
+          setPendingTodoText('');
+        } else if (activeQuadMenuId) {
           setActiveQuadMenuId(null);
         } else {
           onClose();
         }
+        return;
+      }
+
+      // If Tag Picker Modal is open, allow quick numeric keys 1-5 and 0
+      if (isTagPickerOpen) {
+        if (e.key === '1') {
+          e.preventDefault();
+          handleConfirmCreate('E');
+        } else if (e.key === '2') {
+          e.preventDefault();
+          handleConfirmCreate('V');
+        } else if (e.key === '3') {
+          e.preventDefault();
+          handleConfirmCreate('R');
+        } else if (e.key === '4') {
+          e.preventDefault();
+          handleConfirmCreate('S');
+        } else if (e.key === '5') {
+          e.preventDefault();
+          handleConfirmCreate('SC');
+        } else if (e.key === '0' || (e.key === 'Enter' && !e.repeat)) {
+          e.preventDefault();
+          handleConfirmCreate('');
+        }
       }
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, activeQuadMenuId, onClose]);
 
-  // Distribution & Balance Calculation across the 7 tags
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isTagPickerOpen, activeQuadMenuId, onClose, pendingTodoText]);
+
+  // Distribution & Balance Calculation across the 5 tags
   const tagStats = useMemo(() => {
     const counts: Record<TagCode, number> = { '': 0, E: 0, V: 0, SC: 0, S: 0, R: 0, W: 0, SL: 0 };
     let totalActive = 0;
+    let withoutTagCount = 0;
+
     todos.forEach((t) => {
       if (!t.done) {
-        counts[t.tag] = (counts[t.tag] || 0) + 1;
+        if (t.tag && counts[t.tag] !== undefined) {
+          counts[t.tag] = (counts[t.tag] || 0) + 1;
+        } else {
+          withoutTagCount++;
+        }
         totalActive++;
       }
     });
 
     const activeAspectsCount = AVAILABLE_TAGS.filter((tag) => counts[tag] > 0).length;
-    return { counts, totalActive, activeAspectsCount };
+    return { counts, totalActive, activeAspectsCount, withoutTagCount };
   }, [todos]);
 
   // Filtered todos
@@ -105,6 +149,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
     return todos.filter((item) => {
       if (filterTag === 'active') return !item.done;
       if (filterTag === 'done') return item.done;
+      if (filterTag === 'no_tag') return !item.tag;
       if (filterTag !== 'all') return item.tag === filterTag;
       return true;
     });
@@ -112,18 +157,39 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const handleCreate = (e?: React.FormEvent) => {
+  // Open Tag Picker when user submits / presses Enter
+  const handleTriggerAdd = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
     if (!trimmed) return;
-    onAddTodo(trimmed, selectedTag);
+    setPendingTodoText(trimmed);
+    setIsTagPickerOpen(true);
+  };
+
+  const handleConfirmCreate = (tag: TagCode) => {
+    if (!pendingTodoText.trim()) return;
+    onAddTodo(pendingTodoText.trim(), tag);
+    setPendingTodoText('');
     setInputText('');
-    inputRef.current?.focus();
+    setIsTagPickerOpen(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleToggleQuadMenu = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    if (activeQuadMenuId === id) {
+      setActiveQuadMenuId(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    // If space below is less than 240px AND space above is greater, open upward; otherwise open downward
+    const openDown = rect.top < 240 || (window.innerHeight - rect.bottom > 220);
+    setQuadMenuDirection((prev) => ({ ...prev, [id]: openDown ? 'down' : 'up' }));
+    setActiveQuadMenuId(id);
   };
 
   const getTagTitle = (code: TagCode) => {
     const cfg = TAGS_CONFIG[code];
-    if (!cfg) return code;
+    if (!cfg) return code || (lang === 'ar' ? 'بدون تاق' : 'No Tag');
     return cfg.fullTitle[lang].split('(')[0].trim();
   };
 
@@ -137,7 +203,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
 
       {/* Drawer Panel */}
       <div
-        className="relative z-10 w-full sm:w-[460px] md:w-[500px] bg-[var(--card)] text-[var(--ink)] h-full shadow-2xl border-s border-[var(--line)] flex flex-col transition-transform duration-300 animate-in slide-in-from-right"
+        className="relative z-10 w-full sm:w-[480px] md:w-[520px] bg-[var(--card)] text-[var(--ink)] h-full shadow-2xl border-s border-[var(--line)] flex flex-col transition-transform duration-300 animate-in slide-in-from-right"
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
       >
         {/* Header */}
@@ -155,8 +221,8 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
               </h2>
               <p className="text-[11px] text-[var(--ink-soft)] font-medium">
                 {lang === 'ar'
-                  ? 'اكتب أفكارك بسرعة ووزّعها على مجالات حياتك والأولويات'
-                  : 'Capture ideas quickly & distribute across life dimensions'}
+                  ? 'اكتب أفكارك بسرعة ووزّعها على جوانب الحياة والأولويات'
+                  : 'Capture ideas quickly & route to priorities and life dimensions'}
               </p>
             </div>
           </div>
@@ -171,23 +237,23 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
           </button>
         </div>
 
-        {/* 7-Dimensions Balance Bar */}
+        {/* 5-Dimensions Balance Bar */}
         <div className="px-4 py-3 border-b border-[var(--line)] bg-[var(--bg)] shrink-0 flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-[var(--ink)] flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-indigo-500" />
-              <span>{lang === 'ar' ? 'توازن جوانب الحياة السبعة:' : '7 Life Dimensions Balance:'}</span>
+              <span>{lang === 'ar' ? 'توازن جوانب الحياة الخمسة:' : '5 Life Dimensions Balance:'}</span>
             </span>
             <span
               className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                tagStats.activeAspectsCount >= 4
+                tagStats.activeAspectsCount >= 3
                   ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
                   : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
               }`}
             >
               {lang === 'ar'
-                ? `${tagStats.activeAspectsCount} من 7 مجالات نشطة`
-                : `${tagStats.activeAspectsCount}/7 active areas`}
+                ? `${tagStats.activeAspectsCount} من 5 مجالات نشطة`
+                : `${tagStats.activeAspectsCount}/5 active areas`}
             </span>
           </div>
 
@@ -208,7 +274,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
             })}
           </div>
 
-          {/* Quick Tag Badges / Counters */}
+          {/* Quick Filter Badges across the 5 tags + No Tag */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-[11px]">
             {AVAILABLE_TAGS.map((tag) => {
               const count = tagStats.counts[tag] || 0;
@@ -233,13 +299,28 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                 </button>
               );
             })}
+
+            {tagStats.withoutTagCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterTag(filterTag === 'no_tag' ? 'all' : 'no_tag')}
+                className={`px-2 py-0.5 rounded-md font-medium transition-all shrink-0 flex items-center gap-1 cursor-pointer border ${
+                  filterTag === 'no_tag'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold shadow-2xs'
+                    : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)]'
+                }`}
+              >
+                <span>{lang === 'ar' ? 'بدون تاق' : 'No Tag'}</span>
+                <span className="font-mono text-[10px] opacity-80">({tagStats.withoutTagCount})</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Quick Add Form */}
+        {/* Quick Add Form with Enter-to-choose-tag */}
         <form
-          onSubmit={handleCreate}
-          className="p-3.5 border-b border-[var(--line)] bg-[var(--card)] shrink-0 flex flex-col gap-2.5 shadow-2xs"
+          onSubmit={handleTriggerAdd}
+          className="p-3.5 border-b border-[var(--line)] bg-[var(--card)] shrink-0 flex flex-col gap-2 shadow-2xs"
         >
           <div className="flex items-center gap-2">
             <input
@@ -247,47 +328,30 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={lang === 'ar' ? 'اكتب مهمة أو فكرة جديدة (Enter للإضافة)...' : 'Add new task or brain dump...'}
+              placeholder={
+                lang === 'ar'
+                  ? 'اكتب مهمة أو فكرة جديدة (Enter لاختيار التصنيف)...'
+                  : 'Add new task or brain dump (Enter to choose tag)...'
+              }
               className="flex-1 text-sm bg-[var(--bg)] border border-[var(--line)] focus:border-indigo-500 rounded-xl px-3 py-2 outline-hidden transition-all text-[var(--ink)] placeholder:text-[var(--ink-soft)]"
             />
             <button
               type="submit"
               disabled={!inputText.trim()}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 shadow-xs transition-all cursor-pointer shrink-0"
+              title={lang === 'ar' ? 'إضافة واختيار التصنيف' : 'Add and select tag'}
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">{lang === 'ar' ? 'إضافة' : 'Add'}</span>
+              <span>{lang === 'ar' ? 'إضافة' : 'Add'}</span>
             </button>
           </div>
 
-          {/* Tag Selector for new task */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
-            <span className="text-[11px] text-[var(--ink-soft)] font-medium shrink-0">
-              {lang === 'ar' ? 'التصنيف:' : 'Category:'}
+          <div className="flex items-center justify-between text-[11px] text-[var(--ink-soft)] px-1">
+            <span>
+              {lang === 'ar'
+                ? '💡 اضغط Enter لفتح قائمة التصنيفات الخمسة أو الاختيار بدون تاق'
+                : '💡 Press Enter to choose among 5 tags or add without tag'}
             </span>
-            {AVAILABLE_TAGS.map((tag) => {
-              const isSelected = selectedTag === tag;
-              const cfg = TAGS_CONFIG[tag];
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => setSelectedTag(tag)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white font-bold shadow-xs scale-102 ring-1 ring-indigo-400'
-                      : 'bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: isSelected ? '#ffffff' : cfg?.color }}
-                  />
-                  <span>{cfg?.fullTitle[lang].split('(')[0].trim()}</span>
-                  <span className="opacity-75 font-mono text-[10px]">[{tag}]</span>
-                </button>
-              );
-            })}
           </div>
         </form>
 
@@ -341,7 +405,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
         </div>
 
         {/* Task Items List */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 relative">
           {filteredTodos.length === 0 ? (
             <div className="py-12 text-center text-[var(--ink-soft)] flex flex-col items-center justify-center gap-2">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 flex items-center justify-center">
@@ -352,41 +416,64 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
               </p>
               <p className="text-xs max-w-xs text-[var(--ink-soft)]">
                 {lang === 'ar'
-                  ? 'اكتب أي فكرة أو مهمة عشوائية في الحقل أعلاه لتنظيمها وتوزيعها لاحقاً'
-                  : 'Write any idea or task above to organize and promote later'}
+                  ? 'اكتب أي فكرة أو مهمة في الحقل أعلاه لتنظيمها وتوجيهها'
+                  : 'Write any idea or task above to organize and promote'}
               </p>
             </div>
           ) : (
-            filteredTodos.map((item) => {
-              const tagCfg = TAGS_CONFIG[item.tag];
+            filteredTodos.map((item, index) => {
+              const tagCfg = item.tag ? TAGS_CONFIG[item.tag] : null;
               const isQuadMenuOpen = activeQuadMenuId === item.id;
+              const menuDir = quadMenuDirection[item.id] || (index < 2 ? 'down' : 'up');
+
+              // Status styles based on whether it was promoted to matrix, golden goal, or completed directly
+              const isPromotedToQuad = item.done && item.promotedTo === 'quad';
+              const isPromotedToGolden = item.done && item.promotedTo === 'golden';
+              const isDirectlyCompleted = item.done && !item.promotedTo;
 
               return (
                 <div
                   key={item.id}
                   className={`group p-3 rounded-xl border transition-all flex flex-col gap-2.5 ${
-                    item.done
-                      ? 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60'
+                    isPromotedToQuad
+                      ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs'
+                      : isPromotedToGolden
+                      ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/60 shadow-2xs'
+                      : isDirectlyCompleted
+                      ? 'bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-200/70 dark:border-emerald-800/40 opacity-80'
                       : 'bg-[var(--card)] border-[var(--line)] hover:border-indigo-300 dark:hover:border-indigo-700 shadow-2xs'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                      {/* Checkbox */}
+                      {/* Checkbox / Status Icon */}
                       <button
                         type="button"
                         onClick={() => onToggleTodo(item.id)}
-                        className="mt-0.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer shrink-0"
+                        className="mt-0.5 transition-colors cursor-pointer shrink-0"
+                        title={
+                          item.done
+                            ? lang === 'ar' ? 'إعادة المهمة لقيد التنفيذ' : 'Mark as pending'
+                            : lang === 'ar' ? 'إنجاز من الصندوق مباشرة' : 'Complete from inbox'
+                        }
                       >
-                        {item.done ? (
+                        {isPromotedToQuad ? (
+                          <div className="w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] ring-1 ring-indigo-400">
+                            🎯
+                          </div>
+                        ) : isPromotedToGolden ? (
+                          <div className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] ring-1 ring-amber-400">
+                            ⭐
+                          </div>
+                        ) : isDirectlyCompleted ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         ) : (
-                          <Circle className="w-4 h-4" />
+                          <Circle className="w-4 h-4 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" />
                         )}
                       </button>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                         <span
                           className={`text-xs sm:text-sm font-medium leading-relaxed break-words ${
                             item.done
@@ -397,39 +484,80 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                           {item.text}
                         </span>
 
-                        {/* Tag Badge */}
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border"
-                            style={{
-                              borderColor: tagCfg?.color || 'var(--line)',
-                              color: tagCfg?.color || 'var(--ink-soft)',
-                              backgroundColor: tagCfg?.bgTint || 'var(--card)'
-                            }}
-                          >
+                        {/* Badges Bar: Tag + Status Distinction */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {/* Tag Badge (if exists) */}
+                          {item.tag && tagCfg ? (
                             <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: tagCfg?.color || 'var(--ink-soft)' }}
-                            />
-                            <span>{tagCfg?.fullTitle[lang].split('(')[0].trim() || item.tag}</span>
-                            <span className="font-mono opacity-70">[{item.tag}]</span>
-                          </span>
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                              style={{
+                                borderColor: tagCfg.color,
+                                color: tagCfg.color,
+                                backgroundColor: tagCfg.bgTint
+                              }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: tagCfg.color }}
+                              />
+                              <span>{tagCfg.fullTitle[lang].split('(')[0].trim()}</span>
+                              <span className="font-mono opacity-70">[{item.tag}]</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold text-[var(--ink-soft)] bg-slate-100 dark:bg-slate-800 border border-[var(--line)]">
+                              {lang === 'ar' ? 'بدون تاق' : 'No Tag'}
+                            </span>
+                          )}
+
+                          {/* Distinct Status Badges for completed / transferred tasks */}
+                          {isPromotedToQuad && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/60 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 shadow-2xs">
+                              <span>🎯 {lang === 'ar' ? 'منقول إلى مصفوفة الأولويات' : 'Sent to Priority Matrix'}:</span>
+                              <span className="font-mono uppercase font-black">{item.promotedQuad}</span>
+                            </span>
+                          )}
+
+                          {isPromotedToGolden && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 shadow-2xs">
+                              <span>⭐ {lang === 'ar' ? 'منقول إلى الهدف الذهبي لليوم' : 'Promoted to Golden Goal'}</span>
+                            </span>
+                          )}
+
+                          {isDirectlyCompleted && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                              <span>✓ {lang === 'ar' ? 'منجز من الصندوق مباشرة' : 'Completed from Inbox'}</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={() => onDeleteTodo(item.id)}
-                      className="text-slate-400 hover:text-rose-500 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
-                      title={lang === 'ar' ? 'حذف من الصندوق' : 'Delete'}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Restore button if completed/promoted */}
+                      {item.done && (
+                        <button
+                          type="button"
+                          onClick={() => onToggleTodo(item.id)}
+                          className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded-md opacity-70 hover:opacity-100 transition-all cursor-pointer"
+                          title={lang === 'ar' ? 'إعادة تفعيل المهمة' : 'Reactivate task'}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => onDeleteTodo(item.id)}
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded-md opacity-60 group-hover:opacity-100 transition-all cursor-pointer"
+                        title={lang === 'ar' ? 'حذف من الصندوق' : 'Delete'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Promotion Actions Bar */}
+                  {/* Promotion Actions Bar for Active Tasks */}
                   {!item.done && (
                     <div className="pt-2 border-t border-[var(--line)]/70 flex items-center justify-between gap-1 text-xs">
                       {/* Promote to Golden Goal Button */}
@@ -443,29 +571,32 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                         <span>{lang === 'ar' ? 'هدف ذهبي ⭐' : 'Golden Goal ⭐'}</span>
                       </button>
 
-                      {/* Promote to Eisenhower Quad Button with Dropdown */}
+                      {/* Promote to Eisenhower Quad Button with Dropdown (Fixed smart direction so Q1 is never clipped!) */}
                       <div className="relative flex-1" ref={isQuadMenuOpen ? menuRef : null}>
                         <button
                           type="button"
-                          onClick={() => setActiveQuadMenuId(isQuadMenuOpen ? null : item.id)}
+                          onClick={(e) => handleToggleQuadMenu(item.id, e)}
                           className="w-full py-1 px-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer hover:scale-[1.01] active:scale-95 shadow-2xs"
                           title={lang === 'ar' ? 'توجيه لمصفوفة الأولويات' : 'Send to Priority Matrix'}
                         >
                           <Target className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                           <span>{lang === 'ar' ? 'مصفوفة الأولويات 🎯' : 'Priorities 🎯'}</span>
-                          <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+                          <ChevronDown className={`w-2.5 h-2.5 opacity-70 transition-transform ${isQuadMenuOpen ? 'rotate-180' : ''}`} />
                         </button>
 
-                        {/* Quad Selection Menu */}
+                        {/* Quad Selection Menu with Guaranteed Visibility for Q1 */}
                         {isQuadMenuOpen && (
                           <div
-                            className={`absolute bottom-full mb-1.5 z-50 bg-[var(--card)] border border-[var(--line)] rounded-xl p-1.5 shadow-xl w-52 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-150 ${
-                              lang === 'ar' ? 'left-0' : 'right-0'
-                            }`}
+                            className={`absolute z-50 bg-[var(--card)] border border-[var(--line)] rounded-xl p-1.5 shadow-2xl w-56 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-150 ${
+                              menuDir === 'down' ? 'top-full mt-1.5' : 'bottom-full mb-1.5'
+                            } ${lang === 'ar' ? 'left-0' : 'right-0'}`}
                           >
-                            <div className="px-2 py-1 text-[10px] font-bold text-[var(--ink-soft)] border-b border-[var(--line)]">
-                              {lang === 'ar' ? 'اختر مربع الأولويات:' : 'Choose Eisenhower Quad:'}
+                            <div className="px-2 py-1 text-[10px] font-bold text-[var(--ink-soft)] border-b border-[var(--line)] flex items-center justify-between">
+                              <span>{lang === 'ar' ? 'اختر مربع الأولويات:' : 'Choose Eisenhower Quad:'}</span>
+                              <span className="text-[9px] opacity-60 font-mono">Eisenhower</span>
                             </div>
+
+                            {/* Guaranteed listing of all 4 quads starting with Q1 */}
                             {QUADS_CONFIG.map((q) => (
                               <button
                                 key={q.key}
@@ -474,16 +605,16 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                                   onPromoteToQuad(item, q.key as 'q1' | 'q2' | 'q3' | 'q4');
                                   setActiveQuadMenuId(null);
                                 }}
-                                className="w-full p-1.5 rounded-lg text-start flex items-center gap-2 hover:bg-[var(--bg)] transition-colors cursor-pointer"
+                                className="w-full p-1.5 rounded-lg text-start flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer group/q"
                               >
                                 <span
-                                  className="w-2 h-2 rounded-full shrink-0"
+                                  className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-black/10"
                                   style={{ backgroundColor: q.color }}
                                 />
-                                <span className="font-bold text-[11px] text-[var(--ink)]">
+                                <span className="font-mono font-black text-[11px] text-[var(--ink)] group-hover/q:text-indigo-600">
                                   {q.key.toUpperCase()}
                                 </span>
-                                <span className="text-[10px] text-[var(--ink-soft)] truncate">
+                                <span className="text-[10px] text-[var(--ink-soft)] truncate flex-1">
                                   {q.title[lang].split('(')[0].replace(/^[^\w\s\u0600-\u06FF]+/, '').trim()}
                                 </span>
                               </button>
@@ -503,12 +634,108 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
         <div className="p-3 border-t border-[var(--line)] bg-[var(--bg)]/80 text-[11px] text-[var(--ink-soft)] flex items-center justify-between shrink-0">
           <span>
             {lang === 'ar'
-              ? '✨ يتم حفظ وتفريغ أفكارك محلياً ومزامنتها تلقائياً'
-              : '✨ Ideas saved locally & synced automatically'}
+              ? '✨ يتم حفظ الأفكار وتزامنها سحابياً تلقائياً'
+              : '✨ Ideas saved & synced to cloud in real-time'}
           </span>
           <span className="font-mono text-[10px]">{todos.length} items</span>
         </div>
       </div>
+
+      {/* Modal: Interactive Tag Selector on Enter (5 Dimensions + Without Tag) */}
+      {isTagPickerOpen && (
+        <div
+          className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => {
+            setIsTagPickerOpen(false);
+            setPendingTodoText('');
+          }}
+        >
+          <div
+            ref={pickerRef}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-4 shadow-2xl max-w-sm w-full flex flex-col gap-3.5 animate-in zoom-in-95 duration-150"
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+          >
+            <div className="flex items-center justify-between border-b border-[var(--line)] pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏷️</span>
+                <h3 className="font-bold text-sm text-[var(--ink)]">
+                  {lang === 'ar' ? 'اختر تصنيف المهمة' : 'Select Task Tag'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTagPickerOpen(false);
+                  setPendingTodoText('');
+                }}
+                className="text-[var(--ink-soft)] hover:text-[var(--ink)] p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Task Preview */}
+            <div className="p-2.5 rounded-xl bg-[var(--bg)] border border-[var(--line)] text-xs text-[var(--ink)] font-medium max-h-18 overflow-y-auto">
+              <span className="opacity-60 text-[10px] block mb-0.5">{lang === 'ar' ? 'نص المهمة:' : 'Task:'}</span>
+              <p className="line-clamp-2 italic font-semibold">"{pendingTodoText}"</p>
+            </div>
+
+            {/* 5 Core Life Tags Buttons */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-[var(--ink-soft)] px-1">
+                {lang === 'ar' ? 'جوانب الحياة (أرقام 1-5 للاختيار السريع):' : 'Life Dimensions (Keys 1-5):'}
+              </span>
+
+              {AVAILABLE_TAGS.map((tag, idx) => {
+                const cfg = TAGS_CONFIG[tag];
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleConfirmCreate(tag)}
+                    className="w-full p-2 rounded-xl border border-[var(--line)] bg-[var(--card)] hover:bg-[var(--bg)] hover:border-indigo-400 flex items-center justify-between transition-all cursor-pointer group shadow-2xs hover:scale-[1.01]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0 ring-2 ring-black/5"
+                        style={{ backgroundColor: cfg?.color }}
+                      />
+                      <span className="font-bold text-xs text-[var(--ink)] group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        {cfg?.fullTitle[lang].split('(')[0].trim()}
+                      </span>
+                      <span className="text-[10px] text-[var(--ink-soft)] truncate font-mono">
+                        [{tag}]
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[var(--bg)] text-[var(--ink-soft)] border border-[var(--line)]">
+                      {idx + 1}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Without Tag Option (Button 0 / Enter) */}
+              <button
+                type="button"
+                onClick={() => handleConfirmCreate('')}
+                className="w-full p-2 mt-1 rounded-xl border border-dashed border-[var(--line)] bg-[var(--bg)] hover:bg-slate-200/60 dark:hover:bg-slate-800/60 hover:border-slate-400 flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full border border-dashed border-slate-400 shrink-0" />
+                  <span className="font-semibold text-xs text-[var(--ink)]">
+                    {lang === 'ar' ? 'بدون تاق / تصنيف عام' : 'No Tag (General Task)'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[var(--card)] text-[var(--ink-soft)] border border-[var(--line)]">
+                  0 / Enter
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
