@@ -357,15 +357,19 @@ export const HoursList: React.FC<HoursListProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              const tagBtn = document.getElementById(`tag-picker-btn-hour-${key}`);
-                              if (tagBtn) {
-                                tagBtn.click();
+                              if (calEvent && !entry.text.trim()) {
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
+                              } else {
+                                const tagBtn = document.getElementById(`tag-picker-btn-hour-${key}`);
+                                if (tagBtn) {
+                                  tagBtn.click();
+                                }
                               }
                             } else if ((e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'ArrowLeft') && calEvent && !entry.text.trim()) {
                               // Quick accept calendar ghost text
                               if (e.key === 'Tab') {
                                 e.preventDefault();
-                                onChangeHour(key, calEvent.text, calEvent.tag || 'E');
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
                               }
                             }
                           }}
@@ -373,31 +377,37 @@ export const HoursList: React.FC<HoursListProps> = ({
                           className="w-full text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 bg-transparent border-b border-transparent focus:border-indigo-500 outline-hidden py-1 px-1 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-400 relative z-10"
                         />
 
-                        {/* Ghost Calendar Suggestion Pill */}
+                        {/* Ghost Calendar Suggestion Pill (z-20 & pointer-events-auto on button so clicks/taps directly apply) */}
                         {calEvent && !entry.text && (
-                          <div
-                            onClick={() => {
-                              onChangeHour(key, calEvent.text, calEvent.tag || 'E');
-                              const inputEl = document.getElementById(`hour-input-${key}`);
-                              inputEl?.focus();
-                            }}
-                            className="absolute inset-0 z-0 flex items-center justify-between px-1 pointer-events-auto cursor-pointer group/ghost"
-                            title={lang === 'ar' ? `موعد من Google Calendar: "${calEvent.text}" (انقر لتنزيله بالساعة)` : `Google Calendar Event: "${calEvent.text}" (Click to apply)`}
-                          >
-                            <span className="text-xs text-indigo-600/80 dark:text-indigo-400 bg-indigo-50/70 dark:bg-indigo-950/60 border border-dashed border-indigo-300 dark:border-indigo-700/80 px-2 py-0.5 rounded-md truncate max-w-[85%] select-none flex items-center gap-1.5 transition-colors group-hover/ghost:border-indigo-500">
-                              <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0 inline" />
-                              <span className="font-medium">{calEvent.text}</span>
-                              <span className="text-[10px] opacity-70 font-sans hidden sm:inline">({lang === 'ar' ? 'انقر للتنزيل' : 'click to apply'})</span>
-                            </span>
+                          <div className="absolute inset-0 z-20 flex items-center justify-between px-1 pointer-events-none">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
+                                setTimeout(() => {
+                                  const inputEl = document.getElementById(`hour-input-${key}`);
+                                  inputEl?.focus();
+                                }, 50);
+                              }}
+                              className="pointer-events-auto cursor-pointer text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50/95 dark:bg-indigo-950/90 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-dashed border-indigo-400 dark:border-indigo-600 px-2 py-0.5 rounded-md truncate max-w-[85%] select-none flex items-center gap-1.5 transition-all shadow-xs hover:scale-[1.01] active:scale-95 group/ghost text-start"
+                              title={lang === 'ar' ? `موعد من Google Calendar: "${calEvent.text}" (انقر لتنزيله بالساعة)` : `Google Calendar Event: "${calEvent.text}" (Click to apply)`}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0 inline animate-pulse" />
+                              <span className="font-semibold truncate">{calEvent.text}</span>
+                              <span className="text-[10px] opacity-80 font-sans hidden sm:inline">({lang === 'ar' ? 'انقر للتنزيل' : 'click to apply'})</span>
+                            </button>
 
                             {onDismissCalendarEvent && (
                               <button
                                 type="button"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   onDismissCalendarEvent(key);
                                 }}
-                                className="text-slate-400 hover:text-rose-500 p-0.5 rounded transition-colors opacity-60 hover:opacity-100 shrink-0"
+                                className="pointer-events-auto text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors opacity-70 hover:opacity-100 shrink-0 cursor-pointer"
                                 title={lang === 'ar' ? 'إخفاء هذا الاقتراح' : 'Dismiss suggestion'}
                               >
                                 <X className="w-3.5 h-3.5" />
