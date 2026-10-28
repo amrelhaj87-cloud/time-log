@@ -263,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({
                 v3.8
               </span>
             </div>
-            <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden sm:inline mt-0.5 whitespace-nowrap">
+            <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden xl:inline mt-0.5 whitespace-nowrap">
               {lang === 'ar' ? 'نظام تسجيل الوقت الذكي' : 'Productivity Tracker'}
             </span>
           </div>
@@ -328,9 +328,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Row 2 on Mobile (Date Selector + Age + Live Clock + Progress) / Left & Middle on Desktop */}
-      <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 w-full md:w-auto min-w-0 flex-wrap sm:flex-nowrap">
-
+      {/* Middle: Date Selector + Age Badge + Progress Ring + Unified Live Clock (Never Collides!) */}
+      <div className="flex items-center justify-between sm:justify-start md:justify-center gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-wrap sm:flex-nowrap">
         {/* Date Selector Popover */}
         <div className="relative shrink-0" ref={datePickerRef}>
           <button
@@ -511,11 +510,12 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
+        
         {/* Mini Completion Ring */}
         <button
           type="button"
           onClick={onOpenDayDist}
-          title={lang === 'ar' ? 'انقر لعرض توزيع اليوم الكامل' : 'Click to view full day distribution'}
+          title={lang === 'ar' ? 'انقر لعرض توزيع اليوم بالكامل' : 'Click to view full day distribution'}
           className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 py-1 flex items-center gap-1.5 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs shrink-0"
         >
           <svg width="22" height="22" viewBox="0 0 32 32">
@@ -537,28 +537,26 @@ export const Header: React.FC<HeaderProps> = ({
             {loggedCount}/{totalActiveHours}
           </span>
         </button>
-      </div>
 
-      {/* Center: Live Real-time Clock on Desktop */}
-      <div className="hidden md:flex items-center justify-center shrink-0">
+        {/* Unified Real-time Live Clock */}
+        <div
+          className="bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/90 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-mono font-bold shadow-xs flex items-center gap-1.5 select-none shrink-0 ring-1 ring-indigo-500/10"
+          title={lang === 'ar' ? 'الوقت الحالي المباشر' : 'Current Live Time'}
+        >
+          <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <span className="tracking-tight whitespace-nowrap text-[11px] sm:text-xs">{liveTime}</span>
+        </div>
+
         {/* Offline Mode Badge */}
         {!isOnline && (
           <div
-            className="bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg text-[11px] font-bold shadow-xs flex items-center gap-1 animate-pulse mr-1.5 sm:mr-2"
+            className="bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg text-[11px] font-bold shadow-xs flex items-center gap-1 animate-pulse"
             title={lang === 'ar' ? 'أنت في وضع عدم الاتصال - تحفظ البيانات محلياً' : 'Offline Mode - Changes saved locally'}
           >
             <WifiOff className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{lang === 'ar' ? 'دون إنترنت' : 'Offline'}</span>
           </div>
         )}
-
-        <div
-          className="bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/90 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300 px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-mono font-bold shadow-xs flex items-center gap-1.5 select-none ring-1 ring-indigo-500/10"
-          title={lang === 'ar' ? 'الوقت الحالي المباشر' : 'Current Live Time'}
-        >
-          <Clock className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="tracking-wide whitespace-nowrap">{liveTime}</span>
-        </div>
       </div>
 
       {/* End / Left on Desktop: Detailed View Toggle, Settings, and Auth */}
@@ -575,7 +573,7 @@ export const Header: React.FC<HeaderProps> = ({
           title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج (إخفاء شريط الأسبوع)' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي (إظهار شريط الأسبوع)' : 'Detailed View')}
         >
           <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-          <span className="hidden md:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
+          <span className="hidden xl:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
         </button>
 
         {/* Brain Dump & Todo Inbox Button on Desktop */}
@@ -587,7 +585,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={lang === 'ar' ? 'صندوق تفريغ الأفكار والمهام (Brain Dump)' : 'Brain Dump & Tasks'}
           >
             <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الأفكار والمهام' : 'Inbox'}</span>
+            <span className="hidden xl:inline whitespace-nowrap">{lang === 'ar' ? 'الأفكار والمهام' : 'Inbox'}</span>
             {typeof todoCount === 'number' && todoCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-mono font-bold flex items-center justify-center">
                 {todoCount}
@@ -604,7 +602,7 @@ export const Header: React.FC<HeaderProps> = ({
           title={lang === 'ar' ? 'الإعدادات والتفضيلات' : 'Settings & Preferences'}
         >
           <Settings className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الإعدادات' : 'Settings'}</span>
+          <span className="hidden xl:inline whitespace-nowrap">{lang === 'ar' ? 'الإعدادات' : 'Settings'}</span>
         </button>
 
         {/* User Auth Direct Action */}
