@@ -86,7 +86,16 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
     throw new Error('Google Auth Provider is not initialized');
   }
 
-  return await signInWithPopup(auth, googleProvider);
+  const res = await signInWithPopup(auth, googleProvider);
+  try {
+    const cred = GoogleAuthProvider.credentialFromResult(res);
+    const token = cred?.accessToken || (res as any)._tokenResponse?.oauthAccessToken;
+    if (token) {
+      localStorage.setItem('gcal_access_token', token);
+      sessionStorage.setItem('gcal_access_token', token);
+    }
+  } catch {}
+  return res;
 };
 
 /**

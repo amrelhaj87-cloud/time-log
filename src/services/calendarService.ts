@@ -46,7 +46,7 @@ export async function fetchCalendarEventsForDate(
     if (!res.ok) {
       if (res.status === 401) {
         console.warn('Google Calendar token expired or invalid');
-        sessionStorage.removeItem('gcal_access_token');
+        localStorage.removeItem('gcal_access_token'); sessionStorage.removeItem('gcal_access_token');
       }
       return {};
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider, Capacitor } from './services/firebase';
+import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -156,6 +156,9 @@ export default function App() {
   const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => {
     return localStorage.getItem('devToolsEnabled') !== 'false';
   });
+  const [showAgeBadge, setShowAgeBadge] = useState<boolean>(() => {
+    return localStorage.getItem('showAgeBadge') === 'true';
+  });
   const [showStreakBadge, setShowStreakBadge] = useState<boolean>(() => {
     return localStorage.getItem('showStreakBadge') !== 'false';
   });
@@ -201,7 +204,7 @@ export default function App() {
 
   // 4. Google Calendar & Suggestions
   const [gcalAccessToken, setGcalAccessToken] = useState<string | null>(() => {
-    return sessionStorage.getItem('gcal_access_token') || null;
+    return localStorage.getItem('gcal_access_token') || sessionStorage.getItem('gcal_access_token') || null;
   });
   const [googleCalendarEvents, setGoogleCalendarEvents] = useState<Record<string, { text: string; tag: TagCode }>>({});
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>(() => {
@@ -413,6 +416,7 @@ export default function App() {
       localStorage.setItem('ageDisplayOpt', ageDisplayOpt);
       localStorage.setItem('weekStartDay', activeWeekStartDay);
       localStorage.setItem('devToolsEnabled', String(devToolsEnabled));
+      localStorage.setItem('showAgeBadge', String(showAgeBadge));
       localStorage.setItem('showStreakBadge', String(showStreakBadge));
       localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
@@ -430,6 +434,7 @@ export default function App() {
               ageDisplayOpt,
               weekStartDay: activeWeekStartDay,
               devToolsEnabled,
+              showAgeBadge,
               showStreakBadge,
               showFocusModeButton,
               calSyncEnabled,
@@ -444,7 +449,7 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, calSyncEnabled, themeMode, isDetailedView]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, calSyncEnabled, themeMode, isDetailedView]
   );
 
   // Auth State Listener
@@ -479,6 +484,7 @@ export default function App() {
               return;
             }
             if (data.devToolsEnabled !== undefined) setDevToolsEnabled(data.devToolsEnabled);
+            if (data.showAgeBadge !== undefined) setShowAgeBadge(data.showAgeBadge);
             if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
             if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
             if (data.calSyncEnabled !== undefined) setCalSyncEnabled(data.calSyncEnabled);
@@ -809,7 +815,7 @@ export default function App() {
   let bdayBannerText = '';
   let ageDisplayValue = '';
   let ageUnit = '';
-  if (userBirthDate) {
+  if (showAgeBadge && userBirthDate && ageDisplayOpt !== 'none') {
     const birth = new Date(userBirthDate + 'T00:00:00');
     if (!isNaN(birth.getTime())) {
       const today = new Date();
@@ -1252,9 +1258,21 @@ export default function App() {
         }}
         userBirthDate={userBirthDate}
         ageDisplayOpt={ageDisplayOpt}
+        showAgeBadge={showAgeBadge}
+        onToggleAgeBadge={(en) => {
+          setShowAgeBadge(en);
+          localStorage.setItem('showAgeBadge', en ? 'true' : 'false');
+          syncPreferences(currentUser);
+        }}
         onSaveAge={(bDate, opt) => {
           setUserBirthDate(bDate);
           setAgeDisplayOpt(opt);
+          if (!bDate) {
+            localStorage.removeItem('userBirthDate');
+          } else {
+            localStorage.setItem('userBirthDate', bDate);
+          }
+          localStorage.setItem('ageDisplayOpt', opt);
           syncPreferences(currentUser);
         }}
         weekStartDay={weekStartDay}
@@ -1280,7 +1298,9 @@ export default function App() {
           syncPreferences(currentUser);
         }}
         isCalSyncConnected={!!gcalAccessToken}
+        currentUserEmail={currentUser?.email}
         onConnectGCal={handleConnectGCal}
+        onDisconnectGCal={handleDisconnectGCal}
         calSyncEnabled={calSyncEnabled}
         onToggleCalSync={(en) => {
           setCalSyncEnabled(en);

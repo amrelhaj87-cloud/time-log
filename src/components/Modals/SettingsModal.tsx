@@ -42,6 +42,10 @@ interface SettingsModalProps {
   onToggleDevTools: (enabled: boolean) => void;
   showStreakBadge?: boolean;
   onToggleStreakBadge?: (enabled: boolean) => void;
+  showAgeBadge?: boolean;
+  onToggleAgeBadge?: (enabled: boolean) => void;
+  currentUserEmail?: string | null;
+  onDisconnectGCal?: () => void;
   showFocusModeButton?: boolean;
   onToggleShowFocusModeButton?: (enabled: boolean) => void;
   isCalSyncConnected: boolean;
@@ -75,6 +79,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleDevTools,
   showStreakBadge = true,
   onToggleStreakBadge,
+  showAgeBadge = false,
+  onToggleAgeBadge,
+  currentUserEmail,
+  onDisconnectGCal,
   showFocusModeButton = true,
   onToggleShowFocusModeButton,
   isCalSyncConnected,
@@ -502,24 +510,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
             </div>
 
-            {/* Compact Age & Birthday Settings Card */}
+            {/* Compact Age & Birthday Settings Card with Explicit Toggle */}
             <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col justify-between gap-2 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-500 shrink-0">
-                  <Cake className="w-4 h-4" />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-500 shrink-0">
+                    <Cake className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-xs text-[var(--ink)] block truncate">{t.ageSectionTitle}</h4>
+                    <span className="text-[11px] text-[var(--ink-soft)] block truncate">
+                      {showAgeBadge && birthDateInput
+                        ? (ageOptInput === 'years'
+                            ? (lang === 'ar' ? 'مفعل (عرض بالسنين)' : 'Active (Years)')
+                            : ageOptInput === 'days'
+                            ? (lang === 'ar' ? 'مفعل (عرض بالأيام)' : 'Active (Days)')
+                            : (lang === 'ar' ? 'مفعل (تنبيهات فقط)' : 'Active (Alerts only)'))
+                        : (lang === 'ar' ? 'معطل (الشارة مخفية)' : 'Disabled (Badge hidden)')}
+                    </span>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-bold text-xs text-[var(--ink)] block truncate">{t.ageSectionTitle}</h4>
-                  <span className="text-[11px] text-[var(--ink-soft)] block truncate">
-                    {birthDateInput
-                      ? (ageOptInput === 'years'
-                          ? (lang === 'ar' ? 'عرض بالسنين مفعل' : 'Age in years active')
-                          : ageOptInput === 'days'
-                          ? (lang === 'ar' ? 'عرض بالأيام مفعل' : 'Age in days active')
-                          : (lang === 'ar' ? 'تنبيهات أعياد الميلاد فقط' : 'Birthday alerts only'))
-                      : (lang === 'ar' ? 'حدد تاريخ ميلادك' : 'Set birth date')}
-                  </span>
-                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0" title={lang === 'ar' ? 'تفعيل أو إخفاء الشارة' : 'Toggle Age Badge'}>
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={showAgeBadge}
+                    onChange={(e) => onToggleAgeBadge?.(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
               </div>
 
               <div className="pt-2 border-t border-[var(--line)] flex items-center gap-1.5">
@@ -530,10 +550,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     const newDate = e.target.value;
                     setBirthDateInput(newDate);
                     onSaveAge(newDate, ageOptInput);
+                    if (newDate && !showAgeBadge) {
+                      onToggleAgeBadge?.(true);
+                    }
                   }}
                   className="flex-1 min-w-0 bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 py-1 text-xs text-[var(--ink)] focus:outline-none focus:border-indigo-500 font-mono"
                   title={t.lblBirthDate}
                 />
+
+                {birthDateInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBirthDateInput('');
+                      onSaveAge('', 'none');
+                      onToggleAgeBadge?.(false);
+                    }}
+                    className="px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition-all cursor-pointer shrink-0"
+                    title={lang === 'ar' ? 'مسح تاريخ الميلاد' : 'Clear Birth Date'}
+                  >
+                    {lang === 'ar' ? 'مسح' : 'Clear'}
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -573,32 +611,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Google Calendar Sync Card (Toggle + Connect Button) */}
+            {/* Google Calendar Sync Card (Toggle + Connect/Disconnect Button + Account Email) */}
             <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
                   <Calendar className="w-4 h-4" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-xs text-[var(--ink)] block">{lang === 'ar' ? 'ربط تقويم جوجل' : 'Google Calendar'}</h4>
-                  <span className="text-[11px] text-[var(--ink-soft)]">
-                    {isCalSyncConnected ? (lang === 'ar' ? 'متصل ✓' : 'Connected ✓') : (lang === 'ar' ? 'غير متصل' : 'Disconnected')}
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-xs text-[var(--ink)] block truncate">{lang === 'ar' ? 'ربط تقويم جوجل' : 'Google Calendar'}</h4>
+                  <span className="text-[11px] text-[var(--ink-soft)] block truncate">
+                    {isCalSyncConnected
+                      ? (lang === 'ar' ? `متصل ✓ (${currentUserEmail || 'Google'})` : `Connected ✓ (${currentUserEmail || 'Google'})`)
+                      : (lang === 'ar' ? 'غير متصل' : 'Disconnected')}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={onConnectGCal}
-                  className={`px-2.5 py-1 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer ${
-                    isCalSyncConnected
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                  }`}
-                >
-                  {isCalSyncConnected ? (lang === 'ar' ? 'متصل' : 'Connected') : (lang === 'ar' ? 'ربط الحساب' : 'Connect')}
-                </button>
-                <label className="relative inline-flex items-center cursor-pointer">
+                {isCalSyncConnected ? (
+                  <button
+                    type="button"
+                    onClick={onDisconnectGCal}
+                    className="px-2.5 py-1 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100"
+                    title={lang === 'ar' ? 'فصل حساب التقويم' : 'Disconnect calendar'}
+                  >
+                    {lang === 'ar' ? 'فصل' : 'Disconnect'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onConnectGCal}
+                    className="px-2.5 py-1 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    {lang === 'ar' ? 'ربط الحساب' : 'Connect'}
+                  </button>
+                )}
+                <label className="relative inline-flex items-center cursor-pointer" title={lang === 'ar' ? 'مزامنة أحداث التقويم' : 'Sync Calendar Events'}>
                   <input
                     type="checkbox"
                     className="sr-only peer"
