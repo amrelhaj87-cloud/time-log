@@ -91,6 +91,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
 
   const timerRef = useRef<number | null>(null);
+  const endTimeRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Sync ambient audio changes
@@ -129,6 +130,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setMode(newMode);
     setIsRunning(false);
     ambientAudio.stop();
+    endTimeRef.current = null;
     setShowCompletedPrompt(false);
     const targetMins = customMins || (newMode === 'focus' ? focusDurationMin : newMode === 'shortBreak' ? shortBreakDurationMin : longBreakDurationMin);
     const secs = targetMins * 60;
@@ -143,8 +145,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       // Pausing: stop running and stop ambient audio immediately
       setIsRunning(false);
       ambientAudio.stop();
+      endTimeRef.current = null;
     } else {
-      // Starting / Resuming
+      // Starting / Resuming: record target end timestamp to survive tab suspension
+      endTimeRef.current = Date.now() + timeLeft * 1000;
       setIsRunning(true);
       if (ambientSound !== 'none') {
         // Soften volume slightly upon resume so it starts gently
@@ -164,6 +168,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     soundManager.playClick();
     setIsRunning(false);
     ambientAudio.stop();
+    endTimeRef.current = null;
 
     const elapsedSeconds = totalSeconds - timeLeft;
     const elapsedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
@@ -178,42 +183,96 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
-  // Timer Tick
+  // Timer Tick with wall-clock calculation, Web Worker & visibilitychange resilience
   useEffect(() => {
     if (!isOpen) {
       setIsRunning(false);
       ambientAudio.stop();
+      endTimeRef.current = null;
       return;
     }
 
-    if (isRunning) {
-      timerRef.current = window.setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Completed!
-            handleTimerFinish();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
+    if (!isRunning) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      return;
     }
+
+    if (!endTimeRef.current) {
+      endTimeRef.current = Date.now() + timeLeft * 1000;
+    }
+
+    const syncRemaining = () => {
+      if (!endTimeRef.current) return;
+      const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        endTimeRef.current = null;
+        handleTimerFinish();
+      }
+    };
+
+    // Immediate calculation
+    syncRemaining();
+
+    // Standard interval
+    timerRef.current = window.setInterval(syncRemaining, 1000);
+
+    // Background Web Worker to keep timer alive in throttled background tabs
+    let worker: Worker | null = null;
+    try {
+      const blob = new Blob([
+        `let t=null;self.onmessage=function(e){if(e.data==='start'){if(t)clearInterval(t);t=setInterval(function(){self.postMessage('tick')},1000)}else if(e.data==='stop'){if(t)clearInterval(t);t=null}}`
+      ], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      worker = new Worker(workerUrl);
+      URL.revokeObjectURL(workerUrl);
+      worker.onmessage = () => {
+        syncRemaining();
+      };
+      worker.postMessage('start');
+    } catch {}
+
+    // Listen to tab visibility & window focus
+    const handleSync = () => syncRemaining();
+    document.addEventListener('visibilitychange', handleSync);
+    window.addEventListener('focus', handleSync);
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
+      if (worker) {
+        worker.postMessage('stop');
+        worker.terminate();
+      }
+      document.removeEventListener('visibilitychange', handleSync);
+      window.removeEventListener('focus', handleSync);
     };
-  }, [isRunning, isOpen, mode, focusDurationMin]);
+  }, [isRunning, isOpen]);
+
+  // Dynamic tab title displaying countdown
+  useEffect(() => {
+    const originalTitle = document.title;
+    if (isRunning && isOpen) {
+      const mins = Math.floor(timeLeft / 60);
+      const secs = timeLeft % 60;
+      const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const modeIcon = mode === 'focus' ? '🎯' : '☕';
+      document.title = `(${formatted}) ${modeIcon} Time Log`;
+    }
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [isRunning, isOpen, timeLeft, mode]);
 
   // Handle Session Completion
   const handleTimerFinish = () => {
     setIsRunning(false);
+    endTimeRef.current = null;
     soundManager.playTimerCompleteChime();
 
     try {

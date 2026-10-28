@@ -25,6 +25,7 @@ export const TimerBar: React.FC<TimerBarProps> = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const hasChimedRef = useRef(false);
 
   const t = STRINGS[lang];
 
@@ -53,32 +54,66 @@ export const TimerBar: React.FC<TimerBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Timer Tick Interval
+  // Timer Tick Interval with Web Worker & visibilitychange resilience
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isRunning && startTimestamp) {
-      interval = setInterval(() => {
+    let worker: Worker | null = null;
+
+    const syncElapsed = () => {
+      if (isRunning && startTimestamp) {
         const diff = Math.max(0, Math.floor((Date.now() - startTimestamp) / 1000));
         setElapsedSeconds(diff);
 
-        // Check if target duration reached in countdown mode
-        if (targetDurationSec && diff >= targetDurationSec) {
-          // Play pleasant chime
+        // Check if target duration reached in countdown mode (chime only once)
+        if (targetDurationSec && diff >= targetDurationSec && !hasChimedRef.current) {
+          hasChimedRef.current = true;
           soundManager.playTimerCompleteChime();
         }
-      }, 1000);
+      } else {
+        setElapsedSeconds(0);
+      }
+    };
+
+    if (isRunning && startTimestamp) {
+      syncElapsed();
+      interval = setInterval(syncElapsed, 1000);
+
+      try {
+        const blob = new Blob([
+          `let t=null;self.onmessage=function(e){if(e.data==='start'){if(t)clearInterval(t);t=setInterval(function(){self.postMessage('tick')},1000)}else if(e.data==='stop'){if(t)clearInterval(t);t=null}}`
+        ], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        worker = new Worker(workerUrl);
+        URL.revokeObjectURL(workerUrl);
+        worker.onmessage = () => {
+          syncElapsed();
+        };
+        worker.postMessage('start');
+      } catch {}
+
+      const handleSync = () => syncElapsed();
+      document.addEventListener('visibilitychange', handleSync);
+      window.addEventListener('focus', handleSync);
+
+      return () => {
+        if (interval) clearInterval(interval);
+        if (worker) {
+          worker.postMessage('stop');
+          worker.terminate();
+        }
+        document.removeEventListener('visibilitychange', handleSync);
+        window.removeEventListener('focus', handleSync);
+      };
     } else {
       setElapsedSeconds(0);
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
   }, [isRunning, startTimestamp, targetDurationSec]);
 
   // Start Count-up or Countdown Timer
   const startTimer = (durationSeconds: number | null = null) => {
     soundManager.playClick();
     const now = Date.now();
+    hasChimedRef.current = false;
     setStartTimestamp(now);
     setTargetDurationSec(durationSeconds);
     setIsRunning(true);
