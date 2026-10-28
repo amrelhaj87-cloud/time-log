@@ -125,7 +125,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
 
   // Distribution & Balance Calculation across the 5 tags
   const tagStats = useMemo(() => {
-    const counts: Record<TagCode, number> = { '': 0, E: 0, V: 0, SC: 0, S: 0, R: 0, W: 0, SL: 0 };
+    const counts: Record<TagCode, number> = { '': 0, E: 0, V: 0, SC: 0, S: 0, R: 0, SL: 0 };
     let totalActive = 0;
     let withoutTagCount = 0;
 

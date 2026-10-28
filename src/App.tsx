@@ -68,6 +68,26 @@ export default function App() {
   });
   const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
 
+    // 1. Core Date & Data State
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [weekStart, setWeekStart] = useState<Date>(() => {
+    const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
+    return startOfWeekFor(new Date(), initialDay);
+  });
+  const [weekData, setWeekData] = useState<WeekData>(() => {
+    const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
+    const ws = startOfWeekFor(new Date(), initialDay);
+    const days: Record<string, DayData> = {};
+    for (let i = 0; i < 7; i++) {
+      days[isoDate(addDays(ws, i))] = emptyDay();
+    }
+    return { days };
+  });
+
+  const [saveStatus, setSaveStatus] = useState<string>('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+
   // Real-time synchronization of Brain Dump / Todo Inbox with Firestore
   useEffect(() => {
     if (!db || !currentUser) return;
@@ -93,26 +113,6 @@ export default function App() {
       console.warn('Failed to attach todo inbox listener:', err);
     }
   }, [currentUser]);
-
-    // 1. Core Date & Data State
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [weekStart, setWeekStart] = useState<Date>(() => {
-    const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
-    return startOfWeekFor(new Date(), initialDay);
-  });
-  const [weekData, setWeekData] = useState<WeekData>(() => {
-    const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
-    const ws = startOfWeekFor(new Date(), initialDay);
-    const days: Record<string, DayData> = {};
-    for (let i = 0; i < 7; i++) {
-      days[isoDate(addDays(ws, i))] = emptyDay();
-    }
-    return { days };
-  });
-
-  const [saveStatus, setSaveStatus] = useState<string>('');
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
 
   // 2. Preferences State
   const [lang, setLang] = useState<'ar' | 'en'>(() => {
@@ -643,7 +643,7 @@ export default function App() {
   };
 
   const handlePromoteTodoToGolden = (todo: TodoItem) => {
-    handleChangeGoldenGoal({ text: todo.text, done: false, tag: todo.tag || '' });
+    handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode });
     const updated = todoInbox.map((item) =>
       item.id === todo.id ? { ...item, done: true } : item
     );
@@ -655,7 +655,7 @@ export default function App() {
   const handlePromoteTodoToQuad = (todo: TodoItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4') => {
     const existingList = currentDayData.priorities[quadKey] || [];
     const cleanList = existingList.filter((item) => item.text.trim() !== '');
-    const updatedList = [...cleanList, { text: todo.text, done: false, tag: todo.tag || '' }];
+    const updatedList = [...cleanList, { text: todo.text, done: false, tag: (todo.tag || '') as TagCode }];
     handleChangePriorities(quadKey, updatedList);
     const updated = todoInbox.map((item) =>
       item.id === todo.id ? { ...item, done: true } : item
