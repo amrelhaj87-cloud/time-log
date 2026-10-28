@@ -631,9 +631,18 @@ export default function App() {
   };
 
   const handleToggleTodo = (id: string) => {
-    const updated = todoInbox.map((item) =>
-      item.id === id ? { ...item, done: !item.done } : item
-    );
+    const updated = todoInbox.map((item) => {
+      if (item.id === id) {
+        const nextDone = !item.done;
+        return {
+          ...item,
+          done: nextDone,
+          promotedTo: nextDone ? item.promotedTo : undefined,
+          promotedQuad: nextDone ? item.promotedQuad : undefined
+        };
+      }
+      return item;
+    });
     saveTodoInbox(updated);
   };
 
@@ -645,7 +654,14 @@ export default function App() {
   const handlePromoteTodoToGolden = (todo: TodoItem) => {
     handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode });
     const updated = todoInbox.map((item) =>
-      item.id === todo.id ? { ...item, done: true } : item
+      item.id === todo.id
+        ? {
+            ...item,
+            done: true,
+            promotedTo: 'golden' as const,
+            promotedAt: Date.now()
+          }
+        : item
     );
     saveTodoInbox(updated);
     setSaveStatus(lang === 'ar' ? '⭐ تم التعيين كهدف ذهبي لليوم!' : '⭐ Promoted to Golden Goal for today!');
@@ -655,15 +671,52 @@ export default function App() {
   const handlePromoteTodoToQuad = (todo: TodoItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4') => {
     const existingList = currentDayData.priorities[quadKey] || [];
     const cleanList = existingList.filter((item) => item.text.trim() !== '');
+
+    // Prevent duplicate: check if task text is already present in this quad
+    const isAlreadyInQuad = cleanList.some(
+      (item) => item.text.trim().toLowerCase() === todo.text.trim().toLowerCase()
+    );
+    if (isAlreadyInQuad) {
+      // Mark as promoted in inbox if not marked yet
+      const updated = todoInbox.map((item) =>
+        item.id === todo.id
+          ? {
+              ...item,
+              done: true,
+              promotedTo: 'quad' as const,
+              promotedQuad: quadKey,
+              promotedAt: Date.now()
+            }
+          : item
+      );
+      saveTodoInbox(updated);
+      setSaveStatus(
+        lang === 'ar'
+          ? `⚠️ المهمة موجودة بالفعل في مربع (${quadKey.toUpperCase()})`
+          : `⚠️ Task is already in (${quadKey.toUpperCase()})`
+      );
+      setTimeout(() => setSaveStatus(''), 3000);
+      return;
+    }
+
     const updatedList = [...cleanList, { text: todo.text, done: false, tag: (todo.tag || '') as TagCode }];
     handleChangePriorities(quadKey, updatedList);
+
     const updated = todoInbox.map((item) =>
-      item.id === todo.id ? { ...item, done: true } : item
+      item.id === todo.id
+        ? {
+            ...item,
+            done: true,
+            promotedTo: 'quad' as const,
+            promotedQuad: quadKey,
+            promotedAt: Date.now()
+          }
+        : item
     );
     saveTodoInbox(updated);
     setSaveStatus(
       lang === 'ar'
-        ? `🎯 تم التوجيه إلى مربع الأولويات (${quadKey.toUpperCase()}) بنجاح!`
+        ? `🎯 تم النقل إلى مصفوفة الأولويات (${quadKey.toUpperCase()}) بنجاح!`
         : `🎯 Sent to Priority Quadrant (${quadKey.toUpperCase()}) successfully!`
     );
     setTimeout(() => setSaveStatus(''), 3000);

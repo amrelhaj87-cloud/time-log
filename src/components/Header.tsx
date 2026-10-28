@@ -263,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({
                 v3.8
               </span>
             </div>
-            <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden xl:inline mt-0.5 whitespace-nowrap">
+            <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden md:inline mt-0.5 whitespace-nowrap">
               {lang === 'ar' ? 'نظام تسجيل الوقت الذكي' : 'Productivity Tracker'}
             </span>
           </div>
@@ -484,15 +484,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Live Real-time Clock on Mobile */}
-        <div
-          className="flex md:hidden bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/90 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300 px-2 py-1.5 rounded-lg text-xs font-mono font-bold shadow-xs items-center gap-1 select-none shrink-0"
-          title={lang === 'ar' ? 'الوقت الحالي المباشر' : 'Current Live Time'}
-        >
-          <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="tracking-tight whitespace-nowrap text-[11px]">{liveTime}</span>
-        </div>
-
         {/* Brain Dump / Inbox Button on Mobile */}
         {onOpenTodoInbox && (
           <button
@@ -573,7 +564,7 @@ export const Header: React.FC<HeaderProps> = ({
           title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج (إخفاء شريط الأسبوع)' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي (إظهار شريط الأسبوع)' : 'Detailed View')}
         >
           <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-          <span className="hidden xl:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
+          <span className="hidden md:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
         </button>
 
         {/* Brain Dump & Todo Inbox Button on Desktop */}
@@ -585,7 +576,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={lang === 'ar' ? 'صندوق تفريغ الأفكار والمهام (Brain Dump)' : 'Brain Dump & Tasks'}
           >
             <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="hidden xl:inline whitespace-nowrap">{lang === 'ar' ? 'الأفكار والمهام' : 'Inbox'}</span>
+            <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الأفكار والمهام' : 'Inbox'}</span>
             {typeof todoCount === 'number' && todoCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-mono font-bold flex items-center justify-center">
                 {todoCount}
@@ -602,7 +593,7 @@ export const Header: React.FC<HeaderProps> = ({
           title={lang === 'ar' ? 'الإعدادات والتفضيلات' : 'Settings & Preferences'}
         >
           <Settings className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="hidden xl:inline whitespace-nowrap">{lang === 'ar' ? 'الإعدادات' : 'Settings'}</span>
+          <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الإعدادات' : 'Settings'}</span>
         </button>
 
         {/* User Auth Direct Action */}

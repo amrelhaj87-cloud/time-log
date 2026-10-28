@@ -512,8 +512,19 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                           {/* Distinct Status Badges for completed / transferred tasks */}
                           {isPromotedToQuad && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/60 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 shadow-2xs">
-                              <span>🎯 {lang === 'ar' ? 'منقول إلى مصفوفة الأولويات' : 'Sent to Priority Matrix'}:</span>
+                              <span>🎯 {lang === 'ar' ? 'نُقل إلى مصفوفة الأولويات' : 'Sent to Priorities'}:</span>
                               <span className="font-mono uppercase font-black">{item.promotedQuad}</span>
+                              {item.promotedQuad && (
+                                <span className="opacity-80 font-normal">
+                                  ({item.promotedQuad === 'q1'
+                                    ? (lang === 'ar' ? 'عاجل ومهم' : 'Urgent')
+                                    : item.promotedQuad === 'q2'
+                                    ? (lang === 'ar' ? 'مهم وغير عاجل' : 'Important')
+                                    : item.promotedQuad === 'q3'
+                                    ? (lang === 'ar' ? 'عاجل وغير مهم' : 'Delegate')
+                                    : (lang === 'ar' ? 'غير عاجل وغير مهم' : 'Eliminate')})
+                                </span>
+                              )}
                             </span>
                           )}
 
