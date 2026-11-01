@@ -32,6 +32,8 @@ export type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
 interface FocusPomodoroViewProps {
   isOpen: boolean;
   onClose: () => void;
+  onRequestOpen?: () => void;
+  onTimerStateChange?: (state: { isRunning: boolean; timeFormatted: string; mode: PomodoroMode }) => void;
   onLogToCurrentHour?: (text: string, minutes: number, tag: TagCode) => void;
   goldenGoalText?: string;
   themeMode?: ThemeMode;
@@ -51,6 +53,8 @@ const POMO_TAG_KEYS: TagCode[] = ['E', 'V', 'R', 'S', 'SC'];
 export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   isOpen,
   onClose,
+  onRequestOpen,
+  onTimerStateChange,
   onLogToCurrentHour,
   goldenGoalText,
   themeMode = 'light',
@@ -197,15 +201,44 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
-  // Timer Tick with wall-clock calculation, Web Worker & visibilitychange resilience
-  useEffect(() => {
-    if (!isOpen) {
-      setIsRunning(false);
-      ambientAudio.stop();
-      endTimeRef.current = null;
-      return;
+  // Handle Session Completion
+  const handleTimerFinish = () => {
+    setIsRunning(false);
+    ambientAudio.stop();
+    endTimeRef.current = null;
+    soundManager.playTimerCompleteChime();
+
+    if (!isOpen && onRequestOpen) {
+      onRequestOpen();
     }
 
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch {}
+
+    const completedMins = Math.round(totalSeconds / 60);
+    setLastCompletedMins(completedMins);
+
+    if (mode === 'focus') {
+      setShowCompletedPrompt(true);
+      // Advance session count
+      const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
+      setSessionCount(nextSession);
+    } else {
+      // Finished break -> return to focus
+      setMode('focus');
+      const secs = focusDurationMin * 60;
+      setTotalSeconds(secs);
+      setTimeLeft(secs);
+    }
+  };
+
+  // Timer Tick with wall-clock calculation, Web Worker & visibilitychange resilience (continues in background when minimized)
+  useEffect(() => {
     if (!isRunning) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -268,10 +301,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     };
   }, [isRunning, isOpen]);
 
-  // Dynamic tab title displaying countdown
+  // Dynamic tab title displaying countdown (even when minimized)
   useEffect(() => {
     const originalTitle = document.title;
-    if (isRunning && isOpen) {
+    if (isRunning) {
       const mins = Math.floor(timeLeft / 60);
       const secs = timeLeft % 60;
       const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -281,38 +314,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     return () => {
       document.title = originalTitle;
     };
-  }, [isRunning, isOpen, timeLeft, mode]);
-
-  // Handle Session Completion
-  const handleTimerFinish = () => {
-    setIsRunning(false);
-    endTimeRef.current = null;
-    soundManager.playTimerCompleteChime();
-
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch {}
-
-    const completedMins = Math.round(totalSeconds / 60);
-    setLastCompletedMins(completedMins);
-
-    if (mode === 'focus') {
-      setShowCompletedPrompt(true);
-      // Advance session count
-      const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
-      setSessionCount(nextSession);
-    } else {
-      // Finished break -> return to focus
-      setMode('focus');
-      const secs = focusDurationMin * 60;
-      setTotalSeconds(secs);
-      setTimeLeft(secs);
-    }
-  };
+  }, [isRunning, timeLeft, mode]);
 
   // Toggle Fullscreen
   const toggleFullscreen = async () => {
@@ -347,7 +349,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
         if (showCompletedPrompt) {
           setShowCompletedPrompt(false);
         } else {
-          ambientAudio.stop();
+          if (!isRunning) {
+            ambientAudio.stop();
+          }
           onClose();
         }
       }
@@ -357,7 +361,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, showCompletedPrompt, isRunning, ambientSound, onClose]);
 
-  // Stop sound on unmount/close
+  // Stop sound on unmount
   useEffect(() => {
     return () => {
       ambientAudio.stop();
@@ -368,6 +372,13 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const timeFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  // Notify parent of running state & formatted countdown for background badge
+  useEffect(() => {
+    if (onTimerStateChange) {
+      onTimerStateChange({ isRunning, timeFormatted, mode });
+    }
+  }, [isRunning, timeFormatted, mode, onTimerStateChange]);
 
   // Progress Calculation
   const progressPercent = totalSeconds > 0 ? ((totalSeconds - timeLeft) / totalSeconds) * 100 : 0;
@@ -424,9 +435,11 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       <div
         className={`absolute inset-0 bg-radial ${themeStyles.bgGlow} pointer-events-none transition-all duration-700`}
         onClick={(e) => {
-          // Close if clicking outside the card
+          // Close/minimize if clicking outside the card
           if (e.target === e.currentTarget && !showCompletedPrompt) {
-            ambientAudio.stop();
+            if (!isRunning) {
+              ambientAudio.stop();
+            }
             onClose();
           }
         }}
@@ -586,15 +599,23 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
               {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Exit Focus Mode Button */}
+            {/* Exit / Minimize Focus Mode Button */}
             <button
               type="button"
               onClick={() => {
-                ambientAudio.stop();
+                if (!isRunning) {
+                  ambientAudio.stop();
+                }
                 onClose();
               }}
               className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 transition-all cursor-pointer shadow-2xs"
-              title={t.focusModeExitBtn}
+              title={
+                isRunning
+                  ? lang === 'ar'
+                    ? 'تصغير النافذة (سيستمر المؤقت في الخلفية)'
+                    : 'Minimize (timer keeps running in background)'
+                  : t.focusModeExitBtn
+              }
             >
               <X className="w-3.5 h-3.5" />
             </button>

@@ -263,6 +263,15 @@ export default function App() {
   const [ageModalOpen, setAgeModalOpen] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
+  const [pomoBgState, setPomoBgState] = useState<{
+    isRunning: boolean;
+    timeFormatted: string;
+    mode: 'focus' | 'shortBreak' | 'longBreak';
+  }>({
+    isRunning: false,
+    timeFormatted: '25:00',
+    mode: 'focus'
+  });
 
   // Set HTML dir & lang
   useEffect(() => {
@@ -1302,15 +1311,37 @@ export default function App() {
                       soundManager.playClick();
                       handleToggleFocusMode();
                     }}
-                    title={lang === 'ar' ? (focusModeActive ? 'إيقاف وضع التركيز' : 'فتح مؤقت التركيز (بومودورو)') : (focusModeActive ? 'Exit Focus Mode' : 'Open Focus Timer (Pomodoro)')}
+                    title={
+                      lang === 'ar'
+                        ? pomoBgState.isRunning
+                          ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
+                          : focusModeActive
+                          ? 'إيقاف وضع التركيز'
+                          : 'فتح مؤقت التركيز (بومودورو)'
+                        : pomoBgState.isRunning
+                        ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
+                        : focusModeActive
+                        ? 'Exit Focus Mode'
+                        : 'Open Focus Timer (Pomodoro)'
+                    }
                     className={`hidden md:inline-flex px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      focusModeActive
+                      focusModeActive || pomoBgState.isRunning
                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
                         : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
                     }`}
                   >
-                    <Target className={`w-3.5 h-3.5 ${focusModeActive ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                    <Target
+                      className={`w-3.5 h-3.5 ${
+                        focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
+                      }`}
+                    />
                     <span>{t.focusModeBtnText}</span>
+                    {pomoBgState.isRunning && (
+                      <span className="inline-flex items-center gap-1 bg-white/20 px-1.5 py-0.5 rounded-md font-mono text-[11px] font-black tracking-tight text-white">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+                        <span>{pomoBgState.timeFormatted}</span>
+                      </span>
+                    )}
                   </button>
                 )}
               </div>
@@ -1347,15 +1378,37 @@ export default function App() {
                       soundManager.playClick();
                       handleToggleFocusMode();
                     }}
-                    title={lang === 'ar' ? (focusModeActive ? 'إيقاف وضع التركيز' : 'فتح مؤقت التركيز (بومودورو)') : (focusModeActive ? 'Exit Focus Mode' : 'Open Focus Timer (Pomodoro)')}
+                    title={
+                      lang === 'ar'
+                        ? pomoBgState.isRunning
+                          ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
+                          : focusModeActive
+                          ? 'إيقاف وضع التركيز'
+                          : 'فتح مؤقت التركيز (بومودورو)'
+                        : pomoBgState.isRunning
+                        ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
+                        : focusModeActive
+                        ? 'Exit Focus Mode'
+                        : 'Open Focus Timer (Pomodoro)'
+                    }
                     className={`flex-1 justify-center px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                      focusModeActive
+                      focusModeActive || pomoBgState.isRunning
                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
                         : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
                     }`}
                   >
-                    <Target className={`w-3.5 h-3.5 ${focusModeActive ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                    <Target
+                      className={`w-3.5 h-3.5 ${
+                        focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
+                      }`}
+                    />
                     <span>{t.focusModeBtnText}</span>
+                    {pomoBgState.isRunning && (
+                      <span className="inline-flex items-center gap-1 bg-white/20 px-1.5 py-0.5 rounded-md font-mono text-[11px] font-black tracking-tight text-white">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+                        <span>{pomoBgState.timeFormatted}</span>
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -1617,6 +1670,8 @@ export default function App() {
       <FocusPomodoroView
         isOpen={focusModeActive}
         onClose={() => handleToggleFocusMode(false)}
+        onRequestOpen={() => handleToggleFocusMode(true)}
+        onTimerStateChange={setPomoBgState}
         onLogToCurrentHour={handleLogPomodoroToCurrentHour}
         goldenGoalText={currentDayData.goldenGoal.text}
         themeMode={themeMode}
