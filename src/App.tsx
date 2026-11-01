@@ -31,7 +31,6 @@ import { TagRingsOverview } from './components/TagRingsOverview';
 import { HoursList } from './components/HoursList';
 import { PrioritiesSection } from './components/PrioritiesSection';
 import { TagLegend } from './components/TagLegend';
-import { TimerBar } from './components/TimerBar';
 import { SaveToast } from './components/SaveToast';
 
 // Modals
@@ -43,7 +42,6 @@ import { ExportModal } from './components/Modals/ExportModal';
 import { SleepOnboardModal } from './components/Modals/SleepOnboardModal';
 import { AgeSettingsModal } from './components/Modals/AgeSettingsModal';
 import { PwaModal } from './components/Modals/PwaModal';
-import { TimerModal } from './components/Modals/TimerModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { GuideModal } from './components/Modals/GuideModal';
 import { FocusPomodoroView } from './components/FocusPomodoroView';
@@ -265,7 +263,6 @@ export default function App() {
   const [ageModalOpen, setAgeModalOpen] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
-  const [timerModalRange, setTimerModalRange] = useState<{ start: Date; end: Date } | null>(null);
 
   // Set HTML dir & lang
   useEffect(() => {
@@ -906,7 +903,6 @@ export default function App() {
   useEffect(() => {
     const handleCloseTopModal = (): boolean => {
       if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
-      if (timerModalRange) { setTimerModalRange(null); return true; }
       if (authModalOpen) { setAuthModalOpen(false); return true; }
       if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
       if (guideModalOpen) { setGuideModalOpen(false); return true; }
@@ -970,7 +966,6 @@ export default function App() {
     ageModalOpen,
     pwaModalOpen,
     guideModalOpen,
-    timerModalRange,
     focusModeActive
   ]);
 
@@ -1274,16 +1269,16 @@ export default function App() {
         <section className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-3.5 md:p-4 shadow-xs">
           {/* Hours Section Header - Responsive Layout for Mobile vs Desktop/iPad */}
           <div className="flex flex-col gap-2 pb-2.5 mb-3 border-b border-[var(--line)]">
-            {/* ROW 1: Hours Title + Streak 🔥 (in between) + [Desktop: Birthday 🎂] + 0 of 24 Logged Count */}
+            {/* ROW 1: Hours Title + Streak 🔥 + [Desktop: Focus Mode 🎯] + [Desktop: Birthday 🎂] + 0 of 24 Logged Count */}
             <div className="flex items-center justify-between gap-2 w-full">
-              {/* Right Side: Title + Streak Badge in between */}
+              {/* Right Side: Title + Streak Badge + Desktop Focus Mode Button */}
               <div className="flex items-center gap-2 shrink-0">
                 <h2 className="font-bold text-sm sm:text-base text-[var(--ink)] flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0"></span>
                   <span>{t.hoursTitle}</span>
                 </h2>
 
-                {/* Streak Badge positioned right between Title and Logged count */}
+                {/* Streak Badge positioned right between Title and Focus/Logged */}
                 {showStreakBadge && (
                   <div
                     className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs border transition-all ${
@@ -1297,6 +1292,26 @@ export default function App() {
                     <span className="font-mono">{dailyStreak}</span>
                     <span className="text-[10px] font-normal">{lang === 'ar' ? 'يوم' : 'd'}</span>
                   </div>
+                )}
+
+                {/* Unified Focus / Pomodoro Timer Button on Desktop/iPad */}
+                {isToday && showFocusModeButton && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playClick();
+                      handleToggleFocusMode();
+                    }}
+                    title={lang === 'ar' ? (focusModeActive ? 'إيقاف وضع التركيز' : 'فتح مؤقت التركيز (بومودورو)') : (focusModeActive ? 'Exit Focus Mode' : 'Open Focus Timer (Pomodoro)')}
+                    className={`hidden md:inline-flex px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                      focusModeActive
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
+                        : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
+                    }`}
+                  >
+                    <Target className={`w-3.5 h-3.5 ${focusModeActive ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                    <span>{t.focusModeBtnText}</span>
+                  </button>
                 )}
               </div>
 
@@ -1321,55 +1336,44 @@ export default function App() {
               </div>
             </div>
 
-            {/* ROW 2: Start Timer Bar (Full Width, on Desktop/iPad includes Focus Mode button next to start timer) */}
-            {isToday && (
-              <div className="w-full">
-                <TimerBar
-                  onTimerComplete={(start, end) => setTimerModalRange({ start, end })}
-                  showFocusButton={showFocusModeButton}
-                  isFocusMode={focusModeActive}
-                  onToggleFocusMode={() => handleToggleFocusMode()}
-                  lang={lang}
-                />
+            {/* ROW 2: Mobile-Only Row (Hidden on Desktop/iPad where controls are integrated into Row 1) */}
+            {((isToday && showFocusModeButton) || ageDisplayValue) && (
+              <div className="flex md:hidden items-center justify-between gap-2 pt-1 border-t border-dashed border-[var(--line)]">
+                {/* Unified Focus Mode Button on mobile */}
+                {isToday && showFocusModeButton && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playClick();
+                      handleToggleFocusMode();
+                    }}
+                    title={lang === 'ar' ? (focusModeActive ? 'إيقاف وضع التركيز' : 'فتح مؤقت التركيز (بومودورو)') : (focusModeActive ? 'Exit Focus Mode' : 'Open Focus Timer (Pomodoro)')}
+                    className={`flex-1 justify-center px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      focusModeActive
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
+                        : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
+                    }`}
+                  >
+                    <Target className={`w-3.5 h-3.5 ${focusModeActive ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                    <span>{t.focusModeBtnText}</span>
+                  </button>
+                )}
+
+                {/* Birthday / Age Display after Focus Mode on mobile */}
+                {ageDisplayValue && (
+                  <button
+                    type="button"
+                    onClick={() => setSettingsModalOpen(true)}
+                    className="bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200/90 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 select-none shrink-0 transition-all"
+                    title={lang === 'ar' ? `العمر: ${ageDisplayValue} ${ageUnit} (انقر للإعدادات)` : `Age: ${ageDisplayValue} ${ageUnit} (Click for settings)`}
+                  >
+                    <Cake className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span className="font-bold font-mono text-[var(--ink)]">{ageDisplayValue}</span>
+                    <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">{ageUnit}</span>
+                  </button>
+                )}
               </div>
             )}
-
-            {/* ROW 3: Mobile-Only Row (Hidden on Desktop/iPad where controls are integrated into rows 1 & 2) */}
-            <div className="flex md:hidden items-center gap-2 pt-1 border-t border-dashed border-[var(--line)]">
-              {/* Focus Mode Button first on mobile */}
-              {showFocusModeButton && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundManager.playClick();
-                    handleToggleFocusMode();
-                  }}
-                  title={lang === 'ar' ? (focusModeActive ? 'إيقاف وضع التركيز' : 'تفعيل وضع التركيز (بومودورو)') : (focusModeActive ? 'Exit Focus Mode' : 'Enter Focus Mode (Pomodoro)')}
-                  className={`px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                    focusModeActive
-                      ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
-                      : 'bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
-                  }`}
-                >
-                  <Target className={`w-3.5 h-3.5 ${focusModeActive ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'}`} />
-                  <span>{t.focusModeBtnText}</span>
-                </button>
-              )}
-
-              {/* Birthday / Age Display after Focus Mode on mobile */}
-              {ageDisplayValue && (
-                <button
-                  type="button"
-                  onClick={() => setSettingsModalOpen(true)}
-                  className="bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200/90 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 select-none shrink-0 transition-all"
-                  title={lang === 'ar' ? `العمر: ${ageDisplayValue} ${ageUnit} (انقر للإعدادات)` : `Age: ${ageDisplayValue} ${ageUnit} (Click for settings)`}
-                >
-                  <Cake className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span className="font-bold font-mono text-[var(--ink)]">{ageDisplayValue}</span>
-                  <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">{ageUnit}</span>
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Focus Mode Banner (when active and today) */}
@@ -1606,25 +1610,6 @@ export default function App() {
       <GuideModal
         isOpen={guideModalOpen}
         onClose={() => setGuideModalOpen(false)}
-        lang={lang}
-      />
-
-      <TimerModal
-        isOpen={!!timerModalRange}
-        onClose={() => setTimerModalRange(null)}
-        timerRange={timerModalRange}
-        onSave={(desc, chosenTag) => {
-          if (!timerModalRange) return;
-          const startHour = timerModalRange.start.getHours();
-          const endHour = timerModalRange.end.getHours();
-          HOURS_LIST.forEach((key) => {
-            const h = HOUR_TO_24[key];
-            if (h >= startHour && h <= endHour) {
-              handleChangeHour(key, desc, chosenTag);
-            }
-          });
-        }}
-        hideSleepTag={sleepSettings.enabled}
         lang={lang}
       />
 
