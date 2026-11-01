@@ -41,7 +41,7 @@ interface FocusPomodoroViewProps {
 }
 
 const PRESET_DURATIONS: Record<PomodoroMode, number[]> = {
-  focus: [25, 45, 50, 60],
+  focus: [25, 45, 60],
   shortBreak: [5, 10],
   longBreak: [15, 20, 30]
 };
@@ -85,10 +85,12 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [showAmbientMenu, setShowAmbientMenu] = useState<boolean>(false);
 
-  // Fullscreen State
+  // Fullscreen & Custom Duration State
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showCompletedPrompt, setShowCompletedPrompt] = useState<boolean>(false);
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
+  const [isEditingCustomMin, setIsEditingCustomMin] = useState<boolean>(false);
+  const [customMinInput, setCustomMinInput] = useState<string>('30');
 
   const timerRef = useRef<number | null>(null);
   const endTimeRef = useRef<number | null>(null);
@@ -129,6 +131,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const handleSwitchMode = (newMode: PomodoroMode, customMins?: number) => {
     setMode(newMode);
     setIsRunning(false);
+    setIsEditingCustomMin(false);
     ambientAudio.stop();
     endTimeRef.current = null;
     setShowCompletedPrompt(false);
@@ -136,6 +139,17 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     const secs = targetMins * 60;
     setTotalSeconds(secs);
     setTimeLeft(secs);
+  };
+
+  // Apply custom focus duration in minutes
+  const handleApplyCustomMinutes = () => {
+    const parsed = parseInt(customMinInput.trim(), 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 240) {
+      setFocusDurationMin(parsed);
+      handleSwitchMode('focus', parsed);
+    } else {
+      setIsEditingCustomMin(false);
+    }
   };
 
   // Toggle Play / Pause with Ambient Audio syncing & automatic sound controls popup
@@ -634,7 +648,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           {mode === 'focus' ? (
             <div className="flex items-center gap-1.5">
               {PRESET_DURATIONS.focus.map((mins) => {
-                const isSelected = focusDurationMin === mins;
+                const isSelected = focusDurationMin === mins && !isEditingCustomMin;
                 return (
                   <button
                     key={mins}
@@ -657,6 +671,60 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                   </button>
                 );
               })}
+
+              {/* Manual Custom Duration Input / Button */}
+              {isEditingCustomMin && !isRunning ? (
+                <div className="flex items-center gap-1 bg-[var(--bg)] border border-indigo-500 rounded-lg px-1.5 py-0.5 shadow-2xs">
+                  <input
+                    type="number"
+                    min={1}
+                    max={240}
+                    autoFocus
+                    value={customMinInput}
+                    onChange={(e) => setCustomMinInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyCustomMinutes();
+                      } else if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        setIsEditingCustomMin(false);
+                      }
+                    }}
+                    onBlur={handleApplyCustomMinutes}
+                    placeholder="30"
+                    className="w-10 text-center text-[11px] font-mono font-bold bg-transparent text-[var(--ink)] outline-hidden"
+                  />
+                  <span className="text-[10px] font-mono text-[var(--ink-soft)]">m</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isRunning}
+                  onClick={() => {
+                    if (isRunning) return;
+                    setCustomMinInput(String(focusDurationMin));
+                    setIsEditingCustomMin(true);
+                  }}
+                  title={lang === 'ar' ? 'إدخال مدة مخصصة بالدقائق (1 - 240 دقيقة)' : 'Enter custom duration in minutes (1 - 240m)'}
+                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-1 ${
+                    !PRESET_DURATIONS.focus.includes(focusDurationMin)
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 shadow-2xs font-mono'
+                      : isRunning
+                      ? 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-faint)] cursor-not-allowed opacity-50'
+                      : 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:border-indigo-400 cursor-pointer'
+                  }`}
+                >
+                  <span>✏️</span>
+                  <span>
+                    {!PRESET_DURATIONS.focus.includes(focusDurationMin)
+                      ? `${focusDurationMin}m`
+                      : lang === 'ar'
+                      ? 'مخصص'
+                      : 'Custom'}
+                  </span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="text-[11px] font-medium text-[var(--ink-soft)] flex items-center gap-1">
@@ -694,7 +762,24 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
           {/* Center Digital Display & Status */}
           <div className="absolute flex flex-col items-center justify-center text-center px-4">
-            <span className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-[var(--ink)] drop-shadow-2xs">
+            <span
+              onClick={() => {
+                if (mode === 'focus' && !isRunning) {
+                  setCustomMinInput(String(focusDurationMin));
+                  setIsEditingCustomMin(true);
+                }
+              }}
+              title={
+                mode === 'focus' && !isRunning
+                  ? lang === 'ar'
+                    ? 'انقر لتحديد مدة مخصصة بالدقائق'
+                    : 'Click to set custom minutes'
+                  : undefined
+              }
+              className={`text-4xl sm:text-5xl font-black font-mono tracking-tight text-[var(--ink)] drop-shadow-2xs ${
+                mode === 'focus' && !isRunning ? 'cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors' : ''
+              }`}
+            >
               {timeFormatted}
             </span>
 
