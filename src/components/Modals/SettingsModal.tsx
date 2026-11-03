@@ -48,6 +48,8 @@ interface SettingsModalProps {
   onDisconnectGCal?: () => void;
   showFocusModeButton?: boolean;
   onToggleShowFocusModeButton?: (enabled: boolean) => void;
+  showPrioritiesSection?: boolean;
+  onToggleShowPrioritiesSection?: (enabled: boolean) => void;
   isCalSyncConnected: boolean;
   onConnectGCal: () => void;
   calSyncEnabled: boolean;
@@ -83,8 +85,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleAgeBadge,
   currentUserEmail,
   onDisconnectGCal,
-  showFocusModeButton = true,
+  showFocusModeButton = false,
   onToggleShowFocusModeButton,
+  showPrioritiesSection = false,
+  onToggleShowPrioritiesSection,
   isCalSyncConnected,
   onConnectGCal,
   calSyncEnabled,
@@ -328,7 +332,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <h4 className="font-bold text-xs text-[var(--ink)] block">{t.focusModeLabel}</h4>
                   <span className="text-[11px] text-[var(--ink-soft)]">
-                    {showFocusModeButton ? (lang === 'ar' ? 'مفعل (يظهر بجانب التايمر)' : 'Visible') : (lang === 'ar' ? 'معطل (مخفي)' : 'Hidden')}
+                    {showFocusModeButton ? (lang === 'ar' ? 'مفعل (يظهر زر البومودورو)' : 'Visible') : (lang === 'ar' ? 'معطل (مخفي)' : 'Hidden')}
                   </span>
                 </div>
               </div>
@@ -338,6 +342,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className="sr-only peer"
                   checked={showFocusModeButton}
                   onChange={(e) => onToggleShowFocusModeButton?.(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            {/* Priorities & Golden Goal Toggle */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--ink)] block">
+                    {lang === 'ar' ? 'الهدف الذهبي ومصفوفة الأولويات' : 'Golden Goal & Priority Matrix'}
+                  </h4>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {showPrioritiesSection
+                      ? (lang === 'ar' ? 'مفعل (ظاهر أسفل الساعات)' : 'Visible below hours')
+                      : (lang === 'ar' ? 'معطل (مخفي)' : 'Hidden')}
+                  </span>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={showPrioritiesSection}
+                  onChange={(e) => onToggleShowPrioritiesSection?.(e.target.checked)}
                 />
                 <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>

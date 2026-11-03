@@ -200,7 +200,10 @@ export default function App() {
     return localStorage.getItem('showStreakBadge') !== 'false';
   });
   const [showFocusModeButton, setShowFocusModeButton] = useState<boolean>(() => {
-    return localStorage.getItem('showFocusModeButton') !== 'false';
+    return localStorage.getItem('showFocusModeButton') === 'true';
+  });
+  const [showPrioritiesSection, setShowPrioritiesSection] = useState<boolean>(() => {
+    return localStorage.getItem('showPrioritiesSection') === 'true';
   });
   const [focusModeActive, setFocusModeActive] = useState<boolean>(false);
   const [calSyncEnabled, setCalSyncEnabled] = useState<boolean>(() => {
@@ -464,6 +467,7 @@ export default function App() {
       localStorage.setItem('showAgeBadge', String(showAgeBadge));
       localStorage.setItem('showStreakBadge', String(showStreakBadge));
       localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
+      localStorage.setItem('showPrioritiesSection', String(showPrioritiesSection));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
       localStorage.setItem('themeMode', themeMode);
       localStorage.setItem('isDetailedView', String(isDetailedView));
@@ -482,6 +486,7 @@ export default function App() {
               showAgeBadge,
               showStreakBadge,
               showFocusModeButton,
+              showPrioritiesSection,
               calSyncEnabled,
               themeMode,
               isDetailedView,
@@ -494,7 +499,7 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, calSyncEnabled, themeMode, isDetailedView]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showPrioritiesSection, calSyncEnabled, themeMode, isDetailedView]
   );
 
   // Auth State Listener
@@ -532,6 +537,7 @@ export default function App() {
             if (data.showAgeBadge !== undefined) setShowAgeBadge(data.showAgeBadge);
             if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
             if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
+            if (data.showPrioritiesSection !== undefined) setShowPrioritiesSection(data.showPrioritiesSection);
             if (data.calSyncEnabled !== undefined) setCalSyncEnabled(data.calSyncEnabled);
           }
         } catch {}
@@ -552,7 +558,7 @@ export default function App() {
     }
   }, [sleepSettings]);
 
-  // Initial load auto-focus: if no golden goal -> focus golden goal; if golden goal exists -> focus current hour
+  // Initial load auto-focus: if priorities section enabled and no golden goal -> focus golden goal; otherwise -> focus current hour
   const initialStartupFocusDoneRef = useRef(false);
   useEffect(() => {
     if (!isDataLoaded || initialStartupFocusDoneRef.current) return;
@@ -564,17 +570,17 @@ export default function App() {
       const hasGolden = !!(day.goldenGoal && day.goldenGoal.text && day.goldenGoal.text.trim() !== '');
 
       setTimeout(() => {
-        if (!hasGolden) {
+        if (showPrioritiesSection && !hasGolden) {
           const el = document.getElementById('golden-goal-input');
           if (el) {
             el.focus();
+            return;
           }
-        } else {
-          focusCurrentHourInput();
         }
+        focusCurrentHourInput();
       }, 250);
     }
-  }, [isDataLoaded, weekData.days]);
+  }, [isDataLoaded, weekData.days, showPrioritiesSection]);
 
   // Handlers for Hours List
   const handleChangeHour = (key: string, text: string, tag: TagCode) => {
@@ -1468,18 +1474,20 @@ export default function App() {
           />
         </section>
 
-        {/* Priority Matrix & Golden Goal */}
-        <PrioritiesSection
-          goldenGoal={currentDayData.goldenGoal}
-          onChangeGoldenGoal={handleChangeGoldenGoal}
-          priorities={currentDayData.priorities}
-          onChangePriorities={handleChangePriorities}
-          onPromoteToGolden={handlePromoteToGolden}
-          onRollover={handleRollover}
-          onOpenTodoInbox={() => setTodoDrawerOpen(true)}
-          todoCount={todoInbox.filter((t) => !t.done).length}
-          lang={lang}
-        />
+        {/* Priority Matrix & Golden Goal (Optional / Configurable from Settings) */}
+        {showPrioritiesSection && (
+          <PrioritiesSection
+            goldenGoal={currentDayData.goldenGoal}
+            onChangeGoldenGoal={handleChangeGoldenGoal}
+            priorities={currentDayData.priorities}
+            onChangePriorities={handleChangePriorities}
+            onPromoteToGolden={handlePromoteToGolden}
+            onRollover={handleRollover}
+            onOpenTodoInbox={() => setTodoDrawerOpen(true)}
+            todoCount={todoInbox.filter((t) => !t.done).length}
+            lang={lang}
+          />
+        )}
 
         {/* Tag Categories Legend */}
         <TagLegend lang={lang} hideSleepTag={sleepSettings.enabled} />
@@ -1546,6 +1554,12 @@ export default function App() {
           setShowFocusModeButton(en);
           localStorage.setItem('showFocusModeButton', en ? 'true' : 'false');
           if (!en) setFocusModeActive(false);
+          syncPreferences(currentUser);
+        }}
+        showPrioritiesSection={showPrioritiesSection}
+        onToggleShowPrioritiesSection={(en) => {
+          setShowPrioritiesSection(en);
+          localStorage.setItem('showPrioritiesSection', en ? 'true' : 'false');
           syncPreferences(currentUser);
         }}
         isCalSyncConnected={!!gcalAccessToken}
