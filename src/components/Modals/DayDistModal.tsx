@@ -1,5 +1,5 @@
 import React from 'react';
-import { TagCode } from '../../types';
+import { TagCode, TagTargets } from '../../types';
 import { TAGS_CONFIG, STRINGS, DAY_NAMES, MONTH_NAMES } from '../../constants/config';
 import { X, PieChart } from 'lucide-react';
 
@@ -13,6 +13,7 @@ interface DayDistModalProps {
   totalSlots: number;
   loggedTotal: number;
   hideSleepTag?: boolean;
+  tagTargets?: TagTargets;
   lang: 'ar' | 'en';
 }
 
@@ -26,6 +27,7 @@ export const DayDistModal: React.FC<DayDistModalProps> = ({
   totalSlots,
   loggedTotal,
   hideSleepTag = false,
+  tagTargets,
   lang
 }) => {
   const t = STRINGS[lang];
@@ -130,21 +132,53 @@ export const DayDistModal: React.FC<DayDistModalProps> = ({
           </div>
 
           {/* Legend Items */}
-          <div className="flex flex-col gap-1.5 min-w-[160px] text-xs font-semibold">
-            {segments.map((seg) => (
-              <div key={seg.key} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-3 h-3 rounded-md shrink-0 border border-black/5"
-                    style={{ backgroundColor: seg.color }}
-                  />
-                  <span className="truncate">{seg.label}</span>
+          <div className="flex flex-col gap-1.5 min-w-[160px] text-xs font-semibold flex-1">
+            {segments.map((seg) => {
+              const targetQuota = tagTargets && seg.key in tagTargets
+                ? tagTargets[seg.key as keyof TagTargets]
+                : undefined;
+              const quotaPct = targetQuota && targetQuota > 0
+                ? Math.round((seg.count / targetQuota) * 100)
+                : undefined;
+
+              return (
+                <div key={seg.key} className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-3 h-3 rounded-md shrink-0 border border-black/5"
+                        style={{ backgroundColor: seg.color }}
+                      />
+                      <span className="truncate">{seg.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-mono text-[11px] text-[var(--ink)] font-bold">
+                        {seg.count}h
+                      </span>
+                      {targetQuota !== undefined && (
+                        <span className="text-[10px] font-mono text-[var(--ink-soft)] bg-[var(--bg)] px-1 py-0.2 rounded border border-[var(--line)]">
+                          {quotaPct}% {lang === 'ar' ? 'من الهدف' : 'of goal'}
+                        </span>
+                      )}
+                      <span className="font-mono text-[10px] text-[var(--ink-faint)]">
+                        ({seg.pct}%)
+                      </span>
+                    </div>
+                  </div>
+                  {targetQuota !== undefined && targetQuota > 0 && (
+                    <div className="w-full bg-[var(--line)]/50 h-1 rounded-full overflow-hidden ms-5 max-w-[calc(100%-20px)]">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.min(100, (seg.count / targetQuota) * 100)}%`,
+                          backgroundColor: seg.color
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-                <span className="font-mono text-[11px] text-[var(--ink-soft)] font-bold shrink-0">
-                  {seg.count}h ({seg.pct}%)
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

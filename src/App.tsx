@@ -1552,7 +1552,7 @@ export default function App() {
         </div>
         <div className="flex items-center justify-center pt-0.5">
           <span className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-mono px-2.5 py-0.5 rounded-md text-[10px] font-semibold shadow-2xs">
-            {lang === 'ar' ? 'الإصدار v3.8' : 'Version v3.8'}
+            {lang === 'ar' ? 'الإصدار v4.0' : 'Version v4.0'}
           </span>
         </div>
       </footer>
@@ -1666,6 +1666,7 @@ export default function App() {
         totalSlots={activeHoursKeys.length}
         loggedTotal={activeLoggedCount}
         hideSleepTag={sleepSettings.enabled}
+        tagTargets={tagTargets}
         lang={lang}
       />
 
