@@ -10,13 +10,15 @@ import {
   SleepSettings,
   AgeDisplayOpt,
   WeekStartDay,
-  ThemeMode
+  ThemeMode,
+  TagTargets
 } from './types';
 import {
   HOURS_LIST,
   HOUR_TO_24,
   STRINGS,
-  TAGS_CONFIG
+  TAGS_CONFIG,
+  DEFAULT_TAG_TARGETS
 } from './constants/config';
 import { startOfWeekFor, mondayOf, isoDate, addDays, emptyDay, getCurrentHourKey, normalizeWeekData, focusCurrentHourInput } from './utils/dateUtils';
 import { calculateDailyStreak } from './utils/streakUtils';
@@ -46,6 +48,7 @@ import { SettingsModal } from './components/Modals/SettingsModal';
 import { GuideModal } from './components/Modals/GuideModal';
 import { FocusPomodoroView } from './components/FocusPomodoroView';
 import { TodoInboxDrawer } from './components/Modals/TodoInboxDrawer';
+import { MorningNudgeModal } from './components/Modals/MorningNudgeModal';
 
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
@@ -204,6 +207,18 @@ export default function App() {
   });
   const [showPrioritiesSection, setShowPrioritiesSection] = useState<boolean>(() => {
     return localStorage.getItem('showPrioritiesSection') === 'true';
+  });
+  const [morningNudgeEnabled, setMorningNudgeEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('morningNudgeEnabled') === 'true';
+  });
+  const [morningNudgeOpen, setMorningNudgeOpen] = useState<boolean>(false);
+  const [tagTargets, setTagTargets] = useState<TagTargets>(() => {
+    try {
+      const saved = localStorage.getItem('tagTargets');
+      return saved ? { ...DEFAULT_TAG_TARGETS, ...JSON.parse(saved) } : DEFAULT_TAG_TARGETS;
+    } catch {
+      return DEFAULT_TAG_TARGETS;
+    }
   });
   const [focusModeActive, setFocusModeActive] = useState<boolean>(false);
   const [calSyncEnabled, setCalSyncEnabled] = useState<boolean>(() => {
@@ -468,6 +483,8 @@ export default function App() {
       localStorage.setItem('showStreakBadge', String(showStreakBadge));
       localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
       localStorage.setItem('showPrioritiesSection', String(showPrioritiesSection));
+      localStorage.setItem('morningNudgeEnabled', String(morningNudgeEnabled));
+      localStorage.setItem('tagTargets', JSON.stringify(tagTargets));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
       localStorage.setItem('themeMode', themeMode);
       localStorage.setItem('isDetailedView', String(isDetailedView));
@@ -487,6 +504,8 @@ export default function App() {
               showStreakBadge,
               showFocusModeButton,
               showPrioritiesSection,
+              morningNudgeEnabled,
+              tagTargets,
               calSyncEnabled,
               themeMode,
               isDetailedView,
@@ -499,7 +518,7 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showPrioritiesSection, calSyncEnabled, themeMode, isDetailedView]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showPrioritiesSection, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView]
   );
 
   // Auth State Listener
@@ -538,6 +557,15 @@ export default function App() {
             if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
             if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
             if (data.showPrioritiesSection !== undefined) setShowPrioritiesSection(data.showPrioritiesSection);
+            if (data.morningNudgeEnabled !== undefined) setShowPrioritiesSection(data.morningNudgeEnabled);
+            if (data.morningNudgeEnabled !== undefined) {
+              setMorningNudgeEnabled(data.morningNudgeEnabled);
+              localStorage.setItem('morningNudgeEnabled', String(data.morningNudgeEnabled));
+            }
+            if (data.tagTargets) {
+              setTagTargets(data.tagTargets);
+              localStorage.setItem('tagTargets', JSON.stringify(data.tagTargets));
+            }
             if (data.calSyncEnabled !== undefined) setCalSyncEnabled(data.calSyncEnabled);
           }
         } catch {}
@@ -558,29 +586,44 @@ export default function App() {
     }
   }, [sleepSettings]);
 
-  // Initial load auto-focus: if priorities section enabled and no golden goal -> focus golden goal; otherwise -> focus current hour
+  // Handlers for Focus Delegation
+  const delegateStartupFocus = useCallback(() => {
+    const todayStr = isoDate(new Date());
+    const day = weekData.days[todayStr];
+    const hasGolden = !!(day && day.goldenGoal && day.goldenGoal.text && day.goldenGoal.text.trim() !== '');
+
+    setTimeout(() => {
+      if (showPrioritiesSection && !hasGolden) {
+        const el = document.getElementById('golden-goal-input');
+        if (el) {
+          el.focus();
+          return;
+        }
+      }
+      focusCurrentHourInput();
+    }, 150);
+  }, [weekData.days, showPrioritiesSection]);
+
+  // Initial load: Morning Nudge check (between 8:00 AM and 2:00 PM once daily) or fallback to startup focus
   const initialStartupFocusDoneRef = useRef(false);
   useEffect(() => {
     if (!isDataLoaded || initialStartupFocusDoneRef.current) return;
+    initialStartupFocusDoneRef.current = true;
 
-    const todayStr = isoDate(new Date());
-    const day = weekData.days[todayStr];
-    if (day) {
-      initialStartupFocusDoneRef.current = true;
-      const hasGolden = !!(day.goldenGoal && day.goldenGoal.text && day.goldenGoal.text.trim() !== '');
+    const now = new Date();
+    const todayStr = isoDate(now);
+    const curHour = now.getHours();
 
-      setTimeout(() => {
-        if (showPrioritiesSection && !hasGolden) {
-          const el = document.getElementById('golden-goal-input');
-          if (el) {
-            el.focus();
-            return;
-          }
-        }
-        focusCurrentHourInput();
-      }, 250);
+    // Check Morning Nudge eligibility: enabled, between 8 AM and 2 PM, and not seen today
+    const seenKey = `morning_nudge_seen_${todayStr}`;
+    const alreadySeen = localStorage.getItem(seenKey) === 'true';
+
+    if (morningNudgeEnabled && curHour >= 8 && curHour < 14 && !alreadySeen) {
+      setMorningNudgeOpen(true);
+    } else {
+      delegateStartupFocus();
     }
-  }, [isDataLoaded, weekData.days, showPrioritiesSection]);
+  }, [isDataLoaded, morningNudgeEnabled, delegateStartupFocus]);
 
   // Handlers for Hours List
   const handleChangeHour = (key: string, text: string, tag: TagCode) => {
@@ -917,6 +960,13 @@ export default function App() {
   // Unified Android Back-Button (Capacitor) & Desktop Escape key handling
   useEffect(() => {
     const handleCloseTopModal = (): boolean => {
+      if (morningNudgeOpen) {
+        setMorningNudgeOpen(false);
+        const todayStr = isoDate(new Date());
+        localStorage.setItem(`morning_nudge_seen_${todayStr}`, 'true');
+        delegateStartupFocus();
+        return true;
+      }
       if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
       if (authModalOpen) { setAuthModalOpen(false); return true; }
       if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
@@ -1238,6 +1288,7 @@ export default function App() {
             totalSlots={activeHoursKeys.length}
             onOpenCharts={() => setChartsModalOpen(true)}
             hideSleepTag={sleepSettings.enabled}
+            tagTargets={tagTargets}
             lang={lang}
           />
         </div>
@@ -1562,6 +1613,18 @@ export default function App() {
           localStorage.setItem('showPrioritiesSection', en ? 'true' : 'false');
           syncPreferences(currentUser);
         }}
+        morningNudgeEnabled={morningNudgeEnabled}
+        onToggleMorningNudge={(en) => {
+          setMorningNudgeEnabled(en);
+          localStorage.setItem('morningNudgeEnabled', en ? 'true' : 'false');
+          syncPreferences(currentUser);
+        }}
+        tagTargets={tagTargets}
+        onChangeTagTargets={(targets) => {
+          setTagTargets(targets);
+          localStorage.setItem('tagTargets', JSON.stringify(targets));
+          syncPreferences(currentUser);
+        }}
         isCalSyncConnected={!!gcalAccessToken}
         currentUserEmail={currentUser?.email}
         onConnectGCal={handleConnectGCal}
@@ -1705,6 +1768,24 @@ export default function App() {
         onDeleteTodo={handleDeleteTodo}
         onPromoteToGolden={handlePromoteTodoToGolden}
         onPromoteToQuad={handlePromoteTodoToQuad}
+        lang={lang}
+      />
+
+      {/* Morning Nudge Mindful Dialog */}
+      <MorningNudgeModal
+        isOpen={morningNudgeOpen}
+        onClose={() => {
+          setMorningNudgeOpen(false);
+          const todayStr = isoDate(new Date());
+          localStorage.setItem(`morning_nudge_seen_${todayStr}`, 'true');
+          delegateStartupFocus();
+        }}
+        yesterdayData={(() => {
+          const yDate = addDays(new Date(), -1);
+          const yStr = isoDate(yDate);
+          return weekData.days[yStr] || null;
+        })()}
+        tagTargets={tagTargets}
         lang={lang}
       />
 

@@ -1,4 +1,12 @@
-import { TagCode, TagDefinition, PeriodDefinition } from '../types';
+import { TagCode, TagDefinition, PeriodDefinition, TagTargets } from '../types';
+
+export const DEFAULT_TAG_TARGETS: TagTargets = {
+  E: 6,
+  V: 2,
+  R: 3,
+  S: 2,
+  SC: 2
+};
 
 export const HOURS_LIST: string[] = [
   '5am', '6am', '7am', '8am', '9am', '10am', '11am',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TagCode } from '../types';
+import { TagCode, TagTargets } from '../types';
 import { TAGS_CONFIG } from '../constants/config';
 
 interface TagRingsOverviewProps {
@@ -8,6 +8,7 @@ interface TagRingsOverviewProps {
   onOpenCharts: () => void;
   lang: 'ar' | 'en';
   hideSleepTag?: boolean;
+  tagTargets?: TagTargets;
 }
 
 export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
@@ -15,7 +16,8 @@ export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
   totalSlots = 1,
   onOpenCharts,
   lang = 'ar',
-  hideSleepTag = false
+  hideSleepTag = false,
+  tagTargets
 }) => {
   const allCodes: TagCode[] = ['E', 'V', 'R', 'S', 'SC', 'SL'];
   const codes = allCodes.filter((c) => !hideSleepTag || c !== 'SL');
@@ -39,11 +41,16 @@ export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
         const pct = totalSlots > 0 ? count / totalSlots : 0;
         const offset = tcirc * (1 - Math.min(pct, 1));
 
+        const targetQuota = tagTargets && code !== 'SL' && code !== '' ? tagTargets[code as keyof TagTargets] : undefined;
+        const tooltip = targetQuota !== undefined
+          ? `${info.fullTitle[lang]} (${count}h / ${lang === 'ar' ? 'الهدف' : 'Target'}: ${targetQuota}h)`
+          : info.fullTitle[lang];
+
         return (
           <div
             key={code}
             className="flex flex-col items-center justify-center gap-1.5 flex-1 transition-transform duration-150 group-hover:scale-105"
-            title={info.fullTitle[lang]}
+            title={tooltip}
           >
             {/* Bigger & Clearer Circular Progress Ring */}
             <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode } from '../../types';
-import { STRINGS } from '../../constants/config';
+import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, TagTargets } from '../../types';
+import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG } from '../../constants/config';
 import { soundManager } from '../../utils/soundEffects';
 import KofiButton from '../KofiButton';
 import {
@@ -50,6 +50,10 @@ interface SettingsModalProps {
   onToggleShowFocusModeButton?: (enabled: boolean) => void;
   showPrioritiesSection?: boolean;
   onToggleShowPrioritiesSection?: (enabled: boolean) => void;
+  morningNudgeEnabled?: boolean;
+  onToggleMorningNudge?: (enabled: boolean) => void;
+  tagTargets?: TagTargets;
+  onChangeTagTargets?: (targets: TagTargets) => void;
   isCalSyncConnected: boolean;
   onConnectGCal: () => void;
   calSyncEnabled: boolean;
@@ -89,6 +93,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleShowFocusModeButton,
   showPrioritiesSection = false,
   onToggleShowPrioritiesSection,
+  morningNudgeEnabled = false,
+  onToggleMorningNudge,
+  tagTargets = DEFAULT_TAG_TARGETS,
+  onChangeTagTargets,
   isCalSyncConnected,
   onConnectGCal,
   calSyncEnabled,
@@ -373,6 +381,100 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
                 <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
+            </div>
+
+            {/* Morning Nudge Toggle */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                  <Sun className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--ink)] block">
+                    {lang === 'ar' ? 'همسة الصباح (تحليل إنجاز أمس)' : 'Morning Nudge (Yesterday Review)'}
+                  </h4>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {morningNudgeEnabled
+                      ? (lang === 'ar' ? 'مفعل (يظهر بين 8ص و 2م مرة باليوم)' : 'Active (8 AM - 2 PM once daily)')
+                      : (lang === 'ar' ? 'معطل' : 'Disabled')}
+                  </span>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={morningNudgeEnabled}
+                  onChange={(e) => onToggleMorningNudge?.(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            {/* Target Hours Quota / Weights Card */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-xs sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-[var(--ink)]">
+                      {lang === 'ar' ? 'الأوزان اليومية المستهدفة (ساعات لكل جانب)' : 'Daily Target Quotas (Hours per Tag)'}
+                    </h4>
+                    <span className="text-[10px] text-[var(--ink-soft)]">
+                      {lang === 'ar'
+                        ? 'مؤشر استرشادي يساعد في تقييم توازنك اليومي في همسة الصباح والتقارير'
+                        : 'Mindful target guide to assess daily balance in morning nudge & stats'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onChangeTagTargets?.(DEFAULT_TAG_TARGETS)}
+                  className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  {lang === 'ar' ? 'استعادة الافتراضي' : 'Reset Defaults'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 border-t border-[var(--line)]">
+                {(['E', 'V', 'R', 'S', 'SC'] as const).map((code) => {
+                  const cfg = TAGS_CONFIG[code];
+                  const currentVal = tagTargets[code] !== undefined ? tagTargets[code] : DEFAULT_TAG_TARGETS[code];
+                  return (
+                    <div
+                      key={code}
+                      className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-2 flex flex-col items-center gap-1 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-black" style={{ color: cfg.color }}>
+                          {code}
+                        </span>
+                        <span className="text-[11px] font-bold text-[var(--ink)] truncate max-w-[70px]">
+                          {cfg.fullTitle[lang].split(' ')[0]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 w-full justify-center">
+                        <input
+                          type="number"
+                          min="0"
+                          max="16"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(16, parseInt(e.target.value, 10) || 0));
+                            onChangeTagTargets?.({ ...tagTargets, [code]: val });
+                          }}
+                          className="w-12 text-center font-mono font-bold text-xs bg-[var(--bg)] border border-[var(--line)] rounded-lg py-0.5 text-[var(--ink)] outline-hidden focus:border-indigo-500"
+                        />
+                        <span className="text-[10px] font-mono text-[var(--ink-soft)]">
+                          {lang === 'ar' ? 'س' : 'h'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Streak Flame Badge Toggle */}

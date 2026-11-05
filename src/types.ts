@@ -48,6 +48,8 @@ export type AgeDisplayOpt = 'none' | 'days' | 'years' | 'compass';
 export type WeekStartDay = 'saturday' | 'sunday' | 'monday';
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export type TagTargets = Record<'E' | 'V' | 'R' | 'S' | 'SC', number>;
+
 export interface UserPreferences {
   sleepWindow: SleepSettings;
   birthDate: string;
