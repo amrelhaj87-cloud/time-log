@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { WeekStartDay, ThemeMode, AgeDisplayOpt } from '../types';
-import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN } from '../constants/config';
+import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN, APP_VERSION } from '../constants/config';
 import { isoDate, focusCurrentHourInput } from '../utils/dateUtils';
 import {
   Calendar,
@@ -260,7 +260,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {t.brand}
               </h1>
               <span className="font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-                v3.8
+                {APP_VERSION}
               </span>
             </div>
             <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden md:inline mt-0.5 whitespace-nowrap">

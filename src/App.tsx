@@ -18,7 +18,8 @@ import {
   HOUR_TO_24,
   STRINGS,
   TAGS_CONFIG,
-  DEFAULT_TAG_TARGETS
+  DEFAULT_TAG_TARGETS,
+  APP_VERSION
 } from './constants/config';
 import { startOfWeekFor, mondayOf, isoDate, addDays, emptyDay, getCurrentHourKey, normalizeWeekData, focusCurrentHourInput } from './utils/dateUtils';
 import { calculateDailyStreak } from './utils/streakUtils';
@@ -1685,7 +1686,7 @@ export default function App() {
         </div>
         <div className="flex items-center justify-center pt-0.5">
           <span className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-mono px-2.5 py-0.5 rounded-md text-[10px] font-semibold shadow-2xs">
-            {lang === 'ar' ? 'الإصدار v4.0' : 'Version v4.0'}
+            {lang === 'ar' ? `الإصدار ${APP_VERSION}` : `Version ${APP_VERSION}`}
           </span>
         </div>
       </footer>
