@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, ArrowDown, Moon, Sparkles, X, Check } from 'luc
 
 interface HoursListProps {
   hoursData: Record<string, HourEntry>;
-  onChangeHour: (key: string, text: string, tag: TagCode) => void;
+  onChangeHour: (key: string, text: string, tag: TagCode, immediate?: boolean) => void;
   onCopyDown: (sourceKey: string, targetKey: string) => void;
   sleepSettings: SleepSettings;
   isSleepExceptionToday: boolean;
@@ -352,14 +352,15 @@ export const HoursList: React.FC<HoursListProps> = ({
                                 newTag = 'SC';
                               }
                             }
-                            onChangeHour(key, val, newTag);
+                            onChangeHour(key, val, newTag, false);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
                               if (calEvent && !entry.text.trim()) {
-                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
                               } else {
+                                onChangeHour(key, entry.text, entry.tag, true);
                                 const tagBtn = document.getElementById(`tag-picker-btn-hour-${key}`);
                                 if (tagBtn) {
                                   tagBtn.click();
@@ -369,7 +370,7 @@ export const HoursList: React.FC<HoursListProps> = ({
                               // Quick accept calendar ghost text
                               if (e.key === 'Tab') {
                                 e.preventDefault();
-                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
                               }
                             }
                           }}
@@ -385,7 +386,7 @@ export const HoursList: React.FC<HoursListProps> = ({
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E');
+                                onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
                                 setTimeout(() => {
                                   const inputEl = document.getElementById(`hour-input-${key}`);
                                   inputEl?.focus();
@@ -426,7 +427,7 @@ export const HoursList: React.FC<HoursListProps> = ({
                           if (tag === 'SL' && !newText.trim()) {
                             newText = lang === 'ar' ? 'نوم طبيعي' : 'Natural sleep';
                           }
-                          onChangeHour(key, newText, tag);
+                          onChangeHour(key, newText, tag, true);
                         }}
                         disabledCodes={SLEEP_ALLOWED_KEYS.includes(key) ? [] : ['SL']}
                         hideSleepTag={sleepSettings.enabled}

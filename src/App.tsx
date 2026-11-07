@@ -446,10 +446,13 @@ export default function App() {
     setIsDataLoaded(true);
   }, []);
 
-  // Save Week Data (debounced)
-  const saveWeekData = useCallback(
-    async (updated: WeekData, ws: Date, user: User | null) => {
-      setSaveStatus(STRINGS[lang].saving);
+  // Debounced Save Refs (3s after typing stops, instant on Enter/Tag/Action/Page-Close)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<{ updated: WeekData; ws: Date; user: User | null } | null>(null);
+
+  const flushSaveToCloud = useCallback(
+    async (updated: WeekData, ws: Date, user: User | null, showToast = true) => {
+      if (showToast) setSaveStatus(STRINGS[lang].saving);
       const monKey = isoDate(mondayOf(ws));
       const localKey = `time_log_week_${user ? user.uid : 'guest'}_${monKey}`;
       const jsonStr = JSON.stringify(updated);
@@ -464,11 +467,74 @@ export default function App() {
         }
       }
 
-      setSaveStatus(STRINGS[lang].saved);
-      setTimeout(() => setSaveStatus(''), 2000);
+      if (showToast) {
+        setSaveStatus(STRINGS[lang].saved);
+        setTimeout(() => setSaveStatus(''), 2000);
+      }
     },
     [lang]
   );
+
+  // Save Week Data (3-second debounce for typing, immediate for Enter/Tag/Checkboxes)
+  const saveWeekData = useCallback(
+    (updated: WeekData, ws: Date, user: User | null, immediate = false) => {
+      // Always persist to localStorage immediately on every change for zero data loss
+      const monKey = isoDate(mondayOf(ws));
+      const localKey = `time_log_week_${user ? user.uid : 'guest'}_${monKey}`;
+      localStorage.setItem(localKey, JSON.stringify(updated));
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      if (immediate) {
+        pendingSaveRef.current = null;
+        flushSaveToCloud(updated, ws, user, true);
+      } else {
+        pendingSaveRef.current = { updated, ws, user };
+        saveTimeoutRef.current = setTimeout(() => {
+          pendingSaveRef.current = null;
+          saveTimeoutRef.current = null;
+          flushSaveToCloud(updated, ws, user, true);
+        }, 3000);
+      }
+    },
+    [flushSaveToCloud]
+  );
+
+  const flushPendingSaveNow = useCallback(
+    (showToast = false) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (pendingSaveRef.current) {
+        const { updated, ws, user } = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        flushSaveToCloud(updated, ws, user, showToast);
+      }
+    },
+    [flushSaveToCloud]
+  );
+
+  // Silent instant flush on page unload or tab hide if typing debounce is still pending
+  useEffect(() => {
+    const flushOnLeave = () => flushPendingSaveNow(false);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingSaveNow(false);
+      }
+    };
+
+    window.addEventListener('beforeunload', flushOnLeave);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', flushOnLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [flushPendingSaveNow]);
 
   // Sync Preferences to Firestore & Local
   const syncPreferences = useCallback(
@@ -557,7 +623,6 @@ export default function App() {
             if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
             if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
             if (data.showPrioritiesSection !== undefined) setShowPrioritiesSection(data.showPrioritiesSection);
-            if (data.morningNudgeEnabled !== undefined) setShowPrioritiesSection(data.morningNudgeEnabled);
             if (data.morningNudgeEnabled !== undefined) {
               setMorningNudgeEnabled(data.morningNudgeEnabled);
               localStorage.setItem('morningNudgeEnabled', String(data.morningNudgeEnabled));
@@ -626,7 +691,7 @@ export default function App() {
   }, [isDataLoaded, morningNudgeEnabled, delegateStartupFocus]);
 
   // Handlers for Hours List
-  const handleChangeHour = (key: string, text: string, tag: TagCode) => {
+  const handleChangeHour = (key: string, text: string, tag: TagCode, immediate = false) => {
     const updatedDays = { ...weekData.days };
     const currentDay = updatedDays[dateStr] || emptyDay();
     currentDay.hours = {
@@ -636,13 +701,13 @@ export default function App() {
     updatedDays[dateStr] = currentDay;
     const newWeek = { ...weekData, days: updatedDays };
     setWeekData(newWeek);
-    saveWeekData(newWeek, weekStart, currentUser);
+    saveWeekData(newWeek, weekStart, currentUser, immediate);
   };
 
   const handleCopyDown = (sourceKey: string, targetKey: string) => {
     const sourceEntry = currentDayData.hours[sourceKey] || { text: '', tag: '' };
     if (!sourceEntry.text.trim() && !sourceEntry.tag) return;
-    handleChangeHour(targetKey, sourceEntry.text, sourceEntry.tag);
+    handleChangeHour(targetKey, sourceEntry.text, sourceEntry.tag, true);
   };
 
   const handleToggleSleepException = () => {
@@ -707,7 +772,7 @@ export default function App() {
   };
 
   const handlePromoteTodoToGolden = (todo: TodoItem) => {
-    handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode });
+    handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode }, true);
     const updated = todoInbox.map((item) =>
       item.id === todo.id
         ? {
@@ -755,7 +820,7 @@ export default function App() {
     }
 
     const updatedList = [...cleanList, { text: todo.text, done: false, tag: (todo.tag || '') as TagCode }];
-    handleChangePriorities(quadKey, updatedList);
+    handleChangePriorities(quadKey, updatedList, true);
 
     const updated = todoInbox.map((item) =>
       item.id === todo.id
@@ -778,7 +843,7 @@ export default function App() {
   };
 
     // Handlers for Priorities
-  const handleChangeGoldenGoal = (item: GoalItem) => {
+  const handleChangeGoldenGoal = (item: GoalItem, immediate = false) => {
     const updatedDays = { ...weekData.days };
     const currentDay = updatedDays[dateStr] || emptyDay();
     const wasDone = currentDay.goldenGoal.done;
@@ -786,7 +851,7 @@ export default function App() {
     updatedDays[dateStr] = currentDay;
     const newWeek = { ...weekData, days: updatedDays };
     setWeekData(newWeek);
-    saveWeekData(newWeek, weekStart, currentUser);
+    saveWeekData(newWeek, weekStart, currentUser, immediate);
 
     // Confetti celebration on completion!
     if (!wasDone && item.done && item.text.trim() !== '') {
@@ -798,7 +863,7 @@ export default function App() {
     }
   };
 
-  const handleChangePriorities = (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[]) => {
+  const handleChangePriorities = (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[], immediate = false) => {
     const updatedDays = { ...weekData.days };
     const currentDay = updatedDays[dateStr] || emptyDay();
     currentDay.priorities = {
@@ -808,7 +873,7 @@ export default function App() {
     updatedDays[dateStr] = currentDay;
     const newWeek = { ...weekData, days: updatedDays };
     setWeekData(newWeek);
-    saveWeekData(newWeek, weekStart, currentUser);
+    saveWeekData(newWeek, weekStart, currentUser, immediate);
   };
 
   const handlePromoteToGolden = (item: GoalItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4', itemIdx: number) => {
@@ -817,10 +882,10 @@ export default function App() {
       setTimeout(() => setSaveStatus(''), 3000);
       return;
     }
-    handleChangeGoldenGoal({ text: item.text, done: item.done || false, tag: item.tag || '' });
+    handleChangeGoldenGoal({ text: item.text, done: item.done || false, tag: item.tag || '' }, true);
     const currentQuadList = currentDayData.priorities[quadKey] || [];
     const filtered = currentQuadList.filter((_, idx) => idx !== itemIdx);
-    handleChangePriorities(quadKey, filtered.length === 0 ? [{ text: '', done: false, tag: '' }] : filtered);
+    handleChangePriorities(quadKey, filtered.length === 0 ? [{ text: '', done: false, tag: '' }] : filtered, true);
     setSaveStatus(lang === 'ar' ? '✨ تم نقل الهدف إلى الهدف الذهبي بنجاح' : '✨ Moved to Golden Goal successfully');
     setTimeout(() => setSaveStatus(''), 2500);
   };
@@ -891,7 +956,7 @@ export default function App() {
     updatedDays[tomorrowStr] = tomorrowDay;
     const newWeek = { ...weekData, days: updatedDays };
     setWeekData(newWeek);
-    saveWeekData(newWeek, weekStart, currentUser);
+    saveWeekData(newWeek, weekStart, currentUser, true);
 
     // If tomorrow falls in the next week, also sync to the next week's storage document
     const currentMonKey = isoDate(mondayOf(currentDate));
@@ -948,7 +1013,7 @@ export default function App() {
     const updatedText = existing.text.trim()
       ? `${existing.text} • ${prefix}${text}`
       : `${prefix}${text}`;
-    handleChangeHour(currentKey, updatedText, tag || (existing.tag as TagCode) || 'E');
+    handleChangeHour(currentKey, updatedText, tag || (existing.tag as TagCode) || 'E', true);
     setSaveStatus(
       lang === 'ar'
         ? `✅ تم تسجيل ${minutes} دقيقة تركيز بنجاح في ${currentKey}`
@@ -1183,6 +1248,7 @@ export default function App() {
 
   // Date Navigation
   const handleSelectDate = (d: Date) => {
+    flushPendingSaveNow(true);
     setCurrentDate(d);
     const newWs = startOfWeekFor(d, weekStartDay);
     if (isoDate(newWs) !== isoDate(weekStart)) {
@@ -1192,6 +1258,7 @@ export default function App() {
   };
 
   const handleOffsetWeek = (offset: number) => {
+    flushPendingSaveNow(true);
     const newWs = addDays(weekStart, offset * 7);
     const newCd = addDays(currentDate, offset * 7);
     setWeekStart(newWs);
@@ -1200,6 +1267,7 @@ export default function App() {
   };
 
   const handleResetToday = () => {
+    flushPendingSaveNow(true);
     const today = new Date();
     setCurrentDate(today);
     const newWs = startOfWeekFor(today, weekStartDay);
@@ -1209,6 +1277,7 @@ export default function App() {
   };
 
   const handleChangeWeekStartDay = (newDay: WeekStartDay) => {
+    flushPendingSaveNow(false);
     setWeekStartDay(newDay);
     localStorage.setItem('weekStartDay', newDay);
     const newWs = startOfWeekFor(currentDate, newDay);
@@ -1700,7 +1769,7 @@ export default function App() {
         sleepSettings={sleepSettings}
         onImportBackup={(imported) => {
           setWeekData(imported);
-          saveWeekData(imported, weekStart, currentUser);
+          saveWeekData(imported, weekStart, currentUser, true);
         }}
         lang={lang}
       />

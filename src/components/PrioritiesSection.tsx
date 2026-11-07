@@ -7,14 +7,14 @@ import { focusCurrentHourInput } from '../utils/dateUtils';
 
 interface PrioritiesSectionProps {
   goldenGoal: GoalItem;
-  onChangeGoldenGoal: (item: GoalItem) => void;
+  onChangeGoldenGoal: (item: GoalItem, immediate?: boolean) => void;
   priorities: {
     q1: GoalItem[];
     q2: GoalItem[];
     q3: GoalItem[];
     q4: GoalItem[];
   };
-  onChangePriorities: (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[]) => void;
+  onChangePriorities: (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[], immediate?: boolean) => void;
   onPromoteToGolden: (item: GoalItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4', itemIdx: number) => void;
   onRollover: () => void;
   onOpenTodoInbox?: () => void;
@@ -99,7 +99,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
           <input
             type="checkbox"
             checked={goldenGoal.done}
-            onChange={(e) => onChangeGoldenGoal({ ...goldenGoal, done: e.target.checked })}
+            onChange={(e) => onChangeGoldenGoal({ ...goldenGoal, done: e.target.checked }, true)}
             className="w-4 h-4 rounded-md accent-amber-600 cursor-pointer shrink-0"
           />
 
@@ -108,10 +108,11 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
             type="text"
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
             value={goldenGoal.text}
-            onChange={(e) => onChangeGoldenGoal({ ...goldenGoal, text: e.target.value })}
+            onChange={(e) => onChangeGoldenGoal({ ...goldenGoal, text: e.target.value }, false)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
+                onChangeGoldenGoal(goldenGoal, true);
                 const tagBtn = document.getElementById('tag-picker-btn-golden');
                 if (tagBtn) {
                   tagBtn.click();
@@ -129,7 +130,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
             returnFocusId="golden-goal-input"
             currentTag={goldenGoal.tag}
             onSelect={(tag) => {
-              onChangeGoldenGoal({ ...goldenGoal, tag });
+              onChangeGoldenGoal({ ...goldenGoal, tag }, true);
               focusCurrentHourInput();
             }}
             onClose={() => {
@@ -144,7 +145,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
           {goldenGoal.text && (
             <button
               type="button"
-              onClick={() => onChangeGoldenGoal({ text: '', done: false, tag: '' })}
+              onClick={() => onChangeGoldenGoal({ text: '', done: false, tag: '' }, true)}
               className="text-rose-500 hover:text-rose-700 p-1 rounded-md opacity-60 hover:opacity-100 transition-all"
               title={lang === 'ar' ? 'مسح الهدف الذهبي' : 'Clear Golden Goal'}
             >
@@ -175,19 +176,19 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
         {QUADS_CONFIG.map((q) => {
           const items = priorities[q.key] || [];
 
-          const handleUpdateItem = (idx: number, updated: GoalItem) => {
+          const handleUpdateItem = (idx: number, updated: GoalItem, immediate = false) => {
             const copy = [...items];
             copy[idx] = updated;
-            onChangePriorities(q.key, copy);
+            onChangePriorities(q.key, copy, immediate);
           };
 
           const handleAddItem = () => {
-            onChangePriorities(q.key, [...items, { text: '', done: false, tag: '' }]);
+            onChangePriorities(q.key, [...items, { text: '', done: false, tag: '' }], true);
           };
 
           const handleDeleteItem = (idx: number) => {
             const copy = items.filter((_, i) => i !== idx);
-            onChangePriorities(q.key, copy.length === 0 ? [{ text: '', done: false, tag: '' }] : copy);
+            onChangePriorities(q.key, copy.length === 0 ? [{ text: '', done: false, tag: '' }] : copy, true);
           };
 
           return (
@@ -203,7 +204,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                 {items.some((it) => it.text && it.text.trim() !== '') && (
                   <button
                     type="button"
-                    onClick={() => onChangePriorities(q.key, [{ text: '', done: false, tag: '' }])}
+                    onClick={() => onChangePriorities(q.key, [{ text: '', done: false, tag: '' }], true)}
                     className="text-[10px] text-[var(--ink-soft)] hover:text-rose-600 dark:hover:text-rose-400 opacity-60 hover:opacity-100 transition-all flex items-center gap-1 cursor-pointer px-1 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30"
                     title={lang === 'ar' ? 'مسح كافة أولويات هذا المربع' : 'Clear all in this quadrant'}
                   >
@@ -222,17 +223,18 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                     <input
                       type="checkbox"
                       checked={item.done}
-                      onChange={(e) => handleUpdateItem(idx, { ...item, done: e.target.checked })}
+                      onChange={(e) => handleUpdateItem(idx, { ...item, done: e.target.checked }, true)}
                       className="w-3.5 h-3.5 rounded-md accent-indigo-600 cursor-pointer shrink-0"
                     />
 
                     <input
                       type="text"
                       value={item.text}
-                      onChange={(e) => handleUpdateItem(idx, { ...item, text: e.target.value })}
+                      onChange={(e) => handleUpdateItem(idx, { ...item, text: e.target.value }, false)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
+                          handleUpdateItem(idx, item, true);
                           const tagBtn = document.getElementById(`tag-picker-btn-priority-${q.key}-${idx}`);
                           if (tagBtn) {
                             tagBtn.click();
@@ -248,7 +250,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                     <TagPicker
                       buttonId={`tag-picker-btn-priority-${q.key}-${idx}`}
                       currentTag={item.tag}
-                      onSelect={(tag) => handleUpdateItem(idx, { ...item, tag })}
+                      onSelect={(tag) => handleUpdateItem(idx, { ...item, tag }, true)}
                       small
                       hideSleepTag
                       lang={lang}
@@ -282,7 +284,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                           if (items.length > 1) {
                             handleDeleteItem(idx);
                           } else {
-                            handleUpdateItem(idx, { text: '', done: false, tag: '' });
+                            handleUpdateItem(idx, { text: '', done: false, tag: '' }, true);
                           }
                         }}
                         className="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all shrink-0 cursor-pointer"
