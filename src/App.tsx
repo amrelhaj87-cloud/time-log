@@ -25,7 +25,7 @@ import { startOfWeekFor, mondayOf, isoDate, addDays, emptyDay, getCurrentHourKey
 import { calculateDailyStreak } from './utils/streakUtils';
 import { soundManager } from './utils/soundEffects';
 import confetti from 'canvas-confetti';
-import { fetchCalendarEventsForDate } from './services/calendarService';
+import { fetchCalendarEventsForDate, clearAllCachedCalendarEvents } from './services/calendarService';
 
 // Components
 import { Header } from './components/Header';
@@ -1240,9 +1240,18 @@ export default function App() {
     }
   }, [userBirthDate]);
 
-  // Google Calendar Events Fetcher for the active day
+  // Sync calendar token expiration event
   useEffect(() => {
-    if (!calSyncEnabled || !gcalAccessToken) {
+    const handleExpired = () => {
+      setGcalAccessToken(null);
+    };
+    window.addEventListener('gcal-token-expired', handleExpired);
+    return () => window.removeEventListener('gcal-token-expired', handleExpired);
+  }, []);
+
+  // Google Calendar Events Fetcher for the active day (uses live fetch if token available, or local day cache)
+  useEffect(() => {
+    if (!calSyncEnabled) {
       setGoogleCalendarEvents({});
       return;
     }
@@ -1285,11 +1294,13 @@ export default function App() {
         sessionStorage.setItem('gcal_access_token', credential);
         setCalSyncEnabled(true);
         localStorage.setItem('calSyncEnabled', 'true');
+        syncPreferences(currentUser);
         setSaveStatus(lang === 'ar' ? '🎉 تم ربط Google Calendar بنجاح' : '🎉 Google Calendar connected successfully');
         setTimeout(() => setSaveStatus(''), 4000);
       } else {
         setCalSyncEnabled(true);
         localStorage.setItem('calSyncEnabled', 'true');
+        syncPreferences(currentUser);
         setSaveStatus(lang === 'ar' ? '✅ تم الاتصال بحساب Google' : '✅ Connected to Google account');
         setTimeout(() => setSaveStatus(''), 4000);
       }
@@ -1307,6 +1318,10 @@ export default function App() {
     setGcalAccessToken(null);
     localStorage.removeItem('gcal_access_token');
     sessionStorage.removeItem('gcal_access_token');
+    clearAllCachedCalendarEvents();
+    setCalSyncEnabled(false);
+    localStorage.setItem('calSyncEnabled', 'false');
+    syncPreferences(currentUser);
     setSaveStatus(lang === 'ar' ? 'تم فصل حساب تقويم Google' : 'Google Calendar disconnected');
     setTimeout(() => setSaveStatus(''), 3000);
   };
@@ -1918,7 +1933,50 @@ export default function App() {
         yesterdayData={(() => {
           const yDate = addDays(new Date(), -1);
           const yStr = isoDate(yDate);
-          return weekData.days[yStr] || null;
+
+          // 1. If yesterday exists in currently loaded week and has logged hours, use it directly
+          const currentWeekEntry = weekData.days[yStr];
+          if (currentWeekEntry) {
+            const hasHours = Object.values(currentWeekEntry.hours || {}).some(
+              (h) => h && h.text && h.text.trim() !== ''
+            );
+            if (hasHours) return currentWeekEntry;
+          }
+
+          // 2. If at a week boundary (e.g. today is first day of week), check previous week in localStorage
+          try {
+            const yMonday = isoDate(mondayOf(yDate));
+            const userPrefix = currentUser ? currentUser.uid : 'guest';
+            const targetKey = `time_log_week_${userPrefix}_${yMonday}`;
+            const fallbackKey = `time_log_week_guest_${yMonday}`;
+            const raw = localStorage.getItem(targetKey) || localStorage.getItem(fallbackKey);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.days?.[yStr]) {
+                return parsed.days[yStr];
+              }
+            }
+
+            // 3. Scan any cached time_log_week_ documents for yesterday
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith('time_log_week_')) {
+                const itemRaw = localStorage.getItem(k);
+                if (itemRaw) {
+                  const itemParsed = JSON.parse(itemRaw);
+                  if (itemParsed?.days?.[yStr]) {
+                    const entry = itemParsed.days[yStr];
+                    const hasLogged = Object.values(entry.hours || {}).some(
+                      (h: any) => h && h.text && h.text.trim() !== ''
+                    );
+                    if (hasLogged) return entry;
+                  }
+                }
+              }
+            }
+          } catch {}
+
+          return currentWeekEntry || null;
         })()}
         tagTargets={tagTargets}
         lang={lang}

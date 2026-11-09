@@ -1,5 +1,6 @@
 import { TagCode } from '../types';
 import { HOUR_TO_24 } from '../constants/config';
+import { isoDate } from '../utils/dateUtils';
 
 export interface CalendarEventSuggestion {
   text: string;
@@ -9,15 +10,64 @@ export interface CalendarEventSuggestion {
   endHour: number;
 }
 
+const CACHE_PREFIX = 'gcal_cached_events_';
+
+/**
+ * Retrieves cached calendar events for a date from localStorage.
+ */
+export function getCachedCalendarEventsForDate(dateStr: string): Record<string, { text: string; tag: TagCode }> {
+  try {
+    const raw = localStorage.getItem(`${CACHE_PREFIX}${dateStr}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    }
+  } catch {}
+  return {};
+}
+
+/**
+ * Saves calendar events for a date into localStorage cache.
+ */
+export function saveCachedCalendarEventsForDate(dateStr: string, events: Record<string, { text: string; tag: TagCode }>): void {
+  try {
+    localStorage.setItem(`${CACHE_PREFIX}${dateStr}`, JSON.stringify(events));
+  } catch {}
+}
+
+/**
+ * Clears all cached calendar events from localStorage.
+ */
+export function clearAllCachedCalendarEvents(): void {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(CACHE_PREFIX)) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
 /**
  * Fetches Google Calendar events for a given date using the user's OAuth access token.
  * Matches events that fall into specific hour slots and formats them as lightweight non-intrusive suggestions.
+ * Caches events locally so suggestions persist all day even if the 60-minute OAuth token expires.
  */
 export async function fetchCalendarEventsForDate(
   date: Date,
-  accessToken: string
+  accessToken: string | null
 ): Promise<Record<string, { text: string; tag: TagCode }>> {
-  if (!accessToken) return {};
+  const dStr = isoDate(date);
+  const cachedEvents = getCachedCalendarEventsForDate(dStr);
+
+  if (!accessToken) {
+    return cachedEvents;
+  }
 
   try {
     const startOfDay = new Date(date);
@@ -45,10 +95,14 @@ export async function fetchCalendarEventsForDate(
 
     if (!res.ok) {
       if (res.status === 401) {
-        console.warn('Google Calendar token expired or invalid');
-        localStorage.removeItem('gcal_access_token'); sessionStorage.removeItem('gcal_access_token');
+        console.warn('Google Calendar token expired; falling back to cached events');
+        localStorage.removeItem('gcal_access_token');
+        sessionStorage.removeItem('gcal_access_token');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcal-token-expired'));
+        }
       }
-      return {};
+      return cachedEvents;
     }
 
     const data = await res.json();
@@ -104,9 +158,10 @@ export async function fetchCalendarEventsForDate(
       });
     }
 
+    saveCachedCalendarEventsForDate(dStr, eventMap);
     return eventMap;
   } catch (err) {
-    console.warn('Error fetching Google Calendar events:', err);
-    return {};
+    console.warn('Error fetching Google Calendar events, falling back to cache:', err);
+    return cachedEvents;
   }
 }

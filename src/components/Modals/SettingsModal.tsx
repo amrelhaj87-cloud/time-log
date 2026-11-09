@@ -756,6 +756,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-[11px] text-[var(--ink-soft)] block truncate">
                     {isCalSyncConnected
                       ? (lang === 'ar' ? `متصل ✓ (${currentUserEmail || 'Google'})` : `Connected ✓ (${currentUserEmail || 'Google'})`)
+                      : calSyncEnabled
+                      ? (lang === 'ar' ? 'مفعل ✓ (يحتاج تحديث الرمز 🔄)' : 'Active ✓ (Refresh Token 🔄)')
                       : (lang === 'ar' ? 'غير متصل' : 'Disconnected')}
                   </span>
                 </div>
@@ -776,7 +778,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={onConnectGCal}
                     className="px-2.5 py-1 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white"
                   >
-                    {lang === 'ar' ? 'ربط الحساب' : 'Connect'}
+                    {calSyncEnabled ? (lang === 'ar' ? 'تحديث الرمز' : 'Refresh Token') : (lang === 'ar' ? 'ربط الحساب' : 'Connect')}
                   </button>
                 )}
                 <label className="relative inline-flex items-center cursor-pointer" title={lang === 'ar' ? 'مزامنة أحداث التقويم' : 'Sync Calendar Events'}>

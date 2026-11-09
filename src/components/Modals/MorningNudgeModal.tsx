@@ -67,12 +67,12 @@ export const MorningNudgeModal: React.FC<MorningNudgeModalProps> = ({
   let messageAr = '';
   let messageEn = '';
 
-  if (yesterdayTotalLogged >= 6) {
-    messageAr = `أمس كان تركيزك الأكبر على ${topTagInfo.fullTitle.ar} بمعدل (${maxHours} ساعات). اليوم فرصة رائعة لمنح مزيد من الاهتمام لـ ${deficitTagInfo.fullTitle.ar} لإعادة التوازن لساعاتك!`;
-    messageEn = `Yesterday your greatest focus was on ${topTagInfo.fullTitle.en} (${maxHours} hrs). Today is a great opportunity to dedicate time to ${deficitTagInfo.fullTitle.en} for better daily balance!`;
+  if (yesterdayTotalLogged >= 3) {
+    messageAr = `أمس كان تركيزك الأكبر على ${topTagInfo.fullTitle.ar} بمعدل (${maxHours} ساعات) من إجمالي (${yesterdayTotalLogged} ساعات). اليوم فرصة رائعة لمنح مزيد من الاهتمام لـ ${deficitTagInfo.fullTitle.ar} لإعادة التوازن لساعاتك!`;
+    messageEn = `Yesterday your greatest focus was on ${topTagInfo.fullTitle.en} (${maxHours} hrs) out of (${yesterdayTotalLogged} hrs logged). Today is a great opportunity to dedicate time to ${deficitTagInfo.fullTitle.en} for better daily balance!`;
   } else if (yesterdayTotalLogged > 0) {
-    messageAr = `أمس سجّلت (${yesterdayTotalLogged} ساعات فقط). تذكّر أن تسجيل ساعاتك أولاً بأول يمنحك وضوحاً كاملاً ليومك ويزيد من إنتاجيتك!`;
-    messageEn = `Yesterday only (${yesterdayTotalLogged} hours) were logged. Remember, logging hours in real-time brings full clarity and boosts your daily productivity!`;
+    messageAr = `أمس سجّلت (${yesterdayTotalLogged} ساعات). بداية طيبة ومحفزة، واليوم فرصة ذهبية لمضاعفة ساعات تركيزك ومواصلة إنجاز أهدافك!`;
+    messageEn = `Yesterday you logged (${yesterdayTotalLogged} hrs). A solid start, and today is a golden opportunity to expand your focus and achieve your goals!`;
   } else {
     messageAr = `لم يتم رصد ساعات مسجلة لأمس. بداية يومك اليوم فرصة جديدة لتدوين إنجازاتك والاقتراب من أهدافك خطوة بخطوة!`;
     messageEn = `No logged hours were recorded for yesterday. Today is a fresh clean slate to capture your hours and achieve your goals!`;

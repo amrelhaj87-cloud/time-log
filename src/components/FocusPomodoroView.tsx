@@ -192,8 +192,15 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     const elapsedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
 
     if (elapsedSeconds >= 45 || timeLeft <= 60) {
-      // Has worked meaningful minutes -> open completion log dialog
+      // Has worked meaningful minutes -> auto-log immediately & open completion dialog
       setLastCompletedMins(elapsedMinutes);
+      if (mode === 'focus' && onLogToCurrentHour) {
+        onLogToCurrentHour(
+          taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
+          elapsedMinutes,
+          selectedTag
+        );
+      }
       setShowCompletedPrompt(true);
     } else {
       // Less than 45 secs -> just reset timer
@@ -224,6 +231,14 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setLastCompletedMins(completedMins);
 
     if (mode === 'focus') {
+      // Auto-log immediately to current hour so work is NEVER lost!
+      if (onLogToCurrentHour) {
+        onLogToCurrentHour(
+          taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
+          completedMins,
+          selectedTag
+        );
+      }
       setShowCompletedPrompt(true);
       // Advance session count
       const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
@@ -927,6 +942,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                   ? `أنجزت جلسة تركيز مدتها ${lastCompletedMins} دقيقة بنجاح!`
                   : `You completed a ${lastCompletedMins} min focus session!`}
               </p>
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold shadow-2xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{lang === 'ar' ? 'تم تسجيل الجلسة تلقائياً في الساعة الحالية ✓' : 'Session auto-logged to current hour ✓'}</span>
+              </div>
             </div>
 
             {/* Tag Selection for Logging */}
@@ -976,7 +995,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                 className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{t.pomoLogToHour}</span>
+                <span>{lang === 'ar' ? 'تأكيد التعديلات ومتابعة' : 'Confirm & Continue'}</span>
               </button>
 
               <button
