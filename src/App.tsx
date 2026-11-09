@@ -748,6 +748,45 @@ export default function App() {
     localStorage.setItem('sleepExceptionDays', JSON.stringify(updated));
   };
 
+  // Batch Apply All Available Google Calendar Events to Empty Hours Today
+  const handleBatchApplyCalendarEvents = () => {
+    const unapplied = Object.entries(googleCalendarEvents).filter(
+      ([key]) => !currentDayData.hours[key]?.text?.trim()
+    );
+    if (unapplied.length === 0) return;
+
+    soundManager.playSuccess();
+    setWeekData((prevWeek) => {
+      const todayDay = prevWeek.days[dateStr] || emptyDay();
+      const newHours = { ...todayDay.hours };
+      unapplied.forEach(([key, ev]) => {
+        newHours[key] = {
+          text: ev.text,
+          tag: ev.tag || 'E'
+        };
+      });
+      const updatedWeek: WeekData = {
+        ...prevWeek,
+        days: {
+          ...prevWeek.days,
+          [dateStr]: {
+            ...todayDay,
+            hours: newHours
+          }
+        }
+      };
+      saveWeekData(updatedWeek, weekStart, currentUser, true);
+      return updatedWeek;
+    });
+
+    setSaveStatus(
+      lang === 'ar'
+        ? `✅ تم استيراد ${unapplied.length} مواعيد من تقويم جوجل بنجاح!`
+        : `✅ Imported ${unapplied.length} Google Calendar events successfully!`
+    );
+    setTimeout(() => setSaveStatus(''), 3500);
+  };
+
   // Brain Dump & Todo Inbox Handlers
   const saveTodoInbox = useCallback(
     (items: TodoItem[]) => {
@@ -1163,13 +1202,29 @@ export default function App() {
       return false;
     };
 
-    // 1. Desktop Escape key
+    // 1. Desktop Keyboard Shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to close active top modal
       if (e.key === 'Escape') {
         const closed = handleCloseTopModal();
         if (closed) {
           e.preventDefault();
         }
+        return;
+      }
+
+      // Alt + P (or Alt + ح in Arabic layout): Toggle Focus Pomodoro View
+      if (e.altKey && (e.key === 'p' || e.key === 'P' || e.key === 'ح')) {
+        e.preventDefault();
+        handleToggleFocusMode();
+        return;
+      }
+
+      // Alt + T (or Alt + ف in Arabic layout): Toggle Todo Inbox Drawer
+      if (e.altKey && (e.key === 't' || e.key === 'T' || e.key === 'ف')) {
+        e.preventDefault();
+        setTodoDrawerOpen((prev) => !prev);
+        return;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1212,7 +1267,8 @@ export default function App() {
     ageModalOpen,
     pwaModalOpen,
     guideModalOpen,
-    focusModeActive
+    focusModeActive,
+    todoDrawerOpen
   ]);
 
   // Birthday reminder banner check (1 month, 1 week, same day)
@@ -1714,6 +1770,7 @@ export default function App() {
             sleepHourKeys={sleepHourKeys}
             isToday={isToday}
             googleCalendarEvents={googleCalendarEvents}
+            onBatchApplyCalendarEvents={handleBatchApplyCalendarEvents}
             onDismissCalendarEvent={(k) => {
               const updated = { ...dismissedSuggestions, [`${dateStr}_${k}`]: true };
               setDismissedSuggestions(updated);

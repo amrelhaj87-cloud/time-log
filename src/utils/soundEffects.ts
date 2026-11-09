@@ -94,6 +94,34 @@ class SoundManager {
       osc.stop(now + 0.05);
     } catch {}
   }
+
+  /**
+   * Play an uplifting two-tone success chime
+   */
+  public playSuccess() {
+    if (!this.soundEnabled) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      [
+        { freq: 587.33, time: 0, dur: 0.15 },
+        { freq: 880.0, time: 0.1, dur: 0.35 }
+      ].forEach(({ freq, time, dur }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + time);
+        gain.gain.setValueAtTime(0.001, now + time);
+        gain.gain.linearRampToValueAtTime(0.12, now + time + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + time + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + time);
+        osc.stop(now + time + dur);
+      });
+    } catch {}
+  }
 }
 
 export const soundManager = new SoundManager();

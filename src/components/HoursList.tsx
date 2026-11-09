@@ -3,7 +3,7 @@ import { HourEntry, TagCode, SleepSettings } from '../types';
 import { HOUR_LABELS, HOUR_PERIODS, SLEEP_ALLOWED_KEYS, STRINGS, HOURS_LIST } from '../constants/config';
 import { getCurrentHourKey } from '../utils/dateUtils';
 import { TagPicker } from './TagPicker';
-import { ChevronDown, ChevronUp, ArrowDown, Moon, Sparkles, X, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowDown, Moon, Sparkles, X, Check, Calendar } from 'lucide-react';
 
 interface HoursListProps {
   hoursData: Record<string, HourEntry>;
@@ -16,6 +16,7 @@ interface HoursListProps {
   isToday: boolean;
   googleCalendarEvents?: Record<string, { text: string; tag: TagCode }>;
   onDismissCalendarEvent?: (key: string) => void;
+  onBatchApplyCalendarEvents?: () => void;
   hasGoldenGoal?: boolean;
   isFocusMode?: boolean;
   lang: 'ar' | 'en';
@@ -32,6 +33,7 @@ export const HoursList: React.FC<HoursListProps> = ({
   isToday,
   googleCalendarEvents = {},
   onDismissCalendarEvent,
+  onBatchApplyCalendarEvents,
   hasGoldenGoal = false,
   isFocusMode = false,
   lang
@@ -171,8 +173,45 @@ export const HoursList: React.FC<HoursListProps> = ({
     });
   };
 
+  // Unapplied Google Calendar events for empty hour slots today
+  const unappliedCalendarEvents = isToday
+    ? Object.entries(googleCalendarEvents).filter(([k]) => !hoursData[k]?.text?.trim())
+    : [];
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Batch Import Google Calendar Events Banner */}
+      {isToday && unappliedCalendarEvents.length > 0 && onBatchApplyCalendarEvents && (
+        <div className="bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 shadow-xs transition-all select-none animate-in fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-xs text-indigo-950 dark:text-indigo-100 truncate">
+                {lang === 'ar'
+                  ? `مواعيد تقويم جوجل متاحة (${unappliedCalendarEvents.length})`
+                  : `Google Calendar Events Available (${unappliedCalendarEvents.length})`}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium text-indigo-700/80 dark:text-indigo-300/80 truncate">
+                {lang === 'ar'
+                  ? 'يمكنك تنزيل كافة المواعيد في الساعات الفارغة بنقرة واحدة'
+                  : 'Import all events into empty hour slots with one click'}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onBatchApplyCalendarEvents}
+            className="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>{lang === 'ar' ? 'استيراد الكل الآن' : 'Import All'}</span>
+          </button>
+        </div>
+      )}
+
       {/* Sleep Window Collapsed Block */}
       {showSleepBlock && (
         <div
@@ -371,6 +410,26 @@ export const HoursList: React.FC<HoursListProps> = ({
                               if (e.key === 'Tab') {
                                 e.preventDefault();
                                 onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
+                              }
+                            } else if (e.key === 'ArrowDown') {
+                              const currentIdx = HOURS_LIST.indexOf(key);
+                              if (currentIdx >= 0 && currentIdx < HOURS_LIST.length - 1) {
+                                const nextKey = HOURS_LIST[currentIdx + 1];
+                                const nextInput = document.getElementById(`hour-input-${nextKey}`) as HTMLInputElement | null;
+                                if (nextInput) {
+                                  e.preventDefault();
+                                  nextInput.focus();
+                                }
+                              }
+                            } else if (e.key === 'ArrowUp') {
+                              const currentIdx = HOURS_LIST.indexOf(key);
+                              if (currentIdx > 0) {
+                                const prevKey = HOURS_LIST[currentIdx - 1];
+                                const prevInput = document.getElementById(`hour-input-${prevKey}`) as HTMLInputElement | null;
+                                if (prevInput) {
+                                  e.preventDefault();
+                                  prevInput.focus();
+                                }
                               }
                             }
                           }}

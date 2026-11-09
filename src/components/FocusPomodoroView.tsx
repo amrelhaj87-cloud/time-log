@@ -208,6 +208,15 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
+  // Discard Session without logging to hour (إلغاء دون تسجيل)
+  const handleDiscardSession = () => {
+    soundManager.playClick();
+    setIsRunning(false);
+    ambientAudio.stop();
+    endTimeRef.current = null;
+    setTimeLeft(totalSeconds);
+  };
+
   // Handle Session Completion
   const handleTimerFinish = () => {
     setIsRunning(false);
@@ -880,15 +889,27 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
             )}
           </button>
 
-          {/* End / Log Session Button (إنهاء الجلسة) */}
+          {/* End / Log Session Button (إنهاء وحفظ الجلسة) */}
           <button
             type="button"
             onClick={handleEndSession}
             className="p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-            title={lang === 'ar' ? 'إنهاء وحفظ الجلسة الآن' : 'Finish & Save Session'}
+            title={lang === 'ar' ? 'إنهاء وحفظ الجلسة الآن في الساعة' : 'Finish & Save Session to Hour'}
           >
             <Square className="w-4 h-4 fill-current text-rose-500" />
           </button>
+
+          {/* Discard / Cancel Session without saving (إلغاء دون تسجيل) */}
+          {(timeLeft < totalSeconds || isRunning) && (
+            <button
+              type="button"
+              onClick={handleDiscardSession}
+              className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/60 text-amber-600 dark:text-amber-300 hover:text-amber-700 dark:hover:text-amber-100 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 animate-in fade-in"
+              title={lang === 'ar' ? 'إلغاء الجلسة دون تسجيل في الساعة' : 'Discard session without saving'}
+            >
+              <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </button>
+          )}
 
           {/* Skip / Next Session Button */}
           <button
