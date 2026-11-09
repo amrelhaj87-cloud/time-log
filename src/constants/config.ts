@@ -98,6 +98,16 @@ export const TAGS_CONFIG: Record<TagCode, TagDefinition> = {
   }
 };
 
+export const TAG_SHORT_LABELS: Record<TagCode, Record<'ar' | 'en', string>> = {
+  '': { ar: 'عام', en: 'None' },
+  'E': { ar: 'الكسب', en: 'Work' },
+  'V': { ar: 'الرؤية', en: 'Vision' },
+  'R': { ar: 'التعافي', en: 'Rest' },
+  'S': { ar: 'الخدمة', en: 'Service' },
+  'SC': { ar: 'الرعاية', en: 'Care' },
+  'SL': { ar: 'النوم', en: 'Sleep' },
+};
+
 export const TAG_CODES_ORDER: TagCode[] = ['E', 'V', 'R', 'S', 'SC', 'SL', ''];
 export const SLEEP_ALLOWED_KEYS: string[] = ['10pm', '11pm', '12am', '1am', '2am', '3am', '4am', '5am', '6am'];
 

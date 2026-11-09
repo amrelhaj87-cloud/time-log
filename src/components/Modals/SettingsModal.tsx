@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, TagTargets } from '../../types';
-import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG } from '../../constants/config';
+import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG, APP_VERSION } from '../../constants/config';
 import { soundManager } from '../../utils/soundEffects';
 import KofiButton from '../KofiButton';
 import {
@@ -943,7 +943,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-soft)] font-medium">
             <span>{lang === 'ar' ? 'جميع الحقوق محفوظة © zerocold 2026' : 'All rights reserved © zerocold 2026'}</span>
             <span className="text-[var(--line)]">•</span>
-            <span className="font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400">v3.8</span>
+            <span className="font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400">{APP_VERSION}</span>
           </div>
           <button
             type="button"

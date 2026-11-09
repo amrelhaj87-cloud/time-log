@@ -1072,17 +1072,68 @@ export default function App() {
   };
 
   const handleLogPomodoroToCurrentHour = (text: string, minutes: number, tag: TagCode) => {
+    const now = new Date();
+    const todayStr = isoDate(now);
     const currentKey = getCurrentHourKey();
-    const existing = currentDayData.hours[currentKey] || { text: '', tag: '' };
     const prefix = `[🎯 ${minutes}m] `;
-    const updatedText = existing.text.trim()
-      ? `${existing.text} • ${prefix}${text}`
-      : `${prefix}${text}`;
-    handleChangeHour(currentKey, updatedText, tag || (existing.tag as TagCode) || 'E', true);
+
+    // Always log to TODAY's date (now), regardless of which day the user is currently browsing!
+    setWeekData((prevWeek) => {
+      const todayDay = prevWeek.days[todayStr];
+      if (todayDay) {
+        const existing = todayDay.hours[currentKey] || { text: '', tag: '' };
+        const updatedText = existing.text.trim()
+          ? `${existing.text} • ${prefix}${text}`
+          : `${prefix}${text}`;
+        const updatedDay: DayData = {
+          ...todayDay,
+          hours: {
+            ...todayDay.hours,
+            [currentKey]: { text: updatedText, tag: tag || (existing.tag as TagCode) || 'E' }
+          }
+        };
+        const newWeek: WeekData = {
+          ...prevWeek,
+          days: {
+            ...prevWeek.days,
+            [todayStr]: updatedDay
+          }
+        };
+        saveWeekData(newWeek, weekStart, currentUser, true);
+        return newWeek;
+      } else {
+        // If the user navigated to an entirely different week, save to today's week in background
+        const todayWs = startOfWeekFor(now, weekStartDay);
+        const todayMonKey = isoDate(mondayOf(todayWs));
+        const userPrefix = currentUser ? currentUser.uid : 'guest';
+        const targetLocalKey = `time_log_week_${userPrefix}_${todayMonKey}`;
+        let targetWeek: WeekData = { days: {} };
+        const raw = localStorage.getItem(targetLocalKey);
+        if (raw) {
+          try { targetWeek = JSON.parse(raw); } catch {}
+        }
+        targetWeek = normalizeWeekData(targetWeek, todayWs);
+        const existingDay = targetWeek.days[todayStr] || emptyDay();
+        const existing = existingDay.hours[currentKey] || { text: '', tag: '' };
+        const updatedText = existing.text.trim()
+          ? `${existing.text} • ${prefix}${text}`
+          : `${prefix}${text}`;
+        targetWeek.days[todayStr] = {
+          ...existingDay,
+          hours: {
+            ...existingDay.hours,
+            [currentKey]: { text: updatedText, tag: tag || (existing.tag as TagCode) || 'E' }
+          }
+        };
+        saveWeekData(targetWeek, todayWs, currentUser, true);
+        return prevWeek;
+      }
+    });
+
     setSaveStatus(
       lang === 'ar'
-        ? `✅ تم تسجيل ${minutes} دقيقة تركيز بنجاح في ${currentKey}`
-        : `✅ Logged ${minutes}m focus session to ${currentKey}`
+        ? `✅ تم تسجيل ${minutes} دقيقة تركيز في تاريخ اليوم (${currentKey})`
+        : `✅ Logged ${minutes}m focus session to today (${currentKey})`
     );
     setTimeout(() => setSaveStatus(''), 3000);
   };

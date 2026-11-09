@@ -18,7 +18,7 @@ import {
   Laptop
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { STRINGS, TAGS_CONFIG } from '../constants/config';
+import { STRINGS, TAGS_CONFIG, TAG_SHORT_LABELS } from '../constants/config';
 import { TagCode, ThemeMode } from '../types';
 import { soundManager } from '../utils/soundEffects';
 import {
@@ -958,19 +958,21 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                 {POMO_TAG_KEYS.map((tagKey) => {
                   const cfg = TAGS_CONFIG[tagKey];
                   const isSelected = selectedTag === tagKey;
+                  const shortLabel = TAG_SHORT_LABELS[tagKey]?.[lang] || tagKey;
                   return (
                     <button
                       key={tagKey}
                       type="button"
                       onClick={() => setSelectedTag(tagKey)}
-                      className={`p-1.5 rounded-xl border text-[10px] font-bold flex flex-col items-center gap-0.5 transition-all cursor-pointer ${
+                      title={cfg.fullTitle[lang]}
+                      className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xs'
-                          : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)]'
+                          ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                          : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)]'
                       }`}
                     >
-                      <span className="text-xs">{tagKey}</span>
-                      <span className="truncate">{cfg.fullTitle[lang]}</span>
+                      <span className="font-mono text-xs font-black">{tagKey}</span>
+                      <span className="text-[11px] font-semibold tracking-tight">{shortLabel}</span>
                     </button>
                   );
                 })}
