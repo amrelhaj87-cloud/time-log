@@ -102,6 +102,19 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Clicking a notification (e.g. Pomodoro finished) brings the app to the front
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
+    })
+  );
+});
+
 // Listen for messages from client (e.g. skipWaiting trigger)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

@@ -15,12 +15,20 @@ import {
   Tag as TagIcon,
   Sun,
   Moon,
-  Laptop
+  Laptop,
+  Bell,
+  BellOff
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { STRINGS, TAGS_CONFIG, TAG_SHORT_LABELS } from '../constants/config';
 import { TagCode, ThemeMode } from '../types';
 import { soundManager } from '../utils/soundEffects';
+import {
+  isNotifyEnabled,
+  setNotifyEnabled,
+  ensureNotificationPermission,
+  showTimerNotification
+} from '../utils/timerAlerts';
 import {
   ambientAudio,
   AMBIENT_SOUND_OPTIONS,
@@ -95,6 +103,15 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
   const [isEditingCustomMin, setIsEditingCustomMin] = useState<boolean>(false);
   const [customMinInput, setCustomMinInput] = useState<string>('30');
+  const [notifyEnabled, setNotifyEnabledState] = useState<boolean>(() => isNotifyEnabled());
+  const [isAlertFlashing, setIsAlertFlashing] = useState<boolean>(false);
+
+  const handleToggleNotify = () => {
+    const next = !notifyEnabled;
+    setNotifyEnabledState(next);
+    setNotifyEnabled(next);
+    if (next) ensureNotificationPermission();
+  };
 
   const timerRef = useRef<number | null>(null);
   const endTimeRef = useRef<number | null>(null);
@@ -168,6 +185,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       // Starting / Resuming: record target end timestamp to survive tab suspension
       endTimeRef.current = Date.now() + timeLeft * 1000;
       setIsRunning(true);
+      // Ask for notification permission on first start (needs a user gesture)
+      if (notifyEnabled) {
+        ensureNotificationPermission();
+      }
       if (ambientSound !== 'none') {
         // Soften volume slightly upon resume so it starts gently
         const currentVol = ambientAudio.getVolume();
@@ -223,6 +244,21 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     ambientAudio.stop();
     endTimeRef.current = null;
     soundManager.playTimerCompleteChime();
+
+    // Alert the user if they are on another tab / app: notification + flashing title
+    if (isNotifyEnabled() && document.hidden) {
+      const finishedFocus = mode === 'focus';
+      showTimerNotification(
+        lang === 'ar'
+          ? (finishedFocus ? '🎯 انتهت جلسة التركيز!' : '☕ انتهت الاستراحة!')
+          : (finishedFocus ? '🎯 Focus session finished!' : '☕ Break is over!'),
+        lang === 'ar'
+          ? (finishedFocus ? 'أحسنت! ارجع للتطبيق لتصنيف الجلسة وأخذ استراحة.' : 'ارجع للتطبيق لبدء جلسة تركيز جديدة.')
+          : (finishedFocus ? 'Great work! Return to the app to tag the session.' : 'Return to the app for a new focus session.')
+      );
+      setIsAlertFlashing(true);
+      try { window.focus(); } catch {}
+    }
 
     if (!isOpen && onRequestOpen) {
       onRequestOpen();
@@ -339,6 +375,29 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       document.title = originalTitle;
     };
   }, [isRunning, timeLeft, mode]);
+
+  // Flashing tab title after timer finished while the tab is hidden, until the user returns
+  useEffect(() => {
+    if (!isAlertFlashing) return;
+    const originalTitle = document.title.startsWith('🔔') ? 'Time Log' : document.title;
+    const alertTitle = lang === 'ar' ? '🔔 انتهى الوقت! — Time Log' : '🔔 Time is up! — Time Log';
+    let on = false;
+    const id = window.setInterval(() => {
+      on = !on;
+      document.title = on ? alertTitle : originalTitle;
+    }, 900);
+    const stop = () => {
+      if (!document.hidden) setIsAlertFlashing(false);
+    };
+    document.addEventListener('visibilitychange', stop);
+    window.addEventListener('focus', stop);
+    return () => {
+      window.clearInterval(id);
+      document.title = originalTitle;
+      document.removeEventListener('visibilitychange', stop);
+      window.removeEventListener('focus', stop);
+    };
+  }, [isAlertFlashing, lang]);
 
   // Toggle Fullscreen
   const toggleFullscreen = async () => {
@@ -502,6 +561,24 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
           {/* Right: Ambient Sound + Theme Toggle + Fullscreen + Exit */}
           <div className="flex items-center gap-1.5">
+            {/* Finish Alert (notification + flashing tab) Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleNotify}
+              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                notifyEnabled
+                  ? 'border-indigo-500/60 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200'
+                  : 'border-[var(--line)] bg-[var(--bg)] hover:bg-[var(--card)] text-[var(--ink-faint)]'
+              }`}
+              title={
+                notifyEnabled
+                  ? (lang === 'ar' ? 'تنبيه انتهاء المؤقت: مفعّل (إشعار + وميض التبويب)' : 'Finish alert: ON (notification + flashing tab)')
+                  : (lang === 'ar' ? 'تنبيه انتهاء المؤقت: متوقف' : 'Finish alert: OFF')
+              }
+            >
+              {notifyEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+            </button>
+
             {/* Ambient Sound Trigger */}
             <div className="relative">
               <button
