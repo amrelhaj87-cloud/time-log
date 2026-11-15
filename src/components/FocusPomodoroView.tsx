@@ -42,7 +42,7 @@ interface FocusPomodoroViewProps {
   onClose: () => void;
   onRequestOpen?: () => void;
   onTimerStateChange?: (state: { isRunning: boolean; timeFormatted: string; mode: PomodoroMode }) => void;
-  onLogToCurrentHour?: (text: string, minutes: number, tag: TagCode) => void;
+  onLogToCurrentHour?: (text: string, minutes: number, tag: TagCode, updateTagOnly?: boolean) => void;
   goldenGoalText?: string;
   themeMode?: ThemeMode;
   isDarkEffective?: boolean;
@@ -1080,7 +1080,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                     onLogToCurrentHour(
                       taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
                       lastCompletedMins,
-                      selectedTag
+                      selectedTag,
+                      true
                     );
                   }
                   setShowCompletedPrompt(false);

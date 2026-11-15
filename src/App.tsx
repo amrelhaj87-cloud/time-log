@@ -1110,7 +1110,12 @@ export default function App() {
     localStorage.setItem('focusModeActive', next ? 'true' : 'false');
   };
 
-  const handleLogPomodoroToCurrentHour = (text: string, minutes: number, tag: TagCode) => {
+  const handleLogPomodoroToCurrentHour = (
+    text: string,
+    minutes: number,
+    tag: TagCode,
+    updateTagOnly = false
+  ) => {
     const now = new Date();
     const todayStr = isoDate(now);
     const currentKey = getCurrentHourKey();
@@ -1121,7 +1126,9 @@ export default function App() {
       const todayDay = prevWeek.days[todayStr];
       if (todayDay) {
         const existing = todayDay.hours[currentKey] || { text: '', tag: '' };
-        const updatedText = existing.text.trim()
+        const updatedText = updateTagOnly
+          ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
+          : existing.text.trim()
           ? `${existing.text} • ${prefix}${text}`
           : `${prefix}${text}`;
         const updatedDay: DayData = {
@@ -1154,7 +1161,9 @@ export default function App() {
         targetWeek = normalizeWeekData(targetWeek, todayWs);
         const existingDay = targetWeek.days[todayStr] || emptyDay();
         const existing = existingDay.hours[currentKey] || { text: '', tag: '' };
-        const updatedText = existing.text.trim()
+        const updatedText = updateTagOnly
+          ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
+          : existing.text.trim()
           ? `${existing.text} • ${prefix}${text}`
           : `${prefix}${text}`;
         targetWeek.days[todayStr] = {
