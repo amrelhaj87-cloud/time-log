@@ -235,7 +235,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setIsRunning(false);
     ambientAudio.stop();
     endTimeRef.current = null;
-    setTimeLeft(totalSeconds);
+    const secs = getDurationForMode(mode);
+    setTotalSeconds(secs);
+    setTimeLeft(secs);
   };
 
   // Handle Session Completion
@@ -926,19 +928,20 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
         {/* Primary Controls: Reset / Play-Pause / End Session / Skip */}
         <div className="flex items-center justify-center gap-2 mt-3.5 w-full">
-          {/* Reset Button */}
+          {/* Reset / Discard Button */}
           <button
             type="button"
-            onClick={() => {
-              setIsRunning(false);
-              ambientAudio.stop();
-              const secs = getDurationForMode(mode);
-              setTotalSeconds(secs);
-              setTimeLeft(secs);
-              soundManager.playClick();
-            }}
-            className="p-2.5 rounded-2xl bg-[var(--bg)] hover:bg-[var(--card)] border border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-            title={t.pomoReset}
+            onClick={handleDiscardSession}
+            className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 ${
+              timeLeft < totalSeconds || isRunning
+                ? 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border-amber-200 dark:border-amber-800/60 text-amber-600 dark:text-amber-300 hover:text-amber-700 dark:hover:text-amber-100'
+                : 'bg-[var(--bg)] hover:bg-[var(--card)] border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)]'
+            }`}
+            title={
+              timeLeft < totalSeconds || isRunning
+                ? (lang === 'ar' ? 'إلغاء وإعادة ضبط المؤقت دون تسجيل' : 'Cancel & reset timer without saving')
+                : t.pomoReset
+            }
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -975,18 +978,6 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           >
             <Square className="w-4 h-4 fill-current text-rose-500" />
           </button>
-
-          {/* Discard / Cancel Session without saving (إلغاء دون تسجيل) */}
-          {(timeLeft < totalSeconds || isRunning) && (
-            <button
-              type="button"
-              onClick={handleDiscardSession}
-              className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/60 text-amber-600 dark:text-amber-300 hover:text-amber-700 dark:hover:text-amber-100 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 animate-in fade-in"
-              title={lang === 'ar' ? 'إلغاء الجلسة دون تسجيل في الساعة' : 'Discard session without saving'}
-            >
-              <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </button>
-          )}
 
           {/* Skip / Next Session Button */}
           <button

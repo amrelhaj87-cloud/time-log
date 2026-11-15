@@ -38,10 +38,11 @@ export const TagRingsOverview: React.FC<TagRingsOverviewProps> = ({
         const info = TAGS_CONFIG[code];
         if (!info) return null;
         const count = tagCounts?.[code] || 0;
-        const pct = totalSlots > 0 ? count / totalSlots : 0;
+        const targetQuota = tagTargets && code !== 'SL' && code !== '' ? tagTargets[code as keyof TagTargets] : undefined;
+        const denominator = targetQuota && targetQuota > 0 ? targetQuota : totalSlots;
+        const pct = denominator > 0 ? count / denominator : 0;
         const offset = tcirc * (1 - Math.min(pct, 1));
 
-        const targetQuota = tagTargets && code !== 'SL' && code !== '' ? tagTargets[code as keyof TagTargets] : undefined;
         const tooltip = targetQuota !== undefined
           ? `${info.fullTitle[lang]} (${count}h / ${lang === 'ar' ? 'الهدف' : 'Target'}: ${targetQuota}h)`
           : info.fullTitle[lang];
