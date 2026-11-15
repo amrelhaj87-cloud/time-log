@@ -234,9 +234,9 @@ export const Header: React.FC<HeaderProps> = ({
   const t = STRINGS[lang];
 
   return (
-    <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 md:gap-3 pb-3 mb-4 border-b border-[var(--line)] w-full min-w-0 select-none">
-      {/* Top Row on Mobile / Left & Middle on Desktop */}
-      <div className="flex items-center justify-between gap-2 w-full md:w-auto min-w-0">
+    <header className="flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-between gap-2.5 md:gap-x-3 md:gap-y-2 pb-3 mb-4 border-b border-[var(--line)] w-full min-w-0 select-none">
+      {/* Top Row on Mobile / Brand on Desktop */}
+      <div className="flex flex-wrap items-center justify-between gap-2 w-full md:w-auto shrink-0">
         {/* Brand */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="w-8 h-8 bg-indigo-600 dark:bg-indigo-500 rounded-xl flex items-center justify-center shadow-xs select-none shrink-0 ring-1 ring-indigo-700/20 dark:ring-indigo-400/30">
@@ -329,7 +329,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Middle: Date Selector + Age Badge + Progress Ring + Unified Live Clock (Never Collides!) */}
-      <div className="flex items-center justify-between sm:justify-start md:justify-center gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+      <div className="flex items-center justify-between sm:justify-start md:justify-center gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 flex-wrap">
         {/* Date Selector Popover */}
         <div className="relative shrink-0" ref={datePickerRef}>
           <button
@@ -551,20 +551,19 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* End / Left on Desktop: Detailed View Toggle, Settings, and Auth */}
-      <div className="hidden md:flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div className="hidden md:flex flex-wrap items-center justify-end gap-1.5 shrink-0 md:ms-auto">
         {/* Toggle Detailed vs Compact View */}
         <button
           type="button"
           onClick={onToggleDetailedView}
-          className={`border rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+          className={`border rounded-lg p-2 text-xs font-medium flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0 ${
             isDetailedView
               ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 font-bold ring-1 ring-indigo-500/20'
               : 'bg-[var(--card)] border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)] hover:border-slate-300 dark:hover:border-slate-600'
           }`}
           title={isDetailedView ? (lang === 'ar' ? 'عرض مدمج (إخفاء شريط الأسبوع)' : 'Compact View') : (lang === 'ar' ? 'عرض تفصيلي (إظهار شريط الأسبوع)' : 'Detailed View')}
         >
-          <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-          <span className="hidden md:inline whitespace-nowrap">{isDetailedView ? t.expandedBtn : t.compactBtn}</span>
+          <SlidersHorizontal className="w-4 h-4 shrink-0" />
         </button>
 
         {/* Brain Dump & Todo Inbox Button on Desktop */}
@@ -572,7 +571,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenTodoInbox}
-            className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer relative"
+            className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer relative shrink-0"
             title={lang === 'ar' ? 'صندوق تفريغ الأفكار والمهام (Brain Dump)' : 'Brain Dump & Tasks'}
           >
             <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
@@ -589,11 +588,10 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="bg-[var(--card)] border border-[var(--line)] rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer"
+          className="bg-[var(--card)] border border-[var(--line)] rounded-lg p-2 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer shrink-0"
           title={lang === 'ar' ? 'الإعدادات والتفضيلات' : 'Settings & Preferences'}
         >
-          <Settings className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="hidden md:inline whitespace-nowrap">{lang === 'ar' ? 'الإعدادات' : 'Settings'}</span>
+          <Settings className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
         </button>
 
         {/* User Auth Direct Action */}
