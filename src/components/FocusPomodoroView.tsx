@@ -248,7 +248,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     soundManager.playTimerCompleteChime();
 
     // Alert the user if they are on another tab / app: notification + flashing title
-    if (isNotifyEnabled() && document.hidden) {
+    if (isNotifyEnabled() && (document.hidden || !document.hasFocus())) {
       const finishedFocus = mode === 'focus';
       showTimerNotification(
         lang === 'ar'
@@ -299,6 +299,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
+  const handleTimerFinishRef = useRef(handleTimerFinish);
+  handleTimerFinishRef.current = handleTimerFinish;
+
   // Timer Tick with wall-clock calculation, Web Worker & visibilitychange resilience (continues in background when minimized)
   useEffect(() => {
     if (!isRunning) {
@@ -319,7 +322,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       setTimeLeft(remaining);
       if (remaining <= 0) {
         endTimeRef.current = null;
-        handleTimerFinish();
+        handleTimerFinishRef.current();
       }
     };
 
@@ -389,7 +392,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       document.title = on ? alertTitle : originalTitle;
     }, 900);
     const stop = () => {
-      if (!document.hidden) setIsAlertFlashing(false);
+      if (!document.hidden && document.hasFocus()) setIsAlertFlashing(false);
     };
     document.addEventListener('visibilitychange', stop);
     window.addEventListener('focus', stop);

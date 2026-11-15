@@ -173,6 +173,32 @@ export const HoursList: React.FC<HoursListProps> = ({
     });
   };
 
+  const visibleHoursList = HOURS_LIST.filter(
+    (k) => !sleepHourKeys.includes(k) || (showSleepBlock && isSleepExceptionToday)
+  );
+
+  const navigateToHourKey = (targetKey: string) => {
+    const existingInput = document.getElementById(`hour-input-${targetKey}`) as HTMLInputElement | null;
+    if (existingInput) {
+      existingInput.focus();
+      return;
+    }
+    const targetPeriod = HOUR_PERIODS.find((p) => p.keys.includes(targetKey));
+    if (targetPeriod) {
+      setCollapsedPeriods((prev) => ({
+        ...prev,
+        [targetPeriod.id]: false
+      }));
+      setTimeout(() => {
+        const inputEl = document.getElementById(`hour-input-${targetKey}`) as HTMLInputElement | null;
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 40);
+    }
+  };
+
   // Unapplied Google Calendar events for empty hour slots today
   const unappliedCalendarEvents = isToday
     ? Object.entries(googleCalendarEvents).filter(([k]) => !hoursData[k]?.text?.trim())
@@ -412,24 +438,16 @@ export const HoursList: React.FC<HoursListProps> = ({
                                 onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
                               }
                             } else if (e.key === 'ArrowDown') {
-                              const currentIdx = HOURS_LIST.indexOf(key);
-                              if (currentIdx >= 0 && currentIdx < HOURS_LIST.length - 1) {
-                                const nextKey = HOURS_LIST[currentIdx + 1];
-                                const nextInput = document.getElementById(`hour-input-${nextKey}`) as HTMLInputElement | null;
-                                if (nextInput) {
-                                  e.preventDefault();
-                                  nextInput.focus();
-                                }
+                              const currentIdx = visibleHoursList.indexOf(key);
+                              if (currentIdx >= 0 && currentIdx < visibleHoursList.length - 1) {
+                                e.preventDefault();
+                                navigateToHourKey(visibleHoursList[currentIdx + 1]);
                               }
                             } else if (e.key === 'ArrowUp') {
-                              const currentIdx = HOURS_LIST.indexOf(key);
+                              const currentIdx = visibleHoursList.indexOf(key);
                               if (currentIdx > 0) {
-                                const prevKey = HOURS_LIST[currentIdx - 1];
-                                const prevInput = document.getElementById(`hour-input-${prevKey}`) as HTMLInputElement | null;
-                                if (prevInput) {
-                                  e.preventDefault();
-                                  prevInput.focus();
-                                }
+                                e.preventDefault();
+                                navigateToHourKey(visibleHoursList[currentIdx - 1]);
                               }
                             }
                           }}
