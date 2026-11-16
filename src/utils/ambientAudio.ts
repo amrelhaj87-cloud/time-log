@@ -1,7 +1,7 @@
 // Web Audio API synthesized Ambient Background Sounds & Focus Music Engine
 // 100% offline, zero latency, no external mp3 assets needed.
 
-export type AmbientSoundType = 'none' | 'rain' | 'waves' | 'forest' | 'cafe' | 'whitenoise' | 'binaural';
+export type AmbientSoundType = 'none' | 'rain' | 'waves' | 'forest' | 'cafe' | 'whitenoise' | 'brownnoise' | 'binaural';
 
 export interface AmbientSoundOption {
   id: AmbientSoundType;
@@ -17,6 +17,7 @@ export const AMBIENT_SOUND_OPTIONS: AmbientSoundOption[] = [
   { id: 'forest', labelAr: 'غابة وطبيعة', labelEn: 'Zen Forest', icon: '🍃' },
   { id: 'cafe', labelAr: 'أجواء مقهى', labelEn: 'Cafe Ambience', icon: '☕' },
   { id: 'whitenoise', labelAr: 'ضوضاء بيضاء', labelEn: 'White Noise', icon: '🎧' },
+  { id: 'brownnoise', labelAr: 'ضوضاء بنية عميقة', labelEn: 'Deep Brown Noise', icon: '🟤' },
   { id: 'binaural', labelAr: 'نغمات ألفا للتركيز', labelEn: 'Alpha Wave Focus', icon: '🎵' },
 ];
 
@@ -139,6 +140,9 @@ class AmbientAudioEngine {
       case 'whitenoise':
         this.setupWhiteNoise(ctx, this.masterGain);
         break;
+      case 'brownnoise':
+        this.setupBrownNoise(ctx, this.masterGain);
+        break;
       case 'binaural':
         this.setupBinaural(ctx, this.masterGain);
         break;
@@ -149,18 +153,24 @@ class AmbientAudioEngine {
   }
 
   // Create a continuous noise buffer
-  private createNoiseBuffer(ctx: AudioContext, durationSec = 4): AudioBuffer {
+  private createNoiseBuffer(ctx: AudioContext, durationSec = 4, tint: 'pink' | 'brown' = 'pink'): AudioBuffer {
     const bufferSize = ctx.sampleRate * durationSec;
     const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
     for (let channel = 0; channel < 2; channel++) {
       const output = buffer.getChannelData(channel);
       let lastOut = 0.0;
       for (let i = 0; i < bufferSize; i++) {
-        // Pink-tinted random noise
         const white = Math.random() * 2 - 1;
-        output[i] = (lastOut + 0.02 * white) / 1.02;
-        lastOut = output[i];
-        output[i] *= 3.5; // Gain boost
+        if (tint === 'brown') {
+          output[i] = (lastOut + 0.015 * white) / 1.015;
+          lastOut = output[i];
+          output[i] *= 4.0;
+        } else {
+          // Pink-tinted random noise
+          output[i] = (lastOut + 0.02 * white) / 1.02;
+          lastOut = output[i];
+          output[i] *= 3.5; // Gain boost
+        }
       }
     }
     return buffer;
@@ -301,39 +311,24 @@ class AmbientAudioEngine {
     this.intervalIds.push(interval);
   }
 
-  // 4. Cozy Cafe Ambience Synthesizer
-  private setupCafe(ctx: AudioContext, dest: GainNode) {
+  private setupFilteredNoise(
+    ctx: AudioContext,
+    dest: GainNode,
+    cutoffHz: number,
+    gainVal: number,
+    durationSec = 4,
+    tint: 'pink' | 'brown' = 'pink'
+  ) {
     const noise = ctx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer(ctx, 4);
+    noise.buffer = this.createNoiseBuffer(ctx, durationSec, tint);
     noise.loop = true;
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(750, ctx.currentTime);
-
-    const cafeGain = ctx.createGain();
-    cafeGain.gain.setValueAtTime(0.35, ctx.currentTime);
-
-    noise.connect(filter);
-    filter.connect(cafeGain);
-    cafeGain.connect(dest);
-
-    noise.start();
-    this.activeNodes.push(noise, filter, cafeGain);
-  }
-
-  // 5. White Noise Focus Synthesizer
-  private setupWhiteNoise(ctx: AudioContext, dest: GainNode) {
-    const noise = ctx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer(ctx, 4);
-    noise.loop = true;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2500, ctx.currentTime);
+    filter.frequency.setValueAtTime(cutoffHz, ctx.currentTime);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.setValueAtTime(gainVal, ctx.currentTime);
 
     noise.connect(filter);
     filter.connect(gain);
@@ -341,6 +336,21 @@ class AmbientAudioEngine {
 
     noise.start();
     this.activeNodes.push(noise, filter, gain);
+  }
+
+  // 4. Cozy Cafe Ambience Synthesizer
+  private setupCafe(ctx: AudioContext, dest: GainNode) {
+    this.setupFilteredNoise(ctx, dest, 750, 0.35, 4, 'pink');
+  }
+
+  // 5. White Noise Focus Synthesizer
+  private setupWhiteNoise(ctx: AudioContext, dest: GainNode) {
+    this.setupFilteredNoise(ctx, dest, 2500, 0.3, 4, 'pink');
+  }
+
+  // 5b. Deep Brown Noise Synthesizer (warm low-frequency rumble for long focus)
+  private setupBrownNoise(ctx: AudioContext, dest: GainNode) {
+    this.setupFilteredNoise(ctx, dest, 320, 0.42, 5, 'brown');
   }
 
   // 6. Binaural 10Hz Alpha Focus Waves (Left 216Hz, Right 226Hz + Soft Zen Drone)

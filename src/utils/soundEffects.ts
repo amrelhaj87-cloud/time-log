@@ -32,34 +32,27 @@ class SoundManager {
   }
 
   /**
-   * Play a pleasant bell / chime notification sound when timer completes
+   * Shared helper to schedule a sequence of gentle Web Audio chime notes
    */
-  public playTimerCompleteChime() {
+  private playToneSequence(
+    notes: Array<{ freq: number; time: number; dur: number; peakGain?: number; type?: OscillatorType }>
+  ) {
     if (!this.soundEnabled) return;
     try {
       const ctx = this.getContext();
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      
-      // Chime notes: E5 (659.25Hz), G#5 (830.61Hz), B5 (987.77Hz), E6 (1318.51Hz)
-      const notes = [
-        { freq: 659.25, time: 0, dur: 0.8 },
-        { freq: 830.61, time: 0.15, dur: 0.9 },
-        { freq: 987.77, time: 0.3, dur: 1.1 },
-        { freq: 1318.51, time: 0.45, dur: 1.5 }
-      ];
-
-      notes.forEach(({ freq, time, dur }) => {
+      notes.forEach(({ freq, time, dur, peakGain = 0.2, type = 'sine' }) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
-        osc.type = 'sine';
+        osc.type = type;
         osc.frequency.setValueAtTime(freq, now + time);
 
         // Gentle strike and smooth exponential decay
         gain.gain.setValueAtTime(0.001, now + time);
-        gain.gain.linearRampToValueAtTime(0.2, now + time + 0.03);
+        gain.gain.linearRampToValueAtTime(peakGain, now + time + 0.03);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + time + dur);
 
         osc.connect(gain);
@@ -71,6 +64,31 @@ class SoundManager {
     } catch {
       // Audio autoplay policy fallback
     }
+  }
+
+  /**
+   * Play a pleasant ascending bell / chime sound when a focus session completes
+   */
+  public playTimerCompleteChime() {
+    // Chime notes: E5 (659.25Hz), G#5 (830.61Hz), B5 (987.77Hz), E6 (1318.51Hz)
+    this.playToneSequence([
+      { freq: 659.25, time: 0, dur: 0.8 },
+      { freq: 830.61, time: 0.15, dur: 0.9 },
+      { freq: 987.77, time: 0.3, dur: 1.1 },
+      { freq: 1318.51, time: 0.45, dur: 1.5 }
+    ]);
+  }
+
+  /**
+   * Play a distinct, crisp two-pulse chime when a break finishes so the user tells break vs focus apart by ear
+   */
+  public playBreakCompleteChime() {
+    this.playToneSequence([
+      { freq: 1046.5, time: 0, dur: 0.28, peakGain: 0.18, type: 'triangle' },
+      { freq: 783.99, time: 0.16, dur: 0.35, peakGain: 0.16, type: 'triangle' },
+      { freq: 1046.5, time: 0.42, dur: 0.35, peakGain: 0.2, type: 'sine' },
+      { freq: 1318.51, time: 0.58, dur: 0.9, peakGain: 0.18, type: 'sine' }
+    ]);
   }
 
   /**
@@ -99,28 +117,10 @@ class SoundManager {
    * Play an uplifting two-tone success chime
    */
   public playSuccess() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-      [
-        { freq: 587.33, time: 0, dur: 0.15 },
-        { freq: 880.0, time: 0.1, dur: 0.35 }
-      ].forEach(({ freq, time, dur }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + time);
-        gain.gain.setValueAtTime(0.001, now + time);
-        gain.gain.linearRampToValueAtTime(0.12, now + time + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + time + dur);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + time);
-        osc.stop(now + time + dur);
-      });
-    } catch {}
+    this.playToneSequence([
+      { freq: 587.33, time: 0, dur: 0.15, peakGain: 0.12 },
+      { freq: 880.0, time: 0.1, dur: 0.35, peakGain: 0.12 }
+    ]);
   }
 }
 
