@@ -285,7 +285,7 @@ export default function App() {
   const [pomoBgState, setPomoBgState] = useState<{
     isRunning: boolean;
     timeFormatted: string;
-    mode: 'focus' | 'shortBreak' | 'longBreak';
+    mode: 'focus' | 'break';
   }>({
     isRunning: false,
     timeFormatted: '25:00',

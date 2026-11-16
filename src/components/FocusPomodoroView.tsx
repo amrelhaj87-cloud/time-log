@@ -35,7 +35,7 @@ import {
   AmbientSoundType
 } from '../utils/ambientAudio';
 
-export type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
+export type PomodoroMode = 'focus' | 'break';
 
 interface FocusPomodoroViewProps {
   isOpen: boolean;
@@ -52,8 +52,7 @@ interface FocusPomodoroViewProps {
 
 const PRESET_DURATIONS: Record<PomodoroMode, number[]> = {
   focus: [25, 45, 60],
-  shortBreak: [5, 10],
-  longBreak: [15, 20, 30]
+  break: [5, 15, 25]
 };
 
 const POMO_TAG_KEYS: TagCode[] = ['E', 'V', 'R', 'S', 'SC'];
@@ -75,13 +74,13 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   // Pomodoro State
   const [mode, setMode] = useState<PomodoroMode>('focus');
   const [focusDurationMin, setFocusDurationMin] = useState<number>(25);
-  const [shortBreakDurationMin] = useState<number>(5);
-  const [longBreakDurationMin] = useState<number>(15);
+  const [breakDurationMin, setBreakDurationMin] = useState<number>(5);
 
-  const getDurationForMode = (m: PomodoroMode, customFocus = focusDurationMin) => {
-    if (m === 'focus') return customFocus * 60;
-    if (m === 'shortBreak') return shortBreakDurationMin * 60;
-    return longBreakDurationMin * 60;
+  const activeDurationMin = mode === 'focus' ? focusDurationMin : breakDurationMin;
+
+  const getDurationForMode = (m: PomodoroMode, customMins?: number) => {
+    const mins = customMins ?? (m === 'focus' ? focusDurationMin : breakDurationMin);
+    return mins * 60;
   };
 
   const [totalSeconds, setTotalSeconds] = useState<number>(() => getDurationForMode('focus'));
@@ -101,6 +100,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showCompletedPrompt, setShowCompletedPrompt] = useState<boolean>(false);
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
+  const [suggestedBreakMin, setSuggestedBreakMin] = useState<number>(5);
   const [isEditingCustomMin, setIsEditingCustomMin] = useState<boolean>(false);
   const [customMinInput, setCustomMinInput] = useState<string>('30');
   const [notifyEnabled, setNotifyEnabledState] = useState<boolean>(() => isNotifyEnabled());
@@ -148,7 +148,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
-  // Switch Mode handler
+  // Suggested break minutes after a focus block (15m every 4th session, otherwise 5m)
+  const getSuggestedBreakMin = () => (sessionCount % 4 === 0 ? 15 : 5);
+
+  // Switch Mode handler (automatically stops focus ambient sound when moving between modes)
   const handleSwitchMode = (newMode: PomodoroMode, customMins?: number) => {
     setMode(newMode);
     setIsRunning(false);
@@ -156,18 +159,21 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     ambientAudio.stop();
     endTimeRef.current = null;
     setShowCompletedPrompt(false);
-    const targetMins = customMins || (newMode === 'focus' ? focusDurationMin : newMode === 'shortBreak' ? shortBreakDurationMin : longBreakDurationMin);
+    if (customMins !== undefined) {
+      if (newMode === 'focus') setFocusDurationMin(customMins);
+      else setBreakDurationMin(customMins);
+    }
+    const targetMins = customMins ?? (newMode === 'focus' ? focusDurationMin : breakDurationMin);
     const secs = targetMins * 60;
     setTotalSeconds(secs);
     setTimeLeft(secs);
   };
 
-  // Apply custom focus duration in minutes
+  // Apply custom duration in minutes for the currently active tab (focus or break)
   const handleApplyCustomMinutes = () => {
     const parsed = parseInt(customMinInput.trim(), 10);
     if (!isNaN(parsed) && parsed >= 1 && parsed <= 240) {
-      setFocusDurationMin(parsed);
-      handleSwitchMode('focus', parsed);
+      handleSwitchMode(mode, parsed);
     } else {
       setIsEditingCustomMin(false);
     }
@@ -202,8 +208,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
-  // Explicit End Session / Stop & Log early
+  // Explicit End Session / Stop & Log early (focus mode only — breaks are never logged)
   const handleEndSession = () => {
+    if (mode !== 'focus') return;
     soundManager.playClick();
     setIsRunning(false);
     ambientAudio.stop();
@@ -215,7 +222,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     if (elapsedSeconds >= 45 || timeLeft <= 60) {
       // Has worked meaningful minutes -> auto-log immediately & open completion dialog
       setLastCompletedMins(elapsedMinutes);
-      if (mode === 'focus' && onLogToCurrentHour) {
+      setSuggestedBreakMin(getSuggestedBreakMin());
+      if (onLogToCurrentHour) {
         onLogToCurrentHour(
           taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
           elapsedMinutes,
@@ -245,7 +253,11 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setIsRunning(false);
     ambientAudio.stop();
     endTimeRef.current = null;
-    soundManager.playTimerCompleteChime();
+    if (mode === 'focus') {
+      soundManager.playTimerCompleteChime();
+    } else {
+      soundManager.playBreakCompleteChime();
+    }
 
     // Alert the user if they are on another tab / app: notification + flashing title
     if (isNotifyEnabled() && (document.hidden || !document.hasFocus())) {
@@ -286,6 +298,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           selectedTag
         );
       }
+      setSuggestedBreakMin(sessionCount >= 4 ? 15 : 5);
       setShowCompletedPrompt(true);
       // Advance session count
       const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
@@ -488,27 +501,15 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
         icon: '🎯'
       };
     }
-    if (mode === 'shortBreak') {
-      return {
-        accent: 'text-emerald-600 dark:text-emerald-400',
-        bgGlow: 'from-emerald-500/10 via-teal-500/5 to-transparent',
-        border: 'border-emerald-500/30',
-        ringStroke: 'stroke-emerald-500 dark:stroke-emerald-400',
-        trackStroke: 'stroke-slate-200 dark:stroke-slate-800',
-        chipActive: 'bg-emerald-600 text-white shadow-emerald-500/25',
-        label: t.pomoShortBreak,
-        icon: '☕'
-      };
-    }
     return {
-      accent: 'text-amber-600 dark:text-amber-400',
-      bgGlow: 'from-amber-500/10 via-orange-500/5 to-transparent',
-      border: 'border-amber-500/30',
-      ringStroke: 'stroke-amber-500 dark:stroke-amber-400',
+      accent: 'text-emerald-600 dark:text-emerald-400',
+      bgGlow: 'from-emerald-500/10 via-teal-500/5 to-transparent',
+      border: 'border-emerald-500/30',
+      ringStroke: 'stroke-emerald-500 dark:stroke-emerald-400',
       trackStroke: 'stroke-slate-200 dark:stroke-slate-800',
-      chipActive: 'bg-amber-600 text-white shadow-amber-500/25',
-      label: t.pomoLongBreak,
-      icon: '🌴'
+      chipActive: 'bg-emerald-600 text-white shadow-emerald-500/25',
+      label: t.pomoBreak,
+      icon: '☕'
     };
   }, [mode, t]);
 
@@ -728,7 +729,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           </div>
         </header>
 
-        {/* Mode Selector Tabs (Focus / Short Break / Long Break) */}
+        {/* Mode Selector Tabs (Focus / Unified Break) */}
         <div className="w-full bg-[var(--bg)] p-1 rounded-2xl border border-[var(--line)] flex items-center justify-between gap-1 mb-2.5">
           <button
             type="button"
@@ -745,120 +746,113 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
           <button
             type="button"
-            onClick={() => handleSwitchMode('shortBreak')}
+            onClick={() => handleSwitchMode('break')}
             className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              mode === 'shortBreak'
+              mode === 'break'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--card)]'
             }`}
           >
             <span>☕</span>
-            <span className="truncate">{t.pomoShortBreak}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSwitchMode('longBreak')}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              mode === 'longBreak'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--card)]'
-            }`}
-          >
-            <span>🌴</span>
-            <span className="truncate">{t.pomoLongBreak}</span>
+            <span className="truncate">{t.pomoBreak}</span>
           </button>
         </div>
 
-        {/* Quick Focus Duration Presets - Fixed Container (Zero Layout Shift) */}
+        {/* Quick Duration Presets & Custom Input (Shared cleanly across Focus and Break modes) */}
         <div className="w-full h-7 flex items-center justify-center mb-1.5 shrink-0">
-          {mode === 'focus' ? (
-            <div className="flex items-center gap-1.5">
-              {PRESET_DURATIONS.focus.map((mins) => {
-                const isSelected = focusDurationMin === mins && !isEditingCustomMin;
-                return (
-                  <button
-                    key={mins}
-                    type="button"
-                    disabled={isRunning}
-                    onClick={() => {
-                      if (isRunning) return;
-                      setFocusDurationMin(mins);
-                      handleSwitchMode('focus', mins);
-                    }}
-                    className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all border ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 shadow-2xs'
-                        : isRunning
-                        ? 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-faint)] cursor-not-allowed opacity-50'
-                        : 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:border-indigo-400 cursor-pointer'
-                    }`}
-                  >
-                    {mins}m
-                  </button>
-                );
-              })}
+          <div className="flex items-center gap-1.5">
+            {PRESET_DURATIONS[mode].map((mins) => {
+              const isSelected = activeDurationMin === mins && !isEditingCustomMin;
+              const selectedClasses =
+                mode === 'focus'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 shadow-2xs'
+                  : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-200 shadow-2xs';
+              const hoverBorder = mode === 'focus' ? 'hover:border-indigo-400' : 'hover:border-emerald-400';
 
-              {/* Manual Custom Duration Input / Button */}
-              {isEditingCustomMin && !isRunning ? (
-                <div className="flex items-center gap-1 bg-[var(--bg)] border border-indigo-500 rounded-lg px-1.5 py-0.5 shadow-2xs">
-                  <input
-                    type="number"
-                    min={1}
-                    max={240}
-                    autoFocus
-                    value={customMinInput}
-                    onChange={(e) => setCustomMinInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleApplyCustomMinutes();
-                      } else if (e.key === 'Escape') {
-                        e.stopPropagation();
-                        setIsEditingCustomMin(false);
-                      }
-                    }}
-                    onBlur={handleApplyCustomMinutes}
-                    placeholder="30"
-                    className="w-10 text-center text-[11px] font-mono font-bold bg-transparent text-[var(--ink)] outline-hidden"
-                  />
-                  <span className="text-[10px] font-mono text-[var(--ink-soft)]">m</span>
-                </div>
-              ) : (
+              return (
                 <button
+                  key={`${mode}-${mins}`}
                   type="button"
                   disabled={isRunning}
                   onClick={() => {
                     if (isRunning) return;
-                    setCustomMinInput(String(focusDurationMin));
-                    setIsEditingCustomMin(true);
+                    handleSwitchMode(mode, mins);
                   }}
-                  title={lang === 'ar' ? 'إدخال مدة مخصصة بالدقائق (1 - 240 دقيقة)' : 'Enter custom duration in minutes (1 - 240m)'}
-                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-1 ${
-                    !PRESET_DURATIONS.focus.includes(focusDurationMin)
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 shadow-2xs font-mono'
+                  className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all border ${
+                    isSelected
+                      ? selectedClasses
                       : isRunning
                       ? 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-faint)] cursor-not-allowed opacity-50'
-                      : 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:border-indigo-400 cursor-pointer'
+                      : `border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] ${hoverBorder} cursor-pointer`
                   }`}
                 >
-                  <span>✏️</span>
-                  <span>
-                    {!PRESET_DURATIONS.focus.includes(focusDurationMin)
-                      ? `${focusDurationMin}m`
-                      : lang === 'ar'
-                      ? 'مخصص'
-                      : 'Custom'}
-                  </span>
+                  {mins}m
                 </button>
-              )}
-            </div>
-          ) : (
-            <div className="text-[11px] font-medium text-[var(--ink-soft)] flex items-center gap-1">
-              <span>{mode === 'shortBreak' ? '☕' : '🌴'}</span>
-              <span>{mode === 'shortBreak' ? (lang === 'ar' ? 'استراحة سريعة لإنعاش التركيز' : 'Quick refresh break') : (lang === 'ar' ? 'استراحة طويلة للاسترخاء' : 'Long deep break')}</span>
-            </div>
-          )}
+              );
+            })}
+
+            {/* Manual Custom Duration Input / Button */}
+            {isEditingCustomMin && !isRunning ? (
+              <div
+                className={`flex items-center gap-1 bg-[var(--bg)] border rounded-lg px-1.5 py-0.5 shadow-2xs ${
+                  mode === 'focus' ? 'border-indigo-500' : 'border-emerald-500'
+                }`}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={240}
+                  autoFocus
+                  value={customMinInput}
+                  onChange={(e) => setCustomMinInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyCustomMinutes();
+                    } else if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      setIsEditingCustomMin(false);
+                    }
+                  }}
+                  onBlur={handleApplyCustomMinutes}
+                  placeholder={mode === 'focus' ? '30' : '10'}
+                  className="w-10 text-center text-[11px] font-mono font-bold bg-transparent text-[var(--ink)] outline-hidden"
+                />
+                <span className="text-[10px] font-mono text-[var(--ink-soft)]">m</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isRunning}
+                onClick={() => {
+                  if (isRunning) return;
+                  setCustomMinInput(String(activeDurationMin));
+                  setIsEditingCustomMin(true);
+                }}
+                title={lang === 'ar' ? 'إدخال مدة مخصصة بالدقائق (1 - 240 دقيقة)' : 'Enter custom duration in minutes (1 - 240m)'}
+                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-1 ${
+                  !PRESET_DURATIONS[mode].includes(activeDurationMin)
+                    ? mode === 'focus'
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-200 shadow-2xs font-mono'
+                      : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-200 shadow-2xs font-mono'
+                    : isRunning
+                    ? 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-faint)] cursor-not-allowed opacity-50'
+                    : `border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] ${
+                        mode === 'focus' ? 'hover:border-indigo-400' : 'hover:border-emerald-400'
+                      } cursor-pointer`
+                }`}
+              >
+                <span>✏️</span>
+                <span>
+                  {!PRESET_DURATIONS[mode].includes(activeDurationMin)
+                    ? `${activeDurationMin}m`
+                    : lang === 'ar'
+                    ? 'مخصص'
+                    : 'Custom'}
+                </span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Circular Animated Progress Countdown Timer */}
@@ -891,20 +885,26 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           <div className="absolute flex flex-col items-center justify-center text-center px-4">
             <span
               onClick={() => {
-                if (mode === 'focus' && !isRunning) {
-                  setCustomMinInput(String(focusDurationMin));
+                if (!isRunning) {
+                  setCustomMinInput(String(activeDurationMin));
                   setIsEditingCustomMin(true);
                 }
               }}
               title={
-                mode === 'focus' && !isRunning
+                !isRunning
                   ? lang === 'ar'
                     ? 'انقر لتحديد مدة مخصصة بالدقائق'
                     : 'Click to set custom minutes'
                   : undefined
               }
               className={`text-4xl sm:text-5xl font-black font-mono tracking-tight text-[var(--ink)] drop-shadow-2xs ${
-                mode === 'focus' && !isRunning ? 'cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors' : ''
+                !isRunning
+                  ? `cursor-pointer transition-colors ${
+                      mode === 'focus'
+                        ? 'hover:text-indigo-600 dark:hover:text-indigo-400'
+                        : 'hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`
+                  : ''
               }`}
             >
               {timeFormatted}
@@ -918,18 +918,29 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           </div>
         </div>
 
-        {/* Focus Task Note Input */}
+        {/* Focus Task Note Input (Hidden during Break — replaced by calm unlogged break notice; task text stays preserved for return to Focus) */}
         <div className="w-full mt-2">
-          <input
-            type="text"
-            value={taskText}
-            onChange={(e) => setTaskText(e.target.value)}
-            placeholder={t.pomoTaskPlaceholder}
-            className="w-full bg-[var(--bg)] border border-[var(--line)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-[var(--ink)] placeholder-[var(--ink-faint)] text-xs px-3.5 py-2 rounded-xl transition-all text-center focus:text-start outline-hidden"
-          />
+          {mode === 'focus' ? (
+            <input
+              type="text"
+              value={taskText}
+              onChange={(e) => setTaskText(e.target.value)}
+              placeholder={t.pomoTaskPlaceholder}
+              className="w-full bg-[var(--bg)] border border-[var(--line)] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-[var(--ink)] placeholder-[var(--ink-faint)] text-xs px-3.5 py-2 rounded-xl transition-all text-center focus:text-start outline-hidden"
+            />
+          ) : (
+            <div className="w-full bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-medium px-3.5 py-2 rounded-xl text-center flex items-center justify-center gap-1.5">
+              <span>☕</span>
+              <span>
+                {lang === 'ar'
+                  ? 'وقت استراحة وتجديد النشاط — لا يتم تسجيل الاستراحة في ساعات اليوم'
+                  : 'Refresh & recharge break — breaks are not logged to hours'}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Primary Controls: Reset / Play-Pause / End Session / Skip */}
+        {/* Primary Controls: Reset / Play-Pause / End Session (Focus only) / Skip */}
         <div className="flex items-center justify-center gap-2 mt-3.5 w-full">
           {/* Reset / Discard Button */}
           <button
@@ -956,6 +967,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
             className={`flex-1 max-w-[170px] py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:scale-105 active:scale-95 ${
               isRunning
                 ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/20'
+                : mode === 'break'
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/30'
             }`}
           >
@@ -967,20 +980,22 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
             ) : (
               <>
                 <Play className="w-4 h-4 fill-current" />
-                <span>{timeLeft < totalSeconds ? t.pomoResume : t.pomoStart}</span>
+                <span>{timeLeft < totalSeconds ? t.pomoResume : mode === 'break' ? t.pomoStartBreak : t.pomoStart}</span>
               </>
             )}
           </button>
 
-          {/* End / Log Session Button (إنهاء وحفظ الجلسة) */}
-          <button
-            type="button"
-            onClick={handleEndSession}
-            className="p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-            title={lang === 'ar' ? 'إنهاء وحفظ الجلسة الآن في الساعة' : 'Finish & Save Session to Hour'}
-          >
-            <Square className="w-4 h-4 fill-current text-rose-500" />
-          </button>
+          {/* End / Log Session Button (Focus mode only — breaks are never logged) */}
+          {mode === 'focus' && (
+            <button
+              type="button"
+              onClick={handleEndSession}
+              className="p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+              title={lang === 'ar' ? 'إنهاء وحفظ الجلسة الآن في الساعة' : 'Finish & Save Session to Hour'}
+            >
+              <Square className="w-4 h-4 fill-current text-rose-500" />
+            </button>
+          )}
 
           {/* Skip / Next Session Button */}
           <button
@@ -989,7 +1004,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
               soundManager.playClick();
               ambientAudio.stop();
               if (mode === 'focus') {
-                handleSwitchMode(sessionCount % 4 === 0 ? 'longBreak' : 'shortBreak');
+                handleSwitchMode('break', getSuggestedBreakMin());
               } else {
                 handleSwitchMode('focus');
               }
@@ -1085,7 +1100,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                     );
                   }
                   setShowCompletedPrompt(false);
-                  handleSwitchMode(sessionCount % 4 === 0 ? 'longBreak' : 'shortBreak');
+                  handleSwitchMode('break', suggestedBreakMin);
                 }}
                 className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
               >
@@ -1097,7 +1112,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                 type="button"
                 onClick={() => {
                   setShowCompletedPrompt(false);
-                  handleSwitchMode(sessionCount % 4 === 0 ? 'longBreak' : 'shortBreak');
+                  handleSwitchMode('break', suggestedBreakMin);
                 }}
                 className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-[var(--bg)] hover:bg-[var(--card)] border border-[var(--line)] text-[var(--ink)] text-xs font-bold transition-all cursor-pointer"
               >
