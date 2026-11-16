@@ -23,7 +23,9 @@ import {
   Bell,
   Flame,
   Target,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Inbox,
+  LayoutGrid
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -48,8 +50,13 @@ interface SettingsModalProps {
   onDisconnectGCal?: () => void;
   showFocusModeButton?: boolean;
   onToggleShowFocusModeButton?: (enabled: boolean) => void;
-  showPrioritiesSection?: boolean;
-  onToggleShowPrioritiesSection?: (enabled: boolean) => void;
+  showGoldenGoal?: boolean;
+  onToggleShowGoldenGoal?: (enabled: boolean) => void;
+  showPriorityMatrix?: boolean;
+  onToggleShowPriorityMatrix?: (enabled: boolean) => void;
+  showTodoInbox?: boolean;
+  onToggleShowTodoInbox?: (enabled: boolean) => void;
+  onToggleAllPlanningSuite?: (enabled: boolean) => void;
   morningNudgeEnabled?: boolean;
   onToggleMorningNudge?: (enabled: boolean) => void;
   tagTargets?: TagTargets;
@@ -91,8 +98,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onDisconnectGCal,
   showFocusModeButton = false,
   onToggleShowFocusModeButton,
-  showPrioritiesSection = false,
-  onToggleShowPrioritiesSection,
+  showGoldenGoal = false,
+  onToggleShowGoldenGoal,
+  showPriorityMatrix = false,
+  onToggleShowPriorityMatrix,
+  showTodoInbox = true,
+  onToggleShowTodoInbox,
+  onToggleAllPlanningSuite,
   morningNudgeEnabled = false,
   onToggleMorningNudge,
   tagTargets = DEFAULT_TAG_TARGETS,
@@ -355,33 +367,104 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </label>
             </div>
 
-            {/* Priorities & Golden Goal Toggle */}
-            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-                  <Sparkles className="w-4 h-4" />
+            {/* Unified Planning, Goals & Tasks Suite Toggle Card (Master + 3 Sub-toggles) */}
+            {(() => {
+              const planningItems = [
+                {
+                  key: 'golden',
+                  checked: showGoldenGoal,
+                  onToggle: onToggleShowGoldenGoal,
+                  icon: <Sparkles className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400',
+                  label: lang === 'ar' ? 'الهدف الذهبي لليوم' : 'Golden Goal (The One Thing)',
+                  sub: lang === 'ar' ? 'بطاقة أهم إنجاز لليوم أسفل الساعات' : 'Single top goal card below hours'
+                },
+                {
+                  key: 'matrix',
+                  checked: showPriorityMatrix,
+                  onToggle: onToggleShowPriorityMatrix,
+                  icon: <LayoutGrid className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400',
+                  label: lang === 'ar' ? 'مصفوفة الأولويات (المربعات الـ 4)' : 'Priority Matrix (4 Quadrants)',
+                  sub: lang === 'ar' ? 'المربعات الأربعة لفرز المهام وترحيلها' : 'Eisenhower 4-quadrant tasks & rollover'
+                },
+                {
+                  key: 'inbox',
+                  checked: showTodoInbox,
+                  onToggle: onToggleShowTodoInbox,
+                  icon: <Inbox className="w-3.5 h-3.5" />,
+                  iconBg: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400',
+                  label: lang === 'ar' ? 'صندوق الأفكار والمهام' : 'Ideas & Tasks Inbox (Brain Dump)',
+                  sub: lang === 'ar' ? 'زر الأفكار والمهام في الترويسة واختصار Alt+T' : 'Header Inbox drawer & Alt+T shortcut'
+                }
+              ];
+              const enabledCount = planningItems.filter((item) => item.checked).length;
+              const masterChecked = enabledCount > 0;
+
+              return (
+                <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
+                  {/* Master Toggle Row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-xs text-[var(--ink)] block">
+                          {lang === 'ar' ? 'منظومة التخطيط والأهداف والمهام' : 'Planning, Goals & Tasks Suite'}
+                        </h4>
+                        <span className="text-[11px] text-[var(--ink-soft)] block">
+                          {enabledCount === 3
+                            ? (lang === 'ar' ? 'الكل مفعل (الذهبي + المصفوفات الـ 4 + الأفكار والمهام)' : 'All active (Golden Goal + 4 Quadrants + Inbox)')
+                            : enabledCount === 0
+                            ? (lang === 'ar' ? 'معطل بالكامل (عرض جدول الساعات الصافي فقط)' : 'All hidden (clean timeline view only)')
+                            : (lang === 'ar' ? `مفعل جزئياً (${enabledCount} من 3 عناصر)` : `Partially active (${enabledCount} of 3)`)}
+                        </span>
+                      </div>
+                    </div>
+                    <label
+                      className="relative inline-flex items-center cursor-pointer shrink-0"
+                      title={lang === 'ar' ? 'تشغيل أو إيقاف العناصر الثلاثة دفعة واحدة' : 'Toggle all 3 planning tools together'}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={masterChecked}
+                        onChange={(e) => onToggleAllPlanningSuite?.(e.target.checked)}
+                      />
+                      <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+
+                  {/* 3 Independent Sub-Toggles inside the Card */}
+                  <div className="border-t border-dashed border-[var(--line)] pt-2.5 flex flex-col gap-2 ps-1">
+                    {planningItems.map((item) => (
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[var(--card)] border border-[var(--line)]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`p-1.5 rounded-md shrink-0 ${item.iconBg}`}>{item.icon}</div>
+                          <div className="min-w-0">
+                            <span className="font-semibold text-[11px] text-[var(--ink)] block">{item.label}</span>
+                            <span className="text-[10px] text-[var(--ink-faint)] block">{item.sub}</span>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={item.checked}
+                            onChange={(e) => item.onToggle?.(e.target.checked)}
+                          />
+                          <div className="w-9 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-xs text-[var(--ink)] block">
-                    {lang === 'ar' ? 'الهدف الذهبي ومصفوفة الأولويات' : 'Golden Goal & Priority Matrix'}
-                  </h4>
-                  <span className="text-[11px] text-[var(--ink-soft)]">
-                    {showPrioritiesSection
-                      ? (lang === 'ar' ? 'مفعل (ظاهر أسفل الساعات)' : 'Visible below hours')
-                      : (lang === 'ar' ? 'معطل (مخفي)' : 'Hidden')}
-                  </span>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={showPrioritiesSection}
-                  onChange={(e) => onToggleShowPrioritiesSection?.(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              </label>
-            </div>
+              );
+            })()}
 
             {/* Morning Nudge Toggle */}
             <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">

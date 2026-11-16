@@ -19,6 +19,8 @@ interface PrioritiesSectionProps {
   onRollover: () => void;
   onOpenTodoInbox?: () => void;
   todoCount?: number;
+  showGoldenGoal?: boolean;
+  showPriorityMatrix?: boolean;
   lang: 'ar' | 'en';
 }
 
@@ -31,39 +33,44 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
   onRollover,
   onOpenTodoInbox,
   todoCount,
+  showGoldenGoal = true,
+  showPriorityMatrix = true,
   lang
 }) => {
   const t = STRINGS[lang];
 
   const isGoldenEmpty = !goldenGoal.text || goldenGoal.text.trim() === '';
 
-  // Calculate total & completed priorities
+  // Calculate total & completed counts strictly for visible planning sub-modules
   let totalCount = 0;
   let doneCount = 0;
 
-  if (goldenGoal.text && goldenGoal.text.trim() !== '') {
+  if (showGoldenGoal && goldenGoal.text && goldenGoal.text.trim() !== '') {
     totalCount++;
     if (goldenGoal.done) doneCount++;
   }
 
-  QUADS_CONFIG.forEach((q) => {
-    const list = priorities[q.key] || [];
-    list.forEach((item) => {
-      if (item.text && item.text.trim() !== '') {
-        totalCount++;
-        if (item.done) doneCount++;
-      }
+  if (showPriorityMatrix) {
+    QUADS_CONFIG.forEach((q) => {
+      const list = priorities[q.key] || [];
+      list.forEach((item) => {
+        if (item.text && item.text.trim() !== '') {
+          totalCount++;
+          if (item.done) doneCount++;
+        }
+      });
     });
-  });
+  }
 
   const completionPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  if (!showGoldenGoal && !showPriorityMatrix) return null;
 
   return (
     <section className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-4 shadow-xs flex flex-col gap-3.5">
       <div className="flex items-center justify-between pb-1 border-b border-[var(--line)] flex-wrap gap-2">
         <h2 className="font-bold text-base text-[var(--ink)] flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
-          {t.priorTitle}
+          {showPriorityMatrix ? t.priorTitle : t.goldenTitle}
         </h2>
         <div className="flex items-center gap-2.5">
           {onOpenTodoInbox && (
@@ -89,6 +96,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
       </div>
 
       {/* Golden Goal Card */}
+      {showGoldenGoal && (
       <div className="bg-amber-500/10 dark:bg-amber-950/30 border-2 border-amber-400/80 dark:border-amber-600/70 rounded-xl p-3.5 shadow-xs flex flex-col gap-2">
         <div className="flex items-center gap-1.5 text-xs font-extrabold text-amber-900 dark:text-amber-300">
           <span className="text-base leading-none">🌟</span>
@@ -154,6 +162,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* Priorities Progress Bar */}
       <div className="bg-[var(--bg)] border border-[var(--line)] rounded-lg p-2.5 flex flex-col gap-1.5">
@@ -172,6 +181,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
       </div>
 
       {/* 4 Quadrants Grid */}
+      {showPriorityMatrix && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {QUADS_CONFIG.map((q) => {
           const items = priorities[q.key] || [];
@@ -256,8 +266,8 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                       lang={lang}
                     />
 
-                    {/* Promote button for Q1 / Q2 (Only moves if Golden Goal is empty, and deletes from current list) */}
-                    {(q.key === 'q1' || q.key === 'q2') && item.text && item.text.trim() !== '' && (
+                    {/* Promote button for Q1 / Q2 (Only shown when Golden Goal is enabled) */}
+                    {showGoldenGoal && (q.key === 'q1' || q.key === 'q2') && item.text && item.text.trim() !== '' && (
                       <button
                         type="button"
                         onClick={() => onPromoteToGolden(item, q.key, idx)}
@@ -309,6 +319,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
           );
         })}
       </div>
+      )}
 
       {/* Rollover to Tomorrow Button */}
       <div className="flex items-center justify-center pt-1">

@@ -206,9 +206,18 @@ export default function App() {
   const [showFocusModeButton, setShowFocusModeButton] = useState<boolean>(() => {
     return localStorage.getItem('showFocusModeButton') === 'true';
   });
-  const [showPrioritiesSection, setShowPrioritiesSection] = useState<boolean>(() => {
-    return localStorage.getItem('showPrioritiesSection') === 'true';
+  const [showGoldenGoal, setShowGoldenGoal] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showGoldenGoal');
+    return saved !== null ? saved === 'true' : localStorage.getItem('showPrioritiesSection') === 'true';
   });
+  const [showPriorityMatrix, setShowPriorityMatrix] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showPriorityMatrix');
+    return saved !== null ? saved === 'true' : localStorage.getItem('showPrioritiesSection') === 'true';
+  });
+  const [showTodoInbox, setShowTodoInbox] = useState<boolean>(() => {
+    return localStorage.getItem('showTodoInbox') !== 'false';
+  });
+  const showPrioritiesSection = showGoldenGoal || showPriorityMatrix;
   const [morningNudgeEnabled, setMorningNudgeEnabled] = useState<boolean>(() => {
     return localStorage.getItem('morningNudgeEnabled') === 'true';
   });
@@ -550,8 +559,17 @@ export default function App() {
 
   // Sync Preferences to Firestore & Local
   const syncPreferences = useCallback(
-    async (user: User | null, customWeekStartDay?: WeekStartDay) => {
+    async (
+      user: User | null,
+      customWeekStartDay?: WeekStartDay,
+      prefOverrides?: { showGoldenGoal?: boolean; showPriorityMatrix?: boolean; showTodoInbox?: boolean }
+    ) => {
       const activeWeekStartDay = customWeekStartDay || weekStartDay;
+      const nextGolden = prefOverrides?.showGoldenGoal ?? showGoldenGoal;
+      const nextMatrix = prefOverrides?.showPriorityMatrix ?? showPriorityMatrix;
+      const nextTodo = prefOverrides?.showTodoInbox ?? showTodoInbox;
+      const nextPrioritiesSection = nextGolden || nextMatrix;
+
       localStorage.setItem('sleepSettings', JSON.stringify(sleepSettings));
       localStorage.setItem('userBirthDate', userBirthDate);
       localStorage.setItem('ageDisplayOpt', ageDisplayOpt);
@@ -560,7 +578,10 @@ export default function App() {
       localStorage.setItem('showAgeBadge', String(showAgeBadge));
       localStorage.setItem('showStreakBadge', String(showStreakBadge));
       localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
-      localStorage.setItem('showPrioritiesSection', String(showPrioritiesSection));
+      localStorage.setItem('showGoldenGoal', String(nextGolden));
+      localStorage.setItem('showPriorityMatrix', String(nextMatrix));
+      localStorage.setItem('showTodoInbox', String(nextTodo));
+      localStorage.setItem('showPrioritiesSection', String(nextPrioritiesSection));
       localStorage.setItem('morningNudgeEnabled', String(morningNudgeEnabled));
       localStorage.setItem('tagTargets', JSON.stringify(tagTargets));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
@@ -581,7 +602,10 @@ export default function App() {
               showAgeBadge,
               showStreakBadge,
               showFocusModeButton,
-              showPrioritiesSection,
+              showGoldenGoal: nextGolden,
+              showPriorityMatrix: nextMatrix,
+              showTodoInbox: nextTodo,
+              showPrioritiesSection: nextPrioritiesSection,
               morningNudgeEnabled,
               tagTargets,
               calSyncEnabled,
@@ -596,7 +620,25 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showPrioritiesSection, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView]
+  );
+
+  const updatePlanningVisibility = useCallback(
+    (updates: { showGoldenGoal?: boolean; showPriorityMatrix?: boolean; showTodoInbox?: boolean }) => {
+      const nextGolden = updates.showGoldenGoal ?? showGoldenGoal;
+      const nextMatrix = updates.showPriorityMatrix ?? showPriorityMatrix;
+      const nextTodo = updates.showTodoInbox ?? showTodoInbox;
+      setShowGoldenGoal(nextGolden);
+      setShowPriorityMatrix(nextMatrix);
+      setShowTodoInbox(nextTodo);
+      if (!nextTodo) setTodoDrawerOpen(false);
+      syncPreferences(currentUser, undefined, {
+        showGoldenGoal: nextGolden,
+        showPriorityMatrix: nextMatrix,
+        showTodoInbox: nextTodo
+      });
+    },
+    [showGoldenGoal, showPriorityMatrix, showTodoInbox, currentUser, syncPreferences]
   );
 
   // Auth State Listener (runs once on mount; uses refs for active date/weekStart to avoid infinite re-subscribe loop)
@@ -633,7 +675,24 @@ export default function App() {
             if (data.showAgeBadge !== undefined) setShowAgeBadge(data.showAgeBadge);
             if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
             if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
-            if (data.showPrioritiesSection !== undefined) setShowPrioritiesSection(data.showPrioritiesSection);
+            if (data.showGoldenGoal !== undefined) {
+              setShowGoldenGoal(data.showGoldenGoal);
+              localStorage.setItem('showGoldenGoal', String(data.showGoldenGoal));
+            } else if (data.showPrioritiesSection !== undefined) {
+              setShowGoldenGoal(data.showPrioritiesSection);
+              localStorage.setItem('showGoldenGoal', String(data.showPrioritiesSection));
+            }
+            if (data.showPriorityMatrix !== undefined) {
+              setShowPriorityMatrix(data.showPriorityMatrix);
+              localStorage.setItem('showPriorityMatrix', String(data.showPriorityMatrix));
+            } else if (data.showPrioritiesSection !== undefined) {
+              setShowPriorityMatrix(data.showPrioritiesSection);
+              localStorage.setItem('showPriorityMatrix', String(data.showPrioritiesSection));
+            }
+            if (data.showTodoInbox !== undefined) {
+              setShowTodoInbox(data.showTodoInbox);
+              localStorage.setItem('showTodoInbox', String(data.showTodoInbox));
+            }
             if (data.morningNudgeEnabled !== undefined) {
               setMorningNudgeEnabled(data.morningNudgeEnabled);
               localStorage.setItem('morningNudgeEnabled', String(data.morningNudgeEnabled));
@@ -678,7 +737,7 @@ export default function App() {
     const hasGolden = !!(day && day.goldenGoal && day.goldenGoal.text && day.goldenGoal.text.trim() !== '');
 
     setTimeout(() => {
-      if (showPrioritiesSection && !hasGolden) {
+      if (showGoldenGoal && !hasGolden) {
         const el = document.getElementById('golden-goal-input');
         if (el) {
           el.focus();
@@ -687,7 +746,7 @@ export default function App() {
       }
       focusCurrentHourInput();
     }, 150);
-  }, [weekData.days, showPrioritiesSection]);
+  }, [weekData.days, showGoldenGoal]);
 
   // Initial load: Morning Nudge check (between 8:00 AM and 2:00 PM once daily) or fallback to startup focus
   const initialStartupFocusDoneRef = useRef(false);
@@ -1229,8 +1288,8 @@ export default function App() {
         return;
       }
 
-      // Alt + T (or Alt + ف in Arabic layout): Toggle Todo Inbox Drawer
-      if (e.altKey && (e.key === 't' || e.key === 'T' || e.key === 'ف')) {
+      // Alt + T (or Alt + ف in Arabic layout): Toggle Todo Inbox Drawer (when enabled in settings)
+      if (showTodoInbox && e.altKey && (e.key === 't' || e.key === 'T' || e.key === 'ف')) {
         e.preventDefault();
         setTodoDrawerOpen((prev) => !prev);
         return;
@@ -1277,7 +1336,8 @@ export default function App() {
     pwaModalOpen,
     guideModalOpen,
     focusModeActive,
-    todoDrawerOpen
+    todoDrawerOpen,
+    showTodoInbox
   ]);
 
   // Birthday reminder banner check (1 month, 1 week, same day)
@@ -1530,7 +1590,7 @@ export default function App() {
           localStorage.setItem('lang', next);
         }}
         saveStatus={saveStatus}
-        onOpenTodoInbox={() => setTodoDrawerOpen(true)}
+        onOpenTodoInbox={showTodoInbox ? () => setTodoDrawerOpen(true) : undefined}
         todoCount={todoInbox.filter((t) => !t.done).length}
       />
 
@@ -1791,7 +1851,7 @@ export default function App() {
           />
         </section>
 
-        {/* Priority Matrix & Golden Goal (Optional / Configurable from Settings) */}
+        {/* Priority Matrix & Golden Goal (Optional / Individually Configurable from Settings) */}
         {showPrioritiesSection && (
           <PrioritiesSection
             goldenGoal={currentDayData.goldenGoal}
@@ -1800,8 +1860,10 @@ export default function App() {
             onChangePriorities={handleChangePriorities}
             onPromoteToGolden={handlePromoteToGolden}
             onRollover={handleRollover}
-            onOpenTodoInbox={() => setTodoDrawerOpen(true)}
+            onOpenTodoInbox={showTodoInbox ? () => setTodoDrawerOpen(true) : undefined}
             todoCount={todoInbox.filter((t) => !t.done).length}
+            showGoldenGoal={showGoldenGoal}
+            showPriorityMatrix={showPriorityMatrix}
             lang={lang}
           />
         )}
@@ -1873,12 +1935,15 @@ export default function App() {
           if (!en) setFocusModeActive(false);
           syncPreferences(currentUser);
         }}
-        showPrioritiesSection={showPrioritiesSection}
-        onToggleShowPrioritiesSection={(en) => {
-          setShowPrioritiesSection(en);
-          localStorage.setItem('showPrioritiesSection', en ? 'true' : 'false');
-          syncPreferences(currentUser);
-        }}
+        showGoldenGoal={showGoldenGoal}
+        onToggleShowGoldenGoal={(en) => updatePlanningVisibility({ showGoldenGoal: en })}
+        showPriorityMatrix={showPriorityMatrix}
+        onToggleShowPriorityMatrix={(en) => updatePlanningVisibility({ showPriorityMatrix: en })}
+        showTodoInbox={showTodoInbox}
+        onToggleShowTodoInbox={(en) => updatePlanningVisibility({ showTodoInbox: en })}
+        onToggleAllPlanningSuite={(en) =>
+          updatePlanningVisibility({ showGoldenGoal: en, showPriorityMatrix: en, showTodoInbox: en })
+        }
         morningNudgeEnabled={morningNudgeEnabled}
         onToggleMorningNudge={(en) => {
           setMorningNudgeEnabled(en);
