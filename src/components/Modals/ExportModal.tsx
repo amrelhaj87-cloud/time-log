@@ -1,7 +1,15 @@
 import React, { useState, useRef } from 'react';
-import { WeekData, DayData, SleepSettings } from '../../types';
-import { STRINGS, HOUR_LABELS, HOURS_LIST, TAGS_CONFIG, DAY_NAMES, MONTH_NAMES } from '../../constants/config';
+import { WeekData, DayData, SleepSettings, TodoItem } from '../../types';
+import { STRINGS, HOUR_LABELS, HOURS_LIST, TAGS_CONFIG, DAY_NAMES, MONTH_NAMES, APP_VERSION } from '../../constants/config';
 import { isoDate, emptyDay } from '../../utils/dateUtils';
+import {
+  gatherFullBackup,
+  validateBackupSchema,
+  isLegacyWeekBackup,
+  restoreFullBackup,
+  type FullBackup,
+  type BackupPreferences,
+} from '../../utils/backupUtils';
 import {
   X,
   Download,
@@ -10,11 +18,11 @@ import {
   FileJson,
   Copy,
   Check,
-  Calendar,
   CalendarDays,
   Upload,
   AlertCircle,
-  FileText
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -25,7 +33,12 @@ interface ExportModalProps {
   weekData: WeekData;
   activeHoursKeys?: string[];
   sleepSettings?: SleepSettings;
+  /** Legacy: called when user imports a single-week backup */
   onImportBackup?: (data: WeekData) => void;
+  /** New: called when user imports a full backup */
+  onImportFullBackup?: (backup: FullBackup) => void;
+  /** Current logged-in user uid (null = guest) */
+  uid?: string | null;
   lang: 'ar' | 'en';
 }
 
@@ -38,6 +51,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   activeHoursKeys = HOURS_LIST,
   sleepSettings,
   onImportBackup,
+  onImportFullBackup,
+  uid = null,
   lang
 }) => {
   const [copiedText, setCopiedText] = useState(false);
@@ -219,23 +234,38 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   };
 
-  // 5. Backup JSON
+  // 5a. Full Backup JSON (all weeks + inbox + prefs)
+  const handleFullBackupJSON = () => {
+    const backup = gatherFullBackup(uid, APP_VERSION);
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `TimeLog_FullBackup_${isoDate(new Date())}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  // 5b. Legacy single-week backup (kept for reference)
   const handleBackupJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(weekData, null, 2));
     const link = document.createElement('a');
     link.setAttribute('href', dataStr);
-    link.setAttribute('download', `TimeLog_Backup_${isoDate(weekStart)}.json`);
+    link.setAttribute('download', `TimeLog_Week_${isoDate(weekStart)}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     onClose();
   };
 
-  // 6. Restore / Import JSON
+  // 6. Unified Import — handles both full backup and legacy single-week
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setImportError(null);
     setImportSuccess(null);
 
@@ -244,22 +274,42 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       try {
         const content = event.target?.result as string;
         const parsed = JSON.parse(content);
-        if (parsed && parsed.days && typeof parsed.days === 'object') {
-          if (onImportBackup) {
-            onImportBackup(parsed);
-            setImportSuccess(lang === 'ar' ? 'تم استعادة البيانات بنجاح ✅' : 'Backup restored successfully ✅');
-            setTimeout(() => {
-              onClose();
-            }, 1200);
+
+        // Case A: Full backup format
+        if (validateBackupSchema(parsed)) {
+          if (onImportFullBackup) {
+            onImportFullBackup(parsed as FullBackup);
+            const weekCount = Object.keys((parsed as FullBackup).weeks).length;
+            setImportSuccess(
+              lang === 'ar'
+                ? `✅ تمت استعادة ${weekCount} أسبوع + المهام + الإعدادات`
+                : `✅ Restored ${weekCount} weeks + inbox + preferences`
+            );
+            setTimeout(() => onClose(), 1800);
           }
-        } else {
-          setImportError(lang === 'ar' ? 'ملف النسخة الاحتياطية غير صالح' : 'Invalid backup JSON file structure');
+          return;
         }
+
+        // Case B: Legacy single-week format ({ days: {...} })
+        if (isLegacyWeekBackup(parsed)) {
+          if (onImportBackup) {
+            onImportBackup(parsed as WeekData);
+            setImportSuccess(lang === 'ar' ? 'تم استعادة البيانات بنجاح ✅' : 'Backup restored successfully ✅');
+            setTimeout(() => onClose(), 1200);
+          }
+          return;
+        }
+
+        setImportError(
+          lang === 'ar' ? 'ملف النسخة الاحتياطية غير صالح أو تالف' : 'Invalid or corrupted backup file'
+        );
       } catch {
         setImportError(lang === 'ar' ? 'تعذر قراءة ملف JSON' : 'Failed to parse JSON file');
       }
     };
     reader.readAsText(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
   };
 
   return (
@@ -358,23 +408,42 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             {lang === 'ar' ? 'النسخ الاحتياطي واستعادة البيانات' : 'Backup & Data Restoration'}
           </span>
 
+          {/* Full Backup — prominent card */}
+          <button
+            type="button"
+            onClick={handleFullBackupJSON}
+            className="w-full bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 text-[var(--ink)] p-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all shadow-2xs cursor-pointer group"
+          >
+            <div className="p-2 rounded-lg bg-indigo-600 text-white shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="text-start flex-1">
+              <span className="block text-indigo-700 dark:text-indigo-300">
+                {lang === 'ar' ? '🔒 نسخة احتياطية كاملة (كل الأسابيع + المهام + الإعدادات)' : '🔒 Full Backup (All weeks + Inbox + Preferences)'}
+              </span>
+              <span className="text-[10px] text-[var(--ink-soft)] font-normal">
+                {lang === 'ar' ? 'TimeLog_FullBackup_YYYY-MM-DD.json' : 'TimeLog_FullBackup_YYYY-MM-DD.json'}
+              </span>
+            </div>
+          </button>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Download JSON Backup */}
+            {/* Legacy single-week backup */}
             <button
               type="button"
               onClick={handleBackupJSON}
-              className="bg-[var(--bg)] hover:bg-indigo-50/60 dark:hover:bg-indigo-950/40 border border-[var(--line)] hover:border-indigo-400 text-[var(--ink)] p-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all shadow-2xs cursor-pointer group"
+              className="bg-[var(--bg)] hover:bg-slate-50/60 dark:hover:bg-slate-800/40 border border-[var(--line)] hover:border-slate-400 text-[var(--ink)] p-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all shadow-2xs cursor-pointer group"
             >
-              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--line)] text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <div className="p-2 rounded-lg bg-[var(--card)] border border-[var(--line)] text-slate-500 dark:text-slate-400 group-hover:bg-slate-500 group-hover:text-white transition-colors">
                 <FileJson className="w-4 h-4" />
               </div>
               <div className="text-start">
-                <span className="block">{lang === 'ar' ? 'تنزيل نسخة احتياطية (JSON)' : 'Download Backup (JSON)'}</span>
-                <span className="text-[10px] text-[var(--ink-soft)] font-normal">{lang === 'ar' ? 'حفظ ملف على جهازك' : 'Save JSON file'}</span>
+                <span className="block">{lang === 'ar' ? 'نسخة الأسبوع الحالي فقط' : 'Current Week Only'}</span>
+                <span className="text-[10px] text-[var(--ink-soft)] font-normal">{lang === 'ar' ? 'JSON بسيط للأسبوع' : 'Simple week JSON'}</span>
               </div>
             </button>
 
-            {/* Restore JSON Backup */}
+            {/* Restore / Import (unified) */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -384,8 +453,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 <Upload className="w-4 h-4" />
               </div>
               <div className="text-start">
-                <span className="block">{lang === 'ar' ? 'استعادة من ملف نسخة (JSON)' : 'Restore from JSON'}</span>
-                <span className="text-[10px] text-[var(--ink-soft)] font-normal">{lang === 'ar' ? 'استيراد واسترجاع' : 'Import backup'}</span>
+                <span className="block">{lang === 'ar' ? 'استعادة من ملف نسخة' : 'Restore from Backup'}</span>
+                <span className="text-[10px] text-[var(--ink-soft)] font-normal">{lang === 'ar' ? 'يقبل الكاملة والأسبوعية' : 'Full or week backup'}</span>
               </div>
             </button>
             <input

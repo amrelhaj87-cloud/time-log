@@ -16,7 +16,8 @@ import {
   Settings,
   RotateCcw,
   WifiOff,
-  Inbox
+  Inbox,
+  Search
 } from 'lucide-react';
 import { subscribeOnlineStatus } from '../services/pwaService';
 
@@ -48,6 +49,7 @@ interface HeaderProps {
   saveStatus: string;
   onOpenTodoInbox?: () => void;
   todoCount?: number;
+  onOpenSearch?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -77,7 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleLang,
   saveStatus,
   onOpenTodoInbox,
-  todoCount
+  todoCount,
+  onOpenSearch
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -284,6 +287,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <SlidersHorizontal className="w-4 h-4" />
           </button>
+
+          {/* Global Search Button on Mobile */}
+          {onOpenSearch && (
+            <button
+              type="button"
+              onClick={onOpenSearch}
+              className="bg-[var(--card)] border border-[var(--line)] rounded-lg p-2 text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer"
+              title={lang === 'ar' ? 'البحث الشامل (Alt + F)' : 'Global Search (Alt + F)'}
+            >
+              <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </button>
+          )}
 
           {/* Settings Button */}
           <button
@@ -581,6 +596,18 @@ export const Header: React.FC<HeaderProps> = ({
                 {todoCount}
               </span>
             )}
+          </button>
+        )}
+
+        {/* Global Search Button on Desktop */}
+        {onOpenSearch && (
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            className="bg-[var(--card)] border border-[var(--line)] rounded-lg p-2 text-xs font-medium text-[var(--ink)] hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center hover:bg-[var(--bg)] transition-all shadow-xs cursor-pointer shrink-0"
+            title={lang === 'ar' ? 'البحث الشامل في السجلات (Alt + F)' : 'Global Search across logs (Alt + F)'}
+          >
+            <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           </button>
         )}
 

@@ -25,7 +25,10 @@ import {
   Target,
   SlidersHorizontal,
   Inbox,
-  LayoutGrid
+  LayoutGrid,
+  Cloud,
+  CloudUpload,
+  RefreshCw
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -65,6 +68,11 @@ interface SettingsModalProps {
   onConnectGCal: () => void;
   calSyncEnabled: boolean;
   onToggleCalSync: (enabled: boolean) => void;
+  autoCloudSync?: boolean;
+  onToggleAutoCloudSync?: (enabled: boolean) => void;
+  onSyncAllToCloudNow?: () => Promise<{ synced: number; skipped: number; errors: number } | undefined>;
+  isSyncingAllWeeks?: boolean;
+  isUserLoggedIn?: boolean;
   onOpenPwaModal: () => void;
   onOpenGuide: () => void;
   darkMode: boolean;
@@ -113,6 +121,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConnectGCal,
   calSyncEnabled,
   onToggleCalSync,
+  autoCloudSync = false,
+  onToggleAutoCloudSync,
+  onSyncAllToCloudNow,
+  isSyncingAllWeeks = false,
+  isUserLoggedIn = false,
   onOpenPwaModal,
   onOpenGuide,
   darkMode,
@@ -126,6 +139,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [soundEnabled, setSoundEnabled] = useState(() => soundManager.isEnabled());
   const [birthDateInput, setBirthDateInput] = useState(userBirthDate);
   const [ageOptInput, setAgeOptInput] = useState<AgeDisplayOpt>(ageDisplayOpt);
+  const [syncResultMsg, setSyncResultMsg] = useState<string | null>(null);
+
+  const handleTriggerManualCloudSync = async () => {
+    if (!onSyncAllToCloudNow) return;
+    setSyncResultMsg(null);
+    try {
+      const res = await onSyncAllToCloudNow();
+      if (res) {
+        setSyncResultMsg(
+          lang === 'ar'
+            ? `✓ تمت مزامنة ${res.synced} أسبوع (${res.skipped} متطابق)`
+            : `✓ Synced ${res.synced} weeks (${res.skipped} up to date)`
+        );
+        setTimeout(() => setSyncResultMsg(null), 3500);
+      }
+    } catch {
+      setSyncResultMsg(lang === 'ar' ? 'تعذر إتمام المزامنة السحابية' : 'Cloud sync failed');
+      setTimeout(() => setSyncResultMsg(null), 3500);
+    }
+  };
 
   const t = STRINGS[lang];
 
@@ -826,6 +859,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>{lang === 'ar' ? 'أيام' : 'Days'}</span>
                 </button>
               </div>
+            </div>
+
+            {/* Auto Cloud Sync Card (Toggle + Manual Sync Button) */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
+                    <Cloud className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-xs text-[var(--ink)] block truncate">
+                      {lang === 'ar' ? 'المزامنة السحابية الشاملة' : 'Full Cloud Sync'}
+                    </h4>
+                    <span className="text-[11px] text-[var(--ink-soft)] block truncate">
+                      {isUserLoggedIn
+                        ? autoCloudSync
+                          ? (lang === 'ar' ? 'مفعلة ✓ (مزامنة كل الأسابيع تلقائياً)' : 'Active ✓ (Auto-syncs all weeks)')
+                          : (lang === 'ar' ? 'يدوية (يمكنك المزامنة بضغطة زر)' : 'Manual (Sync on demand)')
+                        : (lang === 'ar' ? 'يتطلب تسجيل الدخول بحساب جوجل' : 'Requires Google Login')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {isUserLoggedIn && (
+                    <button
+                      type="button"
+                      disabled={isSyncingAllWeeks}
+                      onClick={handleTriggerManualCloudSync}
+                      className="px-2.5 py-1 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer bg-[var(--card)] hover:bg-[var(--line)] border border-[var(--line)] text-[var(--ink)] flex items-center gap-1.5 disabled:opacity-50"
+                      title={lang === 'ar' ? 'مزامنة كل الأسابيع المسجلة محلياً إلى السحابة فوراً' : 'Sync all local weeks to cloud now'}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAllWeeks ? 'animate-spin text-blue-600' : ''}`} />
+                      <span>{isSyncingAllWeeks ? (lang === 'ar' ? 'جارٍ المزامنة...' : 'Syncing...') : (lang === 'ar' ? 'مزامنة الآن' : 'Sync Now')}</span>
+                    </button>
+                  )}
+                  {isUserLoggedIn && (
+                    <label className="relative inline-flex items-center cursor-pointer" title={lang === 'ar' ? 'المزامنة التلقائية لكل الأسابيع' : 'Auto Cloud Sync'}>
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={autoCloudSync}
+                        onChange={(e) => onToggleAutoCloudSync?.(e.target.checked)}
+                      />
+                      <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  )}
+                </div>
+              </div>
+              {syncResultMsg && (
+                <div className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5 animate-in fade-in">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>{syncResultMsg}</span>
+                </div>
+              )}
             </div>
 
             {/* Google Calendar Sync Card (Toggle + Connect/Disconnect Button + Account Email) */}

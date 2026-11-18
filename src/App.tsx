@@ -24,6 +24,7 @@ import {
 import { startOfWeekFor, mondayOf, isoDate, addDays, emptyDay, getCurrentHourKey, normalizeWeekData, focusCurrentHourInput } from './utils/dateUtils';
 import { calculateDailyStreak } from './utils/streakUtils';
 import { soundManager } from './utils/soundEffects';
+import { restoreFullBackup, syncAllWeeksToCloud, type FullBackup } from './utils/backupUtils';
 import confetti from 'canvas-confetti';
 import { fetchCalendarEventsForDate, clearAllCachedCalendarEvents } from './services/calendarService';
 
@@ -50,6 +51,7 @@ import { GuideModal } from './components/Modals/GuideModal';
 import { FocusPomodoroView } from './components/FocusPomodoroView';
 import { TodoInboxDrawer } from './components/Modals/TodoInboxDrawer';
 import { MorningNudgeModal } from './components/Modals/MorningNudgeModal';
+import { GlobalSearchModal } from './components/Modals/GlobalSearchModal';
 
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
@@ -234,6 +236,22 @@ export default function App() {
   const [calSyncEnabled, setCalSyncEnabled] = useState<boolean>(() => {
     return localStorage.getItem('calSyncEnabled') !== 'false';
   });
+
+  // Auto Cloud Sync — syncs all local weeks to Firestore on login when enabled
+  const [autoCloudSync, setAutoCloudSync] = useState<boolean>(() => {
+    return localStorage.getItem('autoCloudSync') === 'true';
+  });
+  const [isSyncingAllWeeks, setIsSyncingAllWeeks] = useState(false);
+
+  const handleSyncAllWeeksNow = useCallback(async () => {
+    if (!currentUser || !db) return;
+    setIsSyncingAllWeeks(true);
+    try {
+      return await syncAllWeeksToCloud(currentUser.uid, db, doc, setDoc);
+    } finally {
+      setIsSyncingAllWeeks(false);
+    }
+  }, [currentUser]);
   const [userBirthDate, setUserBirthDate] = useState<string>(() => {
     return localStorage.getItem('userBirthDate') || '';
   });
@@ -291,6 +309,7 @@ export default function App() {
   const [ageModalOpen, setAgeModalOpen] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [pomoBgState, setPomoBgState] = useState<{
     isRunning: boolean;
     timeFormatted: string;
@@ -587,6 +606,7 @@ export default function App() {
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
       localStorage.setItem('themeMode', themeMode);
       localStorage.setItem('isDetailedView', String(isDetailedView));
+      localStorage.setItem('autoCloudSync', String(autoCloudSync));
 
       if (db && user) {
         try {
@@ -611,6 +631,7 @@ export default function App() {
               calSyncEnabled,
               themeMode,
               isDetailedView,
+              autoCloudSync,
               updatedAt: new Date().toISOString()
             },
             { merge: true }
@@ -620,7 +641,7 @@ export default function App() {
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
   );
 
   const updatePlanningVisibility = useCallback(
@@ -702,6 +723,10 @@ export default function App() {
               localStorage.setItem('tagTargets', JSON.stringify(data.tagTargets));
             }
             if (data.calSyncEnabled !== undefined) setCalSyncEnabled(data.calSyncEnabled);
+            if (data.autoCloudSync !== undefined) {
+              setAutoCloudSync(data.autoCloudSync);
+              localStorage.setItem('autoCloudSync', String(data.autoCloudSync));
+            }
             if (data.weekStartDay) {
               setWeekStartDay(data.weekStartDay);
               localStorage.setItem('weekStartDay', data.weekStartDay);
@@ -717,6 +742,13 @@ export default function App() {
         setCurrentUser(null);
       }
       loadWeekData(targetWs, u);
+
+      // Auto Cloud Sync: push all local weeks to Firestore once per session on login
+      if (u && db && autoCloudSync) {
+        syncAllWeeksToCloud(u.uid, db, doc, setDoc).catch((err) => {
+          console.warn('Auto cloud sync error:', err);
+        });
+      }
     });
     return () => unsub();
   }, [loadWeekData]);
@@ -1255,6 +1287,7 @@ export default function App() {
         delegateStartupFocus();
         return true;
       }
+      if (globalSearchOpen) { setGlobalSearchOpen(false); return true; }
       if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
       if (authModalOpen) { setAuthModalOpen(false); return true; }
       if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
@@ -1292,6 +1325,16 @@ export default function App() {
       if (showTodoInbox && e.altKey && (e.key === 't' || e.key === 'T' || e.key === 'ف')) {
         e.preventDefault();
         setTodoDrawerOpen((prev) => !prev);
+        return;
+      }
+
+      // Alt + F (or Alt + ب in Arabic layout) or Ctrl + K / Cmd + K: Open Global Search
+      if (
+        (e.altKey && (e.key === 'f' || e.key === 'F' || e.key === 'ب')) ||
+        ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K'))
+      ) {
+        e.preventDefault();
+        setGlobalSearchOpen((prev) => !prev);
         return;
       }
     };
@@ -1337,7 +1380,8 @@ export default function App() {
     guideModalOpen,
     focusModeActive,
     todoDrawerOpen,
-    showTodoInbox
+    showTodoInbox,
+    globalSearchOpen
   ]);
 
   // Birthday reminder banner check (1 month, 1 week, same day)
@@ -1513,6 +1557,17 @@ export default function App() {
     }
   };
 
+  const handleNavigateToDate = (dateStr: string) => {
+    if (!dateStr) return;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (!isNaN(d.getTime())) {
+        handleSelectDate(d);
+      }
+    }
+  };
+
   const handleOffsetWeek = (offset: number) => {
     flushPendingSaveNow(true);
     const newWs = addDays(weekStart, offset * 7);
@@ -1590,6 +1645,7 @@ export default function App() {
           localStorage.setItem('lang', next);
         }}
         saveStatus={saveStatus}
+        onOpenSearch={() => setGlobalSearchOpen(true)}
         onOpenTodoInbox={showTodoInbox ? () => setTodoDrawerOpen(true) : undefined}
         todoCount={todoInbox.filter((t) => !t.done).length}
       />
@@ -1965,6 +2021,15 @@ export default function App() {
           setCalSyncEnabled(en);
           syncPreferences(currentUser);
         }}
+        autoCloudSync={autoCloudSync}
+        onToggleAutoCloudSync={(en) => {
+          setAutoCloudSync(en);
+          localStorage.setItem('autoCloudSync', en ? 'true' : 'false');
+          syncPreferences(currentUser);
+        }}
+        onSyncAllToCloudNow={handleSyncAllWeeksNow}
+        isSyncingAllWeeks={isSyncingAllWeeks}
+        isUserLoggedIn={!!currentUser}
         onOpenPwaModal={() => setPwaModalOpen(true)}
         onOpenGuide={() => setGuideModalOpen(true)}
         darkMode={isDarkEffective}
@@ -2029,9 +2094,49 @@ export default function App() {
         weekData={weekData}
         activeHoursKeys={activeHoursKeys}
         sleepSettings={sleepSettings}
+        uid={currentUser?.uid ?? null}
         onImportBackup={(imported) => {
           setWeekData(imported);
           saveWeekData(imported, weekStart, currentUser, true);
+        }}
+        onImportFullBackup={(backup: FullBackup) => {
+          restoreFullBackup(backup, {
+            uid: currentUser?.uid ?? null,
+            onWeekRestored: (monKey, weekDataRestored) => {
+              // Optionally push to Firestore if logged in
+              if (db && currentUser) {
+                const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'weeks', monKey);
+                setDoc(docRef, { json: JSON.stringify(weekDataRestored), updatedAt: new Date().toISOString() }).catch(() => {});
+              }
+            },
+            onInboxRestored: (items) => {
+              setTodoInbox(items);
+              if (db && currentUser) {
+                const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
+                setDoc(docRef, { items, updatedAt: new Date().toISOString() }).catch(() => {});
+              }
+            },
+            onPrefsRestored: (prefs) => {
+              // Apply all restored preferences to React state
+              if (prefs.tagTargets) setTagTargets(prefs.tagTargets);
+              if (prefs.sleepSettings) setSleepSettings(prefs.sleepSettings);
+              if (prefs.weekStartDay) setWeekStartDay(prefs.weekStartDay);
+              if (prefs.themeMode) setThemeMode(prefs.themeMode);
+              if (prefs.lang) setLang(prefs.lang);
+              if (prefs.birthDate) setUserBirthDate(prefs.birthDate);
+              if (prefs.ageDisplayOpt) setAgeDisplayOpt(prefs.ageDisplayOpt);
+              setIsDetailedView(prefs.isDetailedView ?? false);
+              setShowStreakBadge(prefs.showStreakBadge ?? true);
+              setShowAgeBadge(prefs.showAgeBadge ?? false);
+              setShowFocusModeButton(prefs.showFocusModeButton ?? false);
+              setShowGoldenGoal(prefs.showGoldenGoal ?? true);
+              setShowPriorityMatrix(prefs.showPriorityMatrix ?? true);
+              setShowTodoInbox(prefs.showTodoInbox ?? true);
+              setMorningNudgeEnabled(prefs.morningNudgeEnabled ?? false);
+              // Reload current week from the restored localStorage
+              loadWeekData(weekStart, currentUser);
+            },
+          });
         }}
         lang={lang}
       />
@@ -2162,6 +2267,15 @@ export default function App() {
         })()}
         tagTargets={tagTargets}
         lang={lang}
+      />
+
+      {/* Global Search across all historical weeks */}
+      <GlobalSearchModal
+        isOpen={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
+        uid={currentUser?.uid ?? null}
+        lang={lang}
+        onNavigateToDate={handleNavigateToDate}
       />
 
       {/* Floating Save Toast Notification */}
