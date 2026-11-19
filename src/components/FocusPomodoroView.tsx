@@ -102,6 +102,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   // Fullscreen & Custom Duration State
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showCompletedPrompt, setShowCompletedPrompt] = useState<boolean>(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState<boolean>(false);
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
   const [suggestedBreakMin, setSuggestedBreakMin] = useState<number>(5);
   // Fix 3: الساعات المقسمة ذكياً بكتل ١٥ دقيقة
@@ -167,6 +168,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     endTimeRef.current = null;
     sessionStartTimeRef.current = null;
     setPendingSplits([]);
+    setShowDiscardConfirm(false);
     setShowCompletedPrompt(false);
     if (customMins !== undefined) {
       if (newMode === 'focus') setFocusDurationMin(customMins);
@@ -242,6 +244,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       setPendingSplits(splits);
 
       // Fix 1: لا نسجل تلقائياً حتى يقرر المستخدم الحفظ أو الإلغاء
+      setShowDiscardConfirm(false);
       setShowCompletedPrompt(true);
     } else {
       // Less than 45 secs -> just reset timer
@@ -258,6 +261,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     endTimeRef.current = null;
     sessionStartTimeRef.current = null;
     setPendingSplits([]);
+    setShowDiscardConfirm(false);
     const secs = getDurationForMode(mode);
     setTotalSeconds(secs);
     setTimeLeft(secs);
@@ -266,6 +270,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   // Fix 1: إلغاء وتجاهل الجلسة بالكامل دون كتابة أي شيء في ساعات اليوم
   const handleDiscardCompletedSession = () => {
     soundManager.playClick();
+    setShowDiscardConfirm(false);
     setShowCompletedPrompt(false);
     sessionStartTimeRef.current = null;
     setPendingSplits([]);
@@ -281,6 +286,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     } else if (onLogToCurrentHour) {
       onLogToCurrentHour(cleanText, lastCompletedMins, selectedTag);
     }
+    setShowDiscardConfirm(false);
     setShowCompletedPrompt(false);
     sessionStartTimeRef.current = null;
     setPendingSplits([]);
@@ -336,6 +342,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
       setSuggestedBreakMin(sessionCount >= 4 ? 15 : 5);
       // Fix 1: إظهار النافذة دون تسجيل مسبق لإتاحة الإلغاء التام دون ترك أي أثر
+      setShowDiscardConfirm(false);
       setShowCompletedPrompt(true);
       // Advance session count
       const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
@@ -485,7 +492,11 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
         handleTogglePlayPause();
       } else if (e.code === 'Escape') {
         if (showCompletedPrompt) {
-          handleDiscardCompletedSession();
+          if (showDiscardConfirm) {
+            setShowDiscardConfirm(false);
+          } else {
+            setShowDiscardConfirm(true);
+          }
         } else {
           if (!isRunning) {
             ambientAudio.stop();
@@ -497,7 +508,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, showCompletedPrompt, isRunning, ambientSound, onClose]);
+  }, [isOpen, showCompletedPrompt, showDiscardConfirm, isRunning, ambientSound, onClose]);
 
   // Stop sound on unmount
   useEffect(() => {
@@ -1075,12 +1086,12 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       {showCompletedPrompt && (
         <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[var(--card)] border border-[var(--line)] rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-3.5 animate-in zoom-in-95 relative">
-            {/* Top Close (X) Button to Discard Session without logging */}
+            {/* Top Close (X) Button to prompt Discard Confirmation */}
             <button
               type="button"
-              onClick={handleDiscardCompletedSession}
+              onClick={() => setShowDiscardConfirm(true)}
               className="absolute top-4 end-4 p-1.5 rounded-xl bg-[var(--bg)] hover:bg-[var(--card-subtle)] border border-[var(--line)] text-[var(--ink-soft)] hover:text-rose-500 transition-all cursor-pointer"
-              title={lang === 'ar' ? 'إلغاء وتجاهل الجلسة (دون تسجيل)' : 'Discard session (without saving)'}
+              title={lang === 'ar' ? 'إلغاء الجلسة دون تسجيل' : 'Cancel session without saving'}
             >
               <X className="w-4 h-4" />
             </button>
@@ -1155,27 +1166,62 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
               </div>
             </div>
 
-            {/* Fix 1: Action Buttons - Explicit Confirm VS Discard */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 w-full pt-1">
-              <button
-                type="button"
-                onClick={handleConfirmAndSaveSession}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-98"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{lang === 'ar' ? 'تأكيد وتسجيل الجلسة' : 'Confirm & Save Session'}</span>
-              </button>
+            {/* Action Area: Either Normal (Save VS Cancel) or Confirmation Dialog */}
+            {showDiscardConfirm ? (
+              <div className="w-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/70 rounded-2xl p-4 text-center flex flex-col items-center gap-2.5 animate-in fade-in zoom-in-95">
+                <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 flex items-center justify-center text-lg">
+                  ⚠️
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                    {lang === 'ar' ? 'هل أنت متأكد من إلغاء الجلسة؟' : 'Are you sure you want to discard this session?'}
+                  </h4>
+                  <p className="text-xs text-rose-700 dark:text-rose-300/80 mt-1">
+                    {lang === 'ar'
+                      ? 'سيتم حذف الجلسة دون تدوين أي دقائق في جدول اليوم.'
+                      : 'The session will be discarded without logging any minutes to your schedule.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 w-full pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDiscardCompletedSession}
+                    className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>{lang === 'ar' ? 'نعم، إلغاء وحذف' : 'Yes, Discard'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscardConfirm(false)}
+                    className="flex-1 py-2 px-3 rounded-xl bg-[var(--card)] hover:bg-[var(--bg)] border border-[var(--line)] text-[var(--ink)] text-xs font-bold transition-all cursor-pointer active:scale-95"
+                  >
+                    <span>{lang === 'ar' ? 'تراجع والعودة' : 'Go Back'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full pt-1">
+                <button
+                  type="button"
+                  onClick={handleConfirmAndSaveSession}
+                  className="flex-1 w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-98"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{lang === 'ar' ? 'تسجيل الجلسة' : 'Save Session'}</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleDiscardCompletedSession}
-                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
-                title={lang === 'ar' ? 'إلغاء الجلسة دون تدوين أي شيء في الجدول' : 'Discard session without writing to schedule'}
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>{lang === 'ar' ? 'تجاهل دون تسجيل' : 'Discard (No Log)'}</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDiscardConfirm(true)}
+                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 active:scale-98"
+                  title={lang === 'ar' ? 'إلغاء الجلسة دون تدوين أي شيء في الجدول' : 'Cancel session without writing to schedule'}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'إلغاء الجلسة' : 'Cancel Session'}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

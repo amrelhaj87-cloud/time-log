@@ -82,7 +82,7 @@ export default function App() {
   });
   const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
 
-    // 1. Core Date & Data State
+  // 1. Core Date & Data State
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [weekStart, setWeekStart] = useState<Date>(() => {
     const initialDay = (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
@@ -174,7 +174,7 @@ export default function App() {
       localStorage.setItem('darkMode', String(next === 'dark' || (next === 'system' && systemIsDark)));
       if (db && currentUser) {
         const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-        setDoc(docRef, { themeMode: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        setDoc(docRef, { themeMode: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
       }
       return next;
     });
@@ -186,7 +186,7 @@ export default function App() {
     localStorage.setItem('darkMode', String(mode === 'dark' || (mode === 'system' && systemIsDark)));
     if (db && currentUser) {
       const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-      setDoc(docRef, { themeMode: mode, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      setDoc(docRef, { themeMode: mode, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
     }
   }, [systemIsDark, currentUser]);
 
@@ -201,7 +201,7 @@ export default function App() {
       localStorage.setItem('isDetailedView', String(next));
       if (db && currentUser) {
         const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-        setDoc(docRef, { isDetailedView: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        setDoc(docRef, { isDetailedView: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
       }
       return next;
     });
@@ -277,7 +277,7 @@ export default function App() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return {
       enabled: true,
@@ -414,7 +414,7 @@ export default function App() {
         }
       }
     }
-  } catch {}
+  } catch { }
   const { streak: dailyStreak, hasToday: streakHasToday } = calculateDailyStreak(allDaysHours, allDaysGolden);
 
   // Debounced Save Refs (3s after typing stops, instant on Enter/Tag/Action/Page-Close)
@@ -491,7 +491,7 @@ export default function App() {
         setWeekData(normalized);
         setIsDataLoaded(true);
         return;
-      } catch {}
+      } catch { }
     }
 
     // Default empty week with normalized structures
@@ -747,7 +747,7 @@ export default function App() {
               }
             }
           }
-        } catch {}
+        } catch { }
       } else {
         setCurrentUser(null);
       }
@@ -945,11 +945,11 @@ export default function App() {
     const updated = todoInbox.map((item) =>
       item.id === todo.id
         ? {
-            ...item,
-            done: true,
-            promotedTo: 'golden' as const,
-            promotedAt: Date.now()
-          }
+          ...item,
+          done: true,
+          promotedTo: 'golden' as const,
+          promotedAt: Date.now()
+        }
         : item
     );
     saveTodoInbox(updated);
@@ -970,12 +970,12 @@ export default function App() {
       const updated = todoInbox.map((item) =>
         item.id === todo.id
           ? {
-              ...item,
-              done: true,
-              promotedTo: 'quad' as const,
-              promotedQuad: quadKey,
-              promotedAt: Date.now()
-            }
+            ...item,
+            done: true,
+            promotedTo: 'quad' as const,
+            promotedQuad: quadKey,
+            promotedAt: Date.now()
+          }
           : item
       );
       saveTodoInbox(updated);
@@ -994,12 +994,12 @@ export default function App() {
     const updated = todoInbox.map((item) =>
       item.id === todo.id
         ? {
-            ...item,
-            done: true,
-            promotedTo: 'quad' as const,
-            promotedQuad: quadKey,
-            promotedAt: Date.now()
-          }
+          ...item,
+          done: true,
+          promotedTo: 'quad' as const,
+          promotedQuad: quadKey,
+          promotedAt: Date.now()
+        }
         : item
     );
     saveTodoInbox(updated);
@@ -1173,7 +1173,7 @@ export default function App() {
       if (rawNext) {
         try {
           nextWeekObj = JSON.parse(rawNext);
-        } catch {}
+        } catch { }
       }
       nextWeekObj.days = nextWeekObj.days || {};
       nextWeekObj.days[tomorrowStr] = tomorrowDay;
@@ -1197,7 +1197,7 @@ export default function App() {
           origin: { y: 0.85 },
           disableForReducedMotion: true
         });
-      } catch {}
+      } catch { }
       setSaveStatus(STRINGS[lang].rolloverSuccess(movedCount));
     } else {
       setSaveStatus(STRINGS[lang].noPendingRollover);
@@ -1230,8 +1230,8 @@ export default function App() {
         const updatedText = updateTagOnly
           ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
           : existing.text.trim()
-          ? `${existing.text} • ${prefix}${text}`
-          : `${prefix}${text}`;
+            ? `${existing.text} • ${prefix}${text}`
+            : `${prefix}${text}`;
         const updatedDay: DayData = {
           ...todayDay,
           hours: {
@@ -1257,7 +1257,7 @@ export default function App() {
         let targetWeek: WeekData = { days: {} };
         const raw = localStorage.getItem(targetLocalKey);
         if (raw) {
-          try { targetWeek = JSON.parse(raw); } catch {}
+          try { targetWeek = JSON.parse(raw); } catch { }
         }
         targetWeek = normalizeWeekData(targetWeek, todayWs);
         const existingDay = targetWeek.days[todayStr] || emptyDay();
@@ -1265,8 +1265,8 @@ export default function App() {
         const updatedText = updateTagOnly
           ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
           : existing.text.trim()
-          ? `${existing.text} • ${prefix}${text}`
-          : `${prefix}${text}`;
+            ? `${existing.text} • ${prefix}${text}`
+            : `${prefix}${text}`;
         targetWeek.days[todayStr] = {
           ...existingDay,
           hours: {
@@ -1333,7 +1333,7 @@ export default function App() {
         let targetWeek: WeekData = { days: {} };
         const raw = localStorage.getItem(targetLocalKey);
         if (raw) {
-          try { targetWeek = JSON.parse(raw); } catch {}
+          try { targetWeek = JSON.parse(raw); } catch { }
         }
         targetWeek = normalizeWeekData(targetWeek, todayWs);
         const existingDay = targetWeek.days[todayStr] || emptyDay();
@@ -1451,7 +1451,7 @@ export default function App() {
         }).catch((err) => {
           console.warn('Capacitor backButton listener init warning:', err);
         });
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     return () => {
@@ -1520,8 +1520,8 @@ export default function App() {
             ? diffDays === 1
               ? '🎂 تنبيه عيد الميلاد: متبقي يوم واحد فقط على عيد ميلادك! 🎉'
               : diffDays === 2
-              ? '🎂 تنبيه عيد الميلاد: متبقي يومان فقط على عيد ميلادك! 🎉'
-              : `🎂 تنبيه عيد الميلاد: متبقي على عيد ميلادك ${diffDays} أيام فقط! 🎉`
+                ? '🎂 تنبيه عيد الميلاد: متبقي يومان فقط على عيد ميلادك! 🎉'
+                : `🎂 تنبيه عيد الميلاد: متبقي على عيد ميلادك ${diffDays} أيام فقط! 🎉`
             : `🎂 Birthday Countdown: Only ${diffDays} day${diffDays === 1 ? '' : 's'} left until your birthday! 🎉`;
       } else if (diffDays <= 30) {
         bdayBannerText =
@@ -1548,7 +1548,7 @@ export default function App() {
             spread: 70,
             origin: { y: 0.6 }
           });
-        } catch {}
+        } catch { }
       }
     }
   }, [userBirthDate]);
@@ -1596,7 +1596,7 @@ export default function App() {
       try {
         const googleCred = GoogleAuthProvider.credentialFromResult(res);
         credential = googleCred?.accessToken || null;
-      } catch {}
+      } catch { }
       if (!credential) {
         credential = (res as any)._tokenResponse?.oauthAccessToken || null;
       }
@@ -1821,11 +1821,10 @@ export default function App() {
                 {/* Streak Badge positioned right between Title and Focus/Logged */}
                 {showStreakBadge && (
                   <div
-                    className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs border transition-all ${
-                      dailyStreak > 0
+                    className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs border transition-all ${dailyStreak > 0
                         ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800/80 text-orange-600 dark:text-orange-400'
                         : 'bg-[var(--bg)] border-[var(--line)] text-[var(--ink-faint)]'
-                    }`}
+                      }`}
                     title={dailyStreak > 0 ? t.streakTooltip(dailyStreak) : (lang === 'ar' ? 'سجّل ساعاتك يومياً للحفاظ على شعلة الاستمرارية 🔥' : 'Log hours daily to build your streak 🔥')}
                   >
                     <Flame className={`w-3.5 h-3.5 ${dailyStreak > 0 ? 'text-orange-500 fill-orange-500 animate-pulse' : 'text-slate-400'}`} />
@@ -1847,24 +1846,22 @@ export default function App() {
                         ? pomoBgState.isRunning
                           ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
                           : focusModeActive
-                          ? 'إيقاف وضع التركيز'
-                          : 'فتح مؤقت التركيز (بومودورو)'
+                            ? 'إيقاف وضع التركيز'
+                            : 'فتح مؤقت التركيز (بومودورو)'
                         : pomoBgState.isRunning
-                        ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
-                        : focusModeActive
-                        ? 'Exit Focus Mode'
-                        : 'Open Focus Timer (Pomodoro)'
+                          ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
+                          : focusModeActive
+                            ? 'Exit Focus Mode'
+                            : 'Open Focus Timer (Pomodoro)'
                     }
-                    className={`hidden md:inline-flex px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      focusModeActive || pomoBgState.isRunning
+                    className={`hidden md:inline-flex px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${focusModeActive || pomoBgState.isRunning
                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
                         : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
-                    }`}
+                      }`}
                   >
                     <Target
-                      className={`w-3.5 h-3.5 ${
-                        focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
-                      }`}
+                      className={`w-3.5 h-3.5 ${focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
+                        }`}
                     />
                     <span>{t.focusModeBtnText}</span>
                     {pomoBgState.isRunning && (
@@ -1914,24 +1911,22 @@ export default function App() {
                         ? pomoBgState.isRunning
                           ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
                           : focusModeActive
-                          ? 'إيقاف وضع التركيز'
-                          : 'فتح مؤقت التركيز (بومودورو)'
+                            ? 'إيقاف وضع التركيز'
+                            : 'فتح مؤقت التركيز (بومودورو)'
                         : pomoBgState.isRunning
-                        ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
-                        : focusModeActive
-                        ? 'Exit Focus Mode'
-                        : 'Open Focus Timer (Pomodoro)'
+                          ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
+                          : focusModeActive
+                            ? 'Exit Focus Mode'
+                            : 'Open Focus Timer (Pomodoro)'
                     }
-                    className={`flex-1 justify-center px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                      focusModeActive || pomoBgState.isRunning
+                    className={`flex-1 justify-center px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${focusModeActive || pomoBgState.isRunning
                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
                         : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
-                    }`}
+                      }`}
                   >
                     <Target
-                      className={`w-3.5 h-3.5 ${
-                        focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
-                      }`}
+                      className={`w-3.5 h-3.5 ${focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
+                        }`}
                     />
                     <span>{t.focusModeBtnText}</span>
                     {pomoBgState.isRunning && (
@@ -2199,14 +2194,14 @@ export default function App() {
               // Optionally push to Firestore if logged in
               if (db && currentUser) {
                 const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'weeks', monKey);
-                setDoc(docRef, { json: JSON.stringify(weekDataRestored), updatedAt: new Date().toISOString() }).catch(() => {});
+                setDoc(docRef, { json: JSON.stringify(weekDataRestored), updatedAt: new Date().toISOString() }).catch(() => { });
               }
             },
             onInboxRestored: (items) => {
               setTodoInbox(items);
               if (db && currentUser) {
                 const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
-                setDoc(docRef, { items, updatedAt: new Date().toISOString() }).catch(() => {});
+                setDoc(docRef, { items, updatedAt: new Date().toISOString() }).catch(() => { });
               }
             },
             onPrefsRestored: (prefs) => {
@@ -2288,7 +2283,7 @@ export default function App() {
         lang={lang}
       />
 
-      
+
       {/* Brain Dump & Todo Inbox Slide-over Drawer */}
       <TodoInboxDrawer
         isOpen={todoDrawerOpen}
@@ -2355,7 +2350,7 @@ export default function App() {
                 }
               }
             }
-          } catch {}
+          } catch { }
 
           return currentWeekEntry || null;
         })()}
