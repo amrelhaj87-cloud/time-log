@@ -34,6 +34,7 @@ import {
   AMBIENT_SOUND_OPTIONS,
   AmbientSoundType
 } from '../utils/ambientAudio';
+import { calculatePomodoroHourSplits, PomodoroSplit } from '../utils/dateUtils';
 
 export type PomodoroMode = 'focus' | 'break';
 
@@ -43,6 +44,7 @@ interface FocusPomodoroViewProps {
   onRequestOpen?: () => void;
   onTimerStateChange?: (state: { isRunning: boolean; timeFormatted: string; mode: PomodoroMode }) => void;
   onLogToCurrentHour?: (text: string, minutes: number, tag: TagCode, updateTagOnly?: boolean) => void;
+  onLogPomodoroSplits?: (text: string, splits: PomodoroSplit[], tag: TagCode) => void;
   goldenGoalText?: string;
   themeMode?: ThemeMode;
   isDarkEffective?: boolean;
@@ -63,6 +65,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   onRequestOpen,
   onTimerStateChange,
   onLogToCurrentHour,
+  onLogPomodoroSplits,
   goldenGoalText,
   themeMode = 'light',
   isDarkEffective = false,
@@ -101,6 +104,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [showCompletedPrompt, setShowCompletedPrompt] = useState<boolean>(false);
   const [lastCompletedMins, setLastCompletedMins] = useState<number>(25);
   const [suggestedBreakMin, setSuggestedBreakMin] = useState<number>(5);
+  // Fix 3: الساعات المقسمة ذكياً بكتل ١٥ دقيقة
+  const [pendingSplits, setPendingSplits] = useState<PomodoroSplit[]>([]);
   const [isEditingCustomMin, setIsEditingCustomMin] = useState<boolean>(false);
   const [customMinInput, setCustomMinInput] = useState<string>('30');
   const [notifyEnabled, setNotifyEnabledState] = useState<boolean>(() => isNotifyEnabled());
@@ -116,6 +121,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const timerRef = useRef<number | null>(null);
   const endTimeRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // Fix 3: نحفظ وقت بداية الجلسة الفعلي لحساب التقسيم بين الساعات
+  const sessionStartTimeRef = useRef<Date | null>(null);
 
   // Sync ambient audio changes
   const handleSelectSound = (soundType: AmbientSoundType) => {
@@ -158,6 +165,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setIsEditingCustomMin(false);
     ambientAudio.stop();
     endTimeRef.current = null;
+    sessionStartTimeRef.current = null;
+    setPendingSplits([]);
     setShowCompletedPrompt(false);
     if (customMins !== undefined) {
       if (newMode === 'focus') setFocusDurationMin(customMins);
@@ -190,6 +199,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     } else {
       // Starting / Resuming: record target end timestamp to survive tab suspension
       endTimeRef.current = Date.now() + timeLeft * 1000;
+      // Fix 3: سجّل وقت بداية الجلسة لأول مرة فقط (مش عند الاستئناف بعد إيقاف مؤقت)
+      if (!sessionStartTimeRef.current && mode === 'focus') {
+        sessionStartTimeRef.current = new Date();
+      }
       setIsRunning(true);
       // Ask for notification permission on first start (needs a user gesture)
       if (notifyEnabled) {
@@ -208,7 +221,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     }
   };
 
-  // Explicit End Session / Stop & Log early (focus mode only — breaks are never logged)
+  // Explicit End Session / Stop early (focus mode only — breaks are never logged)
   const handleEndSession = () => {
     if (mode !== 'focus') return;
     soundManager.playClick();
@@ -220,20 +233,20 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     const elapsedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
 
     if (elapsedSeconds >= 45 || timeLeft <= 60) {
-      // Has worked meaningful minutes -> auto-log immediately & open completion dialog
       setLastCompletedMins(elapsedMinutes);
       setSuggestedBreakMin(getSuggestedBreakMin());
-      if (onLogToCurrentHour) {
-        onLogToCurrentHour(
-          taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
-          elapsedMinutes,
-          selectedTag
-        );
-      }
+
+      const endTime = new Date();
+      const startTime = sessionStartTimeRef.current || new Date(endTime.getTime() - elapsedMinutes * 60000);
+      const splits = calculatePomodoroHourSplits(startTime, endTime, elapsedMinutes);
+      setPendingSplits(splits);
+
+      // Fix 1: لا نسجل تلقائياً حتى يقرر المستخدم الحفظ أو الإلغاء
       setShowCompletedPrompt(true);
     } else {
       // Less than 45 secs -> just reset timer
       setTimeLeft(totalSeconds);
+      sessionStartTimeRef.current = null;
     }
   };
 
@@ -243,9 +256,35 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setIsRunning(false);
     ambientAudio.stop();
     endTimeRef.current = null;
+    sessionStartTimeRef.current = null;
+    setPendingSplits([]);
     const secs = getDurationForMode(mode);
     setTotalSeconds(secs);
     setTimeLeft(secs);
+  };
+
+  // Fix 1: إلغاء وتجاهل الجلسة بالكامل دون كتابة أي شيء في ساعات اليوم
+  const handleDiscardCompletedSession = () => {
+    soundManager.playClick();
+    setShowCompletedPrompt(false);
+    sessionStartTimeRef.current = null;
+    setPendingSplits([]);
+    handleSwitchMode('break', suggestedBreakMin);
+  };
+
+  // Fix 1 & 2 & 3: تأكيد وتسجيل الجلسة مع تطبيق التقسيم والتاق المختار
+  const handleConfirmAndSaveSession = () => {
+    soundManager.playClick();
+    const cleanText = taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session');
+    if (onLogPomodoroSplits && pendingSplits.length > 0) {
+      onLogPomodoroSplits(cleanText, pendingSplits, selectedTag);
+    } else if (onLogToCurrentHour) {
+      onLogToCurrentHour(cleanText, lastCompletedMins, selectedTag);
+    }
+    setShowCompletedPrompt(false);
+    sessionStartTimeRef.current = null;
+    setPendingSplits([]);
+    handleSwitchMode('break', suggestedBreakMin);
   };
 
   // Handle Session Completion
@@ -290,15 +329,13 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     setLastCompletedMins(completedMins);
 
     if (mode === 'focus') {
-      // Auto-log immediately to current hour so work is NEVER lost!
-      if (onLogToCurrentHour) {
-        onLogToCurrentHour(
-          taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
-          completedMins,
-          selectedTag
-        );
-      }
+      const endTime = new Date();
+      const startTime = sessionStartTimeRef.current || new Date(endTime.getTime() - completedMins * 60000);
+      const splits = calculatePomodoroHourSplits(startTime, endTime, completedMins);
+      setPendingSplits(splits);
+
       setSuggestedBreakMin(sessionCount >= 4 ? 15 : 5);
+      // Fix 1: إظهار النافذة دون تسجيل مسبق لإتاحة الإلغاء التام دون ترك أي أثر
       setShowCompletedPrompt(true);
       // Advance session count
       const nextSession = sessionCount >= 4 ? 1 : sessionCount + 1;
@@ -448,7 +485,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
         handleTogglePlayPause();
       } else if (e.code === 'Escape') {
         if (showCompletedPrompt) {
-          setShowCompletedPrompt(false);
+          handleDiscardCompletedSession();
         } else {
           if (!isRunning) {
             ambientAudio.stop();
@@ -1034,10 +1071,20 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
         </footer>
       </div>
 
-      {/* COMPLETION MODAL (Save session to Today's Hours) */}
+      {/* COMPLETION MODAL (Save session to Today's Hours or Discard) */}
       {showCompletedPrompt && (
         <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[var(--card)] border border-[var(--line)] rounded-3xl p-6 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-4 animate-in zoom-in-95">
+          <div className="bg-[var(--card)] border border-[var(--line)] rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-3.5 animate-in zoom-in-95 relative">
+            {/* Top Close (X) Button to Discard Session without logging */}
+            <button
+              type="button"
+              onClick={handleDiscardCompletedSession}
+              className="absolute top-4 end-4 p-1.5 rounded-xl bg-[var(--bg)] hover:bg-[var(--card-subtle)] border border-[var(--line)] text-[var(--ink-soft)] hover:text-rose-500 transition-all cursor-pointer"
+              title={lang === 'ar' ? 'إلغاء وتجاهل الجلسة (دون تسجيل)' : 'Discard session (without saving)'}
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-500 flex items-center justify-center text-2xl">
               🎉
             </div>
@@ -1049,17 +1096,39 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                   ? `أنجزت جلسة تركيز مدتها ${lastCompletedMins} دقيقة بنجاح!`
                   : `You completed a ${lastCompletedMins} min focus session!`}
               </p>
-              <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold shadow-2xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>{lang === 'ar' ? 'تم تسجيل الجلسة تلقائياً في الساعة الحالية ✓' : 'Session auto-logged to current hour ✓'}</span>
-              </div>
+
+              {/* Fix 3: مؤشر التقسيم الذكي بين الساعات */}
+              {pendingSplits.length > 1 ? (
+                <div className="mt-2.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>{lang === 'ar' ? 'تقسيم ذكي بين الساعات (بلوكات ١٥ دقيقة):' : 'Smart Hour Split (15m blocks):'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] font-mono">
+                    {pendingSplits.map((s) => (
+                      <span key={s.hourKey} className="bg-[var(--card)] px-2 py-0.5 rounded-md border border-indigo-300 dark:border-indigo-700">
+                        {s.minutes}m @ {s.hourKey}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800/60 border border-[var(--line)] text-[var(--ink-soft)] rounded-full text-xs font-medium">
+                  <span>{lang === 'ar' ? `سيتم التدوين في ساعة: ${pendingSplits[0]?.hourKey || ''}` : `Will be logged to: ${pendingSplits[0]?.hourKey || ''}`}</span>
+                </div>
+              )}
             </div>
 
-            {/* Tag Selection for Logging */}
+            {/* Fix 2: Tag Selection for Logging */}
             <div className="w-full bg-[var(--bg)] border border-[var(--line)] rounded-2xl p-3 text-start">
-              <label className="block text-[11px] font-bold text-[var(--ink-soft)] mb-2 flex items-center gap-1.5">
-                <TagIcon className="w-3.5 h-3.5 text-indigo-500" />
-                {lang === 'ar' ? 'تصنيف النشاط المنجز:' : 'Activity Tag:'}
+              <label className="block text-[11px] font-bold text-[var(--ink-soft)] mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5 text-indigo-500" />
+                  {lang === 'ar' ? 'اختر تصنيف النشاط (التاق):' : 'Select Activity Tag:'}
+                </span>
+                <span className="text-[10px] text-indigo-500 font-mono font-bold">
+                  {selectedTag} - {TAGS_CONFIG[selectedTag]?.fullTitle[lang]}
+                </span>
               </label>
               <div className="grid grid-cols-5 gap-1.5">
                 {POMO_TAG_KEYS.map((tagKey) => {
@@ -1074,7 +1143,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                       title={cfg.fullTitle[lang]}
                       className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                          ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-500/30'
                           : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)]'
                       }`}
                     >
@@ -1086,37 +1155,25 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 w-full pt-2">
+            {/* Fix 1: Action Buttons - Explicit Confirm VS Discard */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full pt-1">
               <button
                 type="button"
-                onClick={() => {
-                  if (onLogToCurrentHour) {
-                    onLogToCurrentHour(
-                      taskText.trim() || (lang === 'ar' ? 'جلسة تركيز بومودورو' : 'Pomodoro Focus Session'),
-                      lastCompletedMins,
-                      selectedTag,
-                      true
-                    );
-                  }
-                  setShowCompletedPrompt(false);
-                  handleSwitchMode('break', suggestedBreakMin);
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
+                onClick={handleConfirmAndSaveSession}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-98"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{lang === 'ar' ? 'تأكيد التعديلات ومتابعة' : 'Confirm & Continue'}</span>
+                <span>{lang === 'ar' ? 'تأكيد وتسجيل الجلسة' : 'Confirm & Save Session'}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowCompletedPrompt(false);
-                  handleSwitchMode('break', suggestedBreakMin);
-                }}
-                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-[var(--bg)] hover:bg-[var(--card)] border border-[var(--line)] text-[var(--ink)] text-xs font-bold transition-all cursor-pointer"
+                onClick={handleDiscardCompletedSession}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-100 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+                title={lang === 'ar' ? 'إلغاء الجلسة دون تدوين أي شيء في الجدول' : 'Discard session without writing to schedule'}
               >
-                {lang === 'ar' ? 'استمرار للاستراحة' : 'Continue to Break'}
+                <X className="w-3.5 h-3.5" />
+                <span>{lang === 'ar' ? 'تجاهل دون تسجيل' : 'Discard (No Log)'}</span>
               </button>
             </div>
           </div>

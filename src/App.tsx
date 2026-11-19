@@ -21,7 +21,17 @@ import {
   DEFAULT_TAG_TARGETS,
   APP_VERSION
 } from './constants/config';
-import { startOfWeekFor, mondayOf, isoDate, addDays, emptyDay, getCurrentHourKey, normalizeWeekData, focusCurrentHourInput } from './utils/dateUtils';
+import {
+  startOfWeekFor,
+  mondayOf,
+  isoDate,
+  addDays,
+  emptyDay,
+  getCurrentHourKey,
+  normalizeWeekData,
+  focusCurrentHourInput,
+  PomodoroSplit
+} from './utils/dateUtils';
 import { calculateDailyStreak } from './utils/streakUtils';
 import { soundManager } from './utils/soundEffects';
 import { restoreFullBackup, syncAllWeeksToCloud, type FullBackup } from './utils/backupUtils';
@@ -1277,6 +1287,89 @@ export default function App() {
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
+  // Fix 3: تسجيل جلسة البومودورو الموزعة ذكياً بين الساعات (بلوكات ١٥ دقيقة)
+  const handleLogPomodoroSplits = (
+    text: string,
+    splits: PomodoroSplit[],
+    tag: TagCode
+  ) => {
+    if (!splits || splits.length === 0) return;
+    const now = new Date();
+    const todayStr = isoDate(now);
+
+    setWeekData((prevWeek) => {
+      const todayDay = prevWeek.days[todayStr];
+      if (todayDay) {
+        const updatedHours = { ...todayDay.hours };
+        for (const split of splits) {
+          const prefix = `[🎯 ${split.minutes}m] `;
+          const existing = updatedHours[split.hourKey] || { text: '', tag: '' };
+          const updatedText = existing.text.trim()
+            ? `${existing.text} • ${prefix}${text}`
+            : `${prefix}${text}`;
+          updatedHours[split.hourKey] = {
+            text: updatedText,
+            tag: tag || (existing.tag as TagCode) || 'E'
+          };
+        }
+        const updatedDay: DayData = {
+          ...todayDay,
+          hours: updatedHours
+        };
+        const newWeek: WeekData = {
+          ...prevWeek,
+          days: {
+            ...prevWeek.days,
+            [todayStr]: updatedDay
+          }
+        };
+        saveWeekData(newWeek, weekStart, currentUser, true);
+        return newWeek;
+      } else {
+        const todayWs = startOfWeekFor(now, weekStartDay);
+        const todayMonKey = isoDate(mondayOf(todayWs));
+        const userPrefix = currentUser ? currentUser.uid : 'guest';
+        const targetLocalKey = `time_log_week_${userPrefix}_${todayMonKey}`;
+        let targetWeek: WeekData = { days: {} };
+        const raw = localStorage.getItem(targetLocalKey);
+        if (raw) {
+          try { targetWeek = JSON.parse(raw); } catch {}
+        }
+        targetWeek = normalizeWeekData(targetWeek, todayWs);
+        const existingDay = targetWeek.days[todayStr] || emptyDay();
+        const updatedHours = { ...existingDay.hours };
+        for (const split of splits) {
+          const prefix = `[🎯 ${split.minutes}m] `;
+          const existing = updatedHours[split.hourKey] || { text: '', tag: '' };
+          const updatedText = existing.text.trim()
+            ? `${existing.text} • ${prefix}${text}`
+            : `${prefix}${text}`;
+          updatedHours[split.hourKey] = {
+            text: updatedText,
+            tag: tag || (existing.tag as TagCode) || 'E'
+          };
+        }
+        targetWeek.days[todayStr] = {
+          ...existingDay,
+          hours: updatedHours
+        };
+        saveWeekData(targetWeek, todayWs, currentUser, true);
+        return prevWeek;
+      }
+    });
+
+    const summaryStr = splits
+      .map((s) => (lang === 'ar' ? `${s.minutes}د في (${s.hourKey})` : `${s.minutes}m @ ${s.hourKey}`))
+      .join(lang === 'ar' ? ' و ' : ' + ');
+
+    setSaveStatus(
+      lang === 'ar'
+        ? `✅ تم تسجيل جلسة تركيز: ${summaryStr}`
+        : `✅ Logged focus session: ${summaryStr}`
+    );
+    setTimeout(() => setSaveStatus(''), 4000);
+  };
+
   // Unified Android Back-Button (Capacitor) & Desktop Escape key handling
   useEffect(() => {
     const handleCloseTopModal = (): boolean => {
@@ -2187,6 +2280,7 @@ export default function App() {
         onRequestOpen={() => handleToggleFocusMode(true)}
         onTimerStateChange={setPomoBgState}
         onLogToCurrentHour={handleLogPomodoroToCurrentHour}
+        onLogPomodoroSplits={handleLogPomodoroSplits}
         goldenGoalText={currentDayData.goldenGoal.text}
         themeMode={themeMode}
         isDarkEffective={isDarkEffective}

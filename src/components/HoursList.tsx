@@ -426,11 +426,14 @@ export const HoursList: React.FC<HoursListProps> = ({
                                 onChangeHour(key, calEvent.text, calEvent.tag || entry.tag || 'E', true);
                               } else {
                                 onChangeHour(key, entry.text, entry.tag, true);
+                              }
+                              // Fix 2: فتح قائمة التاقات تلقائياً بعد الضغط على Enter
+                              setTimeout(() => {
                                 const tagBtn = document.getElementById(`tag-picker-btn-hour-${key}`);
                                 if (tagBtn) {
                                   tagBtn.click();
                                 }
-                              }
+                              }, 70);
                             } else if ((e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'ArrowLeft') && calEvent && !entry.text.trim()) {
                               // Quick accept calendar ghost text
                               if (e.key === 'Tab') {

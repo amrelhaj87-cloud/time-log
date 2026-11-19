@@ -132,13 +132,74 @@ export function normalizeWeekData(raw: any, ws: Date): WeekData {
   return { days };
 }
 
-export function getCurrentHourKey(): string {
-  const h = new Date().getHours();
+export function getHourKeyForHour(h: number): string {
   if (h >= 5 && h <= 11) return `${h}am`;
   if (h === 12) return `12pm`;
   if (h >= 13 && h <= 23) return `${h - 12}pm`;
   if (h === 0) return `12am`;
   return `${h}am`;
+}
+
+export function getCurrentHourKey(): string {
+  return getHourKeyForHour(new Date().getHours());
+}
+
+export interface PomodoroSplit {
+  hourKey: string;
+  minutes: number;
+}
+
+/**
+ * Calculates smart splitting for a Pomodoro session across hours.
+ * If the session started and ended in the same hour, returns a single split for that hour.
+ * If it spanned across two hours, calculates raw minutes in each, rounds to 15-minute blocks
+ * (e.g. 15, 30, 45, 60), ensuring fair and clean allocation without minute-by-minute clutter.
+ */
+export function calculatePomodoroHourSplits(
+  startTime: Date,
+  endTime: Date,
+  totalSessionMinutes: number
+): PomodoroSplit[] {
+  const startHour = startTime.getHours();
+  const endHour = endTime.getHours();
+
+  // Same hour -> no splitting needed
+  if (startHour === endHour) {
+    return [{ hourKey: getHourKeyForHour(endHour), minutes: totalSessionMinutes }];
+  }
+
+  // Crosses hour boundary
+  // Raw minutes spent in the starting hour: from startTime until top of the next hour
+  const startMinutes = startTime.getMinutes();
+  const rawPrevMins = Math.max(0, 60 - startMinutes);
+  // Raw minutes in ending hour
+  const endMinutes = endTime.getMinutes();
+  const rawCurrMins = Math.max(0, endMinutes);
+
+  const totalRaw = rawPrevMins + rawCurrMins;
+
+  // Scale to match actual session duration
+  const prevAllocated = totalRaw > 0 ? (rawPrevMins / totalRaw) * totalSessionMinutes : totalSessionMinutes / 2;
+  const currAllocated = totalSessionMinutes - prevAllocated;
+
+  // Round each to 15-minute blocks
+  const roundTo15 = (m: number) => Math.round(m / 15) * 15;
+
+  const prevBlock = roundTo15(prevAllocated);
+  const currBlock = roundTo15(currAllocated);
+
+  // If one of them rounded to 0 because it was very short (< 7 mins), assign full session to dominant hour
+  if (prevBlock <= 0) {
+    return [{ hourKey: getHourKeyForHour(endHour), minutes: totalSessionMinutes }];
+  }
+  if (currBlock <= 0) {
+    return [{ hourKey: getHourKeyForHour(startHour), minutes: totalSessionMinutes }];
+  }
+
+  return [
+    { hourKey: getHourKeyForHour(startHour), minutes: prevBlock },
+    { hourKey: getHourKeyForHour(endHour), minutes: currBlock }
+  ];
 }
 
 /**
