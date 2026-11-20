@@ -19,15 +19,11 @@
   border-bottom: none !important;
 }
 
-/* Two columns on larger screens: simple toggles sit side by side. */
+/* Two columns on larger screens: settings pair up side by side. Very tall/wide
+   cards opt out via the Tailwind `sm:col-span-2` utility, not via a CSS guess. */
 @media (min-width: 640px) {
   .settings-flat {
     grid-template-columns: 1fr 1fr !important;
     grid-auto-flow: row dense !important;
-  }
-
-  /* Cards with stacked controls (flex-col) keep the full width. */
-  .settings-flat > *[class*="flex-col"] {
-    grid-column: 1 / -1 !important;
   }
 }
