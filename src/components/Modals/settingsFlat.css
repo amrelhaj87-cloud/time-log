@@ -1,25 +1,33 @@
 /* Settings modal — flat grouped list (no cards / boxes). */
 .settings-flat {
-  display: flex !important;
-  flex-direction: column !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
   gap: 0 !important;
 }
 
-/* Every top-level setting becomes one flat row, separated by a hairline. */
+/* Every top-level setting is a flat row separated by a hairline. */
 .settings-flat > * {
   background: transparent !important;
   border: none !important;
   border-bottom: 1px solid var(--line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  padding: 0.8rem 0 !important;
+  padding: 0.8rem 0.5rem !important;
 }
 
 .settings-flat > *:last-child {
   border-bottom: none !important;
 }
 
-/* Nested sub-cards (e.g. planning suite) keep a subtler inset look. */
-.settings-flat > * > .settings-subrow {
-  border-radius: 0.75rem;
+/* Two columns on larger screens: simple toggles sit side by side. */
+@media (min-width: 640px) {
+  .settings-flat {
+    grid-template-columns: 1fr 1fr !important;
+    grid-auto-flow: row dense !important;
+  }
+
+  /* Cards with stacked controls (flex-col) keep the full width. */
+  .settings-flat > *[class*="flex-col"] {
+    grid-column: 1 / -1 !important;
+  }
 }
