@@ -1,29 +1,22 @@
-/* Settings modal — flat grouped list (no cards / boxes). */
+/* Settings modal — one flat, compact column (no cards / boxes).
+   A single column avoids the horizontal overflow and stretched-row gaps that a
+   two-column grid produced with variable-height cards. */
 .settings-flat {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
+  display: flex !important;
+  flex-direction: column !important;
   gap: 0 !important;
 }
 
-/* Every top-level setting is a flat row separated by a hairline. */
+/* Every setting is one flat row, separated by a hairline. */
 .settings-flat > * {
   background: transparent !important;
   border: none !important;
   border-bottom: 1px solid var(--line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  padding: 0.8rem 0.5rem !important;
+  padding: 0.6rem 0.25rem !important;
 }
 
 .settings-flat > *:last-child {
   border-bottom: none !important;
-}
-
-/* Two columns on larger screens: settings pair up side by side. Very tall/wide
-   cards opt out via the Tailwind `sm:col-span-2` utility, not via a CSS guess. */
-@media (min-width: 640px) {
-  .settings-flat {
-    grid-template-columns: 1fr 1fr !important;
-    grid-auto-flow: row dense !important;
-  }
 }
