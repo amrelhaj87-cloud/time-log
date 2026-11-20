@@ -8,7 +8,7 @@ import {
 } from './backupUtils';
 
 const validBackup: FullBackup = {
-  appVersion: 'v4.7',
+  appVersion: 'v5.0',
   exportedAt: new Date().toISOString(),
   schemaVersion: CURRENT_SCHEMA_VERSION,
   weeks: {},
