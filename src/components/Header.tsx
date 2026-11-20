@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { WeekStartDay, ThemeMode, AgeDisplayOpt } from '../types';
 import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN, APP_VERSION } from '../constants/config';
 import { isoDate, focusCurrentHourInput } from '../utils/dateUtils';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor } from './services/firebase';
+import type { User } from 'firebase/auth';
+import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor, onAuthStateChanged, loadFirebase } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -702,8 +702,12 @@ export default function App() {
   weekStartRef.current = weekStart;
 
   useEffect(() => {
-    if (!auth) return;
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+
+    loadFirebase().then(() => {
+      if (cancelled || !onAuthStateChanged) return;
+      unsub = onAuthStateChanged(auth, async (u) => {
       setCurrentUser(u);
       let targetWs = weekStartRef.current;
 
@@ -782,8 +786,13 @@ export default function App() {
           console.warn('Auto cloud sync error:', err);
         });
       }
-    });
-    return () => unsub();
+      });
+    }).catch(() => {});
+
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
   }, [loadWeekData]);
 
   // Sleep settings are managed cleanly through the Settings Modal, so disable automatic popup spam
@@ -1612,6 +1621,7 @@ export default function App() {
 
   // Google Calendar Connection
   const handleConnectGCal = async () => {
+    await loadFirebase();
     if (!auth || !googleProvider) return;
     try {
       const res = await signInWithPopup(auth, googleProvider);

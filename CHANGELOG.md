@@ -32,6 +32,10 @@
      - تصحيح خريطة التاقات في `README.md`.
   8. **التحقق من النشر (`version.json`):**
      - سكربت `postbuild` (`scripts/write-version.mjs`) يكتب `dist/version.json` (الإصدار + commit SHA + وقت البناء) للتحقق من أي نشر عبر `GET /version.json`.
+  9. **تحميل Firebase ديناميكياً (Lazy Firebase):**
+     - `src/services/firebase.ts` يستورد SDK ديناميكياً ويصدّر live bindings تُملأ عند `loadFirebase()`؛ الـ UI يعمل في وضع الضيف أولاً ثم تُفعّل السحابة.
+     - `main.tsx` يبدأ التحميل بعد أول رسم؛ auth effect ينتظر التحميل؛ `handleConnectGCal` ينتظر التحميل؛ `Header.tsx` يستورد `User` type-only.
+     - النتيجة: التحميل الأولي ~171KB gzip بدلاً من ~293KB (Firebase ~761KB أصبح lazy).
 
 ---
 

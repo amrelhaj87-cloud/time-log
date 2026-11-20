@@ -150,6 +150,12 @@
 - إضافة `scripts/write-version.mjs` (postbuild) يكتب `dist/version.json` فيه الإصدار + commit SHA + وقت البناء.
 - **السبب:** تمكين التحقق السريع من أن أي نشر وصل فعلاً عبر `GET /version.json` بدون الحاجة لمتصفح.
 
+**10. تحميل Firebase ديناميكياً (Lazy Firebase) لتسريع أول تحميل:**
+- **المشكلة:** حزمة Firebase SDK كانت جزءاً من التحميل الأولي (واجهة واحدة 1.26MB سابقاً، ثم vendor-firebase 528KB).
+- **القرار:** إعادة كتابة `src/services/firebase.ts` ليستورد SDK ديناميكياً (`import('firebase/app' | 'firebase/auth' | 'firebase/firestore')`) ويصدّر **live bindings** (`auth`, `db`, `doc`, `onSnapshot`, ...) تُملأ عند `loadFirebase()`. باقي `App.tsx` لم يتغيّر تقريباً بفضل الحُرّاس الموجودين (`if (db && user)`) + Live Bindings.
+- **التعديلات المرافقة:** `main.tsx` يبدأ `loadFirebase()` بعد أول رسم؛ الـ auth effect ينتظر التحميل قبل `onAuthStateChanged`؛ `handleConnectGCal` ينتظر التحميل؛ `Header.tsx` يستورد `User` كـ type-only (حتى لا يسحب SDK).
+- **النتيجة:** `index.html` لم يعد يحمّل Firebase مسبقاً؛ التحميل الأولي ~171KB gzip بدلاً من ~293KB، وFirebase يُحمّل بعد أول تفاعل. (يلزم اختبار تسجيل الدخول/المزامنة يدوياً بعد النشر.)
+
 ---
 
 *آخر تحديث: 2026-11-20 | الإصدار الحالي: v4.7*
