@@ -146,6 +146,10 @@
 - مراقبة أخطاء خفيفة بدون اعتماد خارجي (`errorMonitoring.ts`) تلتقط `error`/`unhandledrejection` وتحفظ آخر 20 خطأ، مع ربطها بـ `ErrorBoundary`.
 - تصحيح خريطة التاقات في `README.md` (V=الرؤية، R=التعافي، SC=الرعاية) بدل الوصف الخاطئ.
 
+**9. التحقق من النشر (version.json):**
+- إضافة `scripts/write-version.mjs` (postbuild) يكتب `dist/version.json` فيه الإصدار + commit SHA + وقت البناء.
+- **السبب:** تمكين التحقق السريع من أن أي نشر وصل فعلاً عبر `GET /version.json` بدون الحاجة لمتصفح.
+
 ---
 
 *آخر تحديث: 2026-11-20 | الإصدار الحالي: v4.7*

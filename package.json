@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "postbuild": "node scripts/write-version.mjs",
     "test": "vitest run",
     "sync": "vite build && npx cap sync android",
     "push": "git push",

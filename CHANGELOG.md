@@ -30,6 +30,8 @@
      - إشعار "تحديث متاح" عبر `UpdateToast` + `subscribeUpdateAvailable`.
      - مراقبة أخطاء خفيفة بدون اعتماد خارجي (`errorMonitoring.ts`) مربوطة بـ `ErrorBoundary`.
      - تصحيح خريطة التاقات في `README.md`.
+  8. **التحقق من النشر (`version.json`):**
+     - سكربت `postbuild` (`scripts/write-version.mjs`) يكتب `dist/version.json` (الإصدار + commit SHA + وقت البناء) للتحقق من أي نشر عبر `GET /version.json`.
 
 ---
 
