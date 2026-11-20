@@ -24,6 +24,7 @@ import {
   focusCurrentHourInput,
   PomodoroSplit
 } from './utils/dateUtils';
+import { isChunkLoadError, recoverFromStaleChunk } from './utils/chunkRecovery';
 import { calculateDailyStreak } from './utils/streakUtils';
 import { findDayDataAcrossWeeks, hasLoggedHours } from './utils/dayLookup';
 import {
@@ -64,9 +65,19 @@ const makeLazyModal = (
   loader: () => Promise<any>,
   exportName: string
 ) => {
-  const LazyModal = React.lazy(() =>
-    loader().then((m) => ({ default: m[exportName] as React.ComponentType<any> }))
-  );
+  const LazyModal = React.lazy(async () => {
+    try {
+      const m = await loader();
+      return { default: m[exportName] as React.ComponentType<any> };
+    } catch (err) {
+      // A chunk from an older deployment 404s after a release: reload onto the
+      // fresh build instead of letting the error reach the error boundary.
+      if (isChunkLoadError(err) && (await recoverFromStaleChunk())) {
+        return new Promise<never>(() => {});
+      }
+      throw err;
+    }
+  });
   return function LazyModalGate(props: { isOpen?: boolean } & Record<string, any>) {
     if (!props.isOpen) return null;
     return (
