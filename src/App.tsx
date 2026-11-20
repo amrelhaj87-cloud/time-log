@@ -682,10 +682,16 @@ export default function App() {
     let unsub: (() => void) | null = null;
     let cancelled = false;
 
+    // Fast path: load the last known user's local data immediately, so the calendar
+    // is never empty while the lazy Firebase SDK downloads.
+    const lastUid = localStorage.getItem('timelog_last_uid');
+    loadWeekData(weekStartRef.current, lastUid ? ({ uid: lastUid } as unknown as User) : null);
+
     loadFirebase().then(() => {
       if (cancelled || !onAuthStateChanged) return;
       unsub = onAuthStateChanged(auth, async (u) => {
       setCurrentUser(u);
+      if (u) localStorage.setItem('timelog_last_uid', u.uid);
       let targetWs = weekStartRef.current;
 
       if (u) {
@@ -1723,6 +1729,7 @@ export default function App() {
         onOpenAuth={() => setAuthModalOpen(true)}
         onSignOut={() => {
           if (auth) signOut(auth);
+          localStorage.removeItem('timelog_last_uid');
           setCurrentUser(null);
           loadWeekData(weekStart, null);
         }}
