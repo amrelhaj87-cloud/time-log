@@ -7,11 +7,8 @@ import {
   BarChart3,
   TrendingUp,
   Calendar,
-  Clock,
-  CheckCircle2,
   PieChart,
-  CalendarDays,
-  Sparkles
+  CalendarDays
 } from 'lucide-react';
 
 interface ChartsModalProps {
@@ -365,7 +362,6 @@ export const ChartsModal: React.FC<ChartsModalProps> = ({
                   const info = TAGS_CONFIG[code];
                   const count = weekStats.weeklyTagTotals[code] || 0;
                   const pctOfLogged = weekStats.totalWeeklyLogged > 0 ? Math.round((count / weekStats.totalWeeklyLogged) * 100) : 0;
-                  const pctOfCapacity = weekStats.totalWeeklyCapacity > 0 ? Math.round((count / weekStats.totalWeeklyCapacity) * 100) : 0;
 
                   return (
                     <div key={code} className="flex flex-col gap-1">

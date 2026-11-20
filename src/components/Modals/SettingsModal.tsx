@@ -21,14 +21,12 @@ import {
   ArrowUpRight,
   CalendarDays,
   Volume2,
-  Bell,
   Flame,
   Target,
   SlidersHorizontal,
   Inbox,
   LayoutGrid,
   Cloud,
-  CloudUpload,
   RefreshCw
 } from 'lucide-react';
 
@@ -133,8 +131,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isUserLoggedIn = false,
   onOpenPwaModal,
   onOpenGuide,
-  darkMode,
-  onToggleDarkMode,
   themeMode = 'light',
   isDarkEffective = false,
   onChangeThemeMode,
@@ -179,10 +175,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     ? (sleepSettings.end - sleepSettings.start + 24) % 24 || 0
     : 0;
   const activeHours = 24 - sleepHours;
-
-  const handleSaveAgeSettings = () => {
-    onSaveAge(birthDateInput, ageOptInput);
-  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">

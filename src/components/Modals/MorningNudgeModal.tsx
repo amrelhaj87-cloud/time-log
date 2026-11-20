@@ -1,7 +1,7 @@
 import React from 'react';
 import { TagCode, TagTargets, DayData } from '../../types';
 import { TAGS_CONFIG } from '../../constants/config';
-import { Sun, Sparkles, Check, X, ArrowRight, Target } from 'lucide-react';
+import { Sun, Sparkles, X, ArrowRight } from 'lucide-react';
 import { soundManager } from '../../utils/soundEffects';
 
 interface MorningNudgeModalProps {

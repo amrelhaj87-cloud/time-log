@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { WeekStartDay, ThemeMode, AgeDisplayOpt } from '../types';
 import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN, APP_VERSION } from '../constants/config';
-import { isoDate, focusCurrentHourInput } from '../utils/dateUtils';
+import { focusCurrentHourInput } from '../utils/dateUtils';
 import {
   Calendar,
   Clock,
@@ -12,7 +12,6 @@ import {
   LogIn,
   LogOut,
   SlidersHorizontal,
-  Cake,
   Settings,
   RotateCcw,
   WifiOff,
@@ -58,11 +57,6 @@ export const Header: React.FC<HeaderProps> = ({
   loggedCount,
   totalActiveHours,
   onOpenDayDist,
-  userBirthDate,
-  ageDisplayOpt,
-  streak = 0,
-  streakHasToday = false,
-  showStreak = true,
   weekStartDay = 'saturday',
   isDetailedView,
   onToggleDetailedView,
@@ -70,14 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onSignOut,
   onOpenSettings,
-  darkMode,
-  onToggleDarkMode,
-  themeMode = 'light',
-  isDarkEffective = false,
-  onCycleThemeMode,
   lang,
-  onToggleLang,
-  saveStatus,
   onOpenTodoInbox,
   todoCount,
   onOpenSearch
@@ -208,26 +195,6 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const today = new Date();
-
-  // Age calculation
-  let ageDisplayValue = '';
-  let ageUnit = '';
-  if (userBirthDate && (ageDisplayOpt === 'days' || ageDisplayOpt === 'years')) {
-    const birth = new Date(userBirthDate + 'T00:00:00');
-    const now = new Date();
-    const diffMs = now.getTime() - birth.getTime();
-    if (diffMs > 0) {
-      if (ageDisplayOpt === 'days') {
-        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        ageDisplayValue = days.toLocaleString('en-US');
-        ageUnit = lang === 'ar' ? 'يوم' : 'd';
-      } else {
-        const years = (diffMs / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
-        ageDisplayValue = years;
-        ageUnit = lang === 'ar' ? 'سنة' : 'y';
-      }
-    }
-  }
 
   // Mini progress ring
   const pct = totalActiveHours > 0 ? Math.min(1, loggedCount / totalActiveHours) : 0;

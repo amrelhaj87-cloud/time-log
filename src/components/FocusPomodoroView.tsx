@@ -421,7 +421,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       document.removeEventListener('visibilitychange', handleSync);
       window.removeEventListener('focus', handleSync);
     };
-  }, [isRunning, isOpen]);
+  }, [isRunning, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps -- timeLeft is read once to seed endTimeRef; depending on it would restart the 1s interval every tick
 
   // Dynamic tab title displaying countdown (even when minimized)
   useEffect(() => {
@@ -508,7 +508,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, showCompletedPrompt, showDiscardConfirm, isRunning, ambientSound, onClose]);
+  }, [isOpen, showCompletedPrompt, showDiscardConfirm, isRunning, ambientSound, onClose]); // eslint-disable-line react-hooks/exhaustive-deps -- handleTogglePlayPause is a plain handler; adding it only re-binds the listener
 
   // Stop sound on unmount
   useEffect(() => {

@@ -11,7 +11,7 @@ export function startOfWeekFor(d: Date, startDay: WeekStartDay = 'saturday'): Da
   if (startDay === 'sunday') targetIndex = 0;
   if (startDay === 'monday') targetIndex = 1;
 
-  let diff = (day - targetIndex + 7) % 7;
+  const diff = (day - targetIndex + 7) % 7;
   dt.setDate(dt.getDate() - diff);
   return dt;
 }

@@ -1,8 +1,8 @@
 import React from 'react';
-import { GoalItem, TagCode } from '../types';
+import { GoalItem } from '../types';
 import { QUADS_CONFIG, STRINGS } from '../constants/config';
 import { TagPicker } from './TagPicker';
-import { Target, ArrowRight, Trash2, Plus, Star, Inbox } from 'lucide-react';
+import { ArrowRight, Trash2, Plus, Star, Inbox } from 'lucide-react';
 import { focusCurrentHourInput } from '../utils/dateUtils';
 
 interface PrioritiesSectionProps {

@@ -1,14 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { WeekData, DayData, SleepSettings, TodoItem } from '../../types';
+import { WeekData, SleepSettings } from '../../types';
 import { STRINGS, HOUR_LABELS, HOURS_LIST, TAGS_CONFIG, DAY_NAMES, MONTH_NAMES, APP_VERSION } from '../../constants/config';
 import { isoDate, emptyDay } from '../../utils/dateUtils';
 import {
   gatherFullBackup,
   validateBackupSchema,
   isLegacyWeekBackup,
-  restoreFullBackup,
   type FullBackup,
-  type BackupPreferences,
 } from '../../utils/backupUtils';
 import {
   X,
@@ -22,7 +20,6 @@ import {
   Upload,
   AlertCircle,
   ShieldCheck,
-  RefreshCw,
 } from 'lucide-react';
 
 interface ExportModalProps {
@@ -49,7 +46,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   weekStart,
   weekData,
   activeHoursKeys = HOURS_LIST,
-  sleepSettings,
   onImportBackup,
   onImportFullBackup,
   uid = null,

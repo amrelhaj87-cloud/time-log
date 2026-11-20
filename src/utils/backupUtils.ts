@@ -183,7 +183,7 @@ export function isLegacyWeekBackup(data: unknown): data is WeekData {
  * Extend this function as schemaVersion increases.
  */
 export function migrateBackupIfNeeded(data: FullBackup): FullBackup {
-  let migrated = { ...data };
+  const migrated = { ...data };
 
   // Migration: schema 0 → 1 (pre-schemaVersion backups don't exist yet, placeholder)
   // if (migrated.schemaVersion < 1) { ... migrated.schemaVersion = 1; }

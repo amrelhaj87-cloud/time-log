@@ -1,7 +1,7 @@
 import React from 'react';
 import { DayData, SleepSettings } from '../../types';
 import { STRINGS, TAGS_CONFIG } from '../../constants/config';
-import { X, Sparkles, CheckCircle2, Award } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface AiSummaryModalProps {
   isOpen: boolean;
@@ -16,7 +16,6 @@ interface AiSummaryModalProps {
 export const AiSummaryModal: React.FC<AiSummaryModalProps> = ({
   isOpen,
   onClose,
-  currentDate,
   dayData,
   sleepSettings,
   activeHoursKeys,

@@ -10,10 +10,7 @@ import {
   WeekStartDay
 } from './types';
 import {
-  HOURS_LIST,
-  HOUR_TO_24,
   STRINGS,
-  TAGS_CONFIG,
   APP_VERSION
 } from './constants/config';
 import {
@@ -38,7 +35,7 @@ import {
 import { soundManager } from './utils/soundEffects';
 import { restoreFullBackup, syncAllWeeksToCloud, type FullBackup } from './utils/backupUtils';
 import confetti from 'canvas-confetti';
-import { fetchCalendarEventsForDate, clearAllCachedCalendarEvents } from './services/calendarService';
+import { clearAllCachedCalendarEvents } from './services/calendarService';
 
 // Components
 import { Header } from './components/Header';
@@ -159,7 +156,6 @@ export default function App() {
     saveStatus,
     setSaveStatus,
     isDataLoaded,
-    setIsDataLoaded,
     loadWeekData,
     saveWeekData,
     flushPendingSaveNow
@@ -455,7 +451,7 @@ export default function App() {
       cancelled = true;
       if (unsub) unsub();
     };
-  }, [loadWeekData]);
+  }, [loadWeekData]); // eslint-disable-line react-hooks/exhaustive-deps -- one-shot mount effect: refs hold live values, every setter is a stable dispatcher
 
   // Sleep onboarding effect now lives inside useSleepWindow.
 
@@ -1198,7 +1194,7 @@ export default function App() {
         backButtonHandle.remove();
       }
     };
-  }, [
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps -- stable setters + render-closure handlers; re-binding every shortcut listener per render is worse
     authModalOpen,
     settingsModalOpen,
     dayDistModalOpen,
@@ -1242,7 +1238,7 @@ export default function App() {
         }
       }
 
-      let nextBday = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+      const nextBday = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
       if (nextBday < today) nextBday.setFullYear(today.getFullYear() + 1);
       const diffTime = nextBday.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

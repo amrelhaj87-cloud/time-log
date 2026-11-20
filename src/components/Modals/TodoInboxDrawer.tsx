@@ -121,7 +121,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isTagPickerOpen, activeQuadMenuId, onClose, pendingTodoText]);
+  }, [isOpen, isTagPickerOpen, activeQuadMenuId, onClose, pendingTodoText]); // eslint-disable-line react-hooks/exhaustive-deps -- handleConfirmCreate is a plain handler; adding it only re-binds the listener
 
   // Distribution & Balance Calculation across the 5 tags
   const tagStats = useMemo(() => {

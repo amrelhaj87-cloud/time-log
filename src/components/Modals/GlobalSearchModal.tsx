@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TagCode } from '../../types';
 import { TAGS_CONFIG } from '../../constants/config';
 import {
-  SearchEntry,
-  FrequencyGroup,
   SortMode,
   buildSearchIndex,
   querySearchIndex,
@@ -16,7 +14,6 @@ import {
   Search,
   Calendar,
   Clock,
-  Flame,
   ArrowUpDown,
   Filter,
   Copy,

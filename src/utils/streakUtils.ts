@@ -23,7 +23,7 @@ export function calculateDailyStreak(
   const hasToday = todayHoursCount > 0 || !!(todayGolden && todayGolden.done);
 
   let streak = 0;
-  let checkDate = new Date(today);
+  const checkDate = new Date(today);
 
   // If today is not logged yet, start checking from yesterday to preserve existing streak
   if (!hasToday) {

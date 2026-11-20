@@ -9,7 +9,6 @@ import {
   Moon,
   Zap,
   CheckCircle2,
-  HelpCircle,
   Layers,
   ArrowUpRight
 } from 'lucide-react';
