@@ -7,18 +7,13 @@ import {
   TodoItem,
   DayData,
   WeekData,
-  SleepSettings,
-  AgeDisplayOpt,
-  WeekStartDay,
-  ThemeMode,
-  TagTargets
+  WeekStartDay
 } from './types';
 import {
   HOURS_LIST,
   HOUR_TO_24,
   STRINGS,
   TAGS_CONFIG,
-  DEFAULT_TAG_TARGETS,
   APP_VERSION
 } from './constants/config';
 import {
@@ -52,6 +47,7 @@ import { useSleepWindow } from './hooks/useSleepWindow';
 import { useCalendar } from './hooks/useCalendar';
 import { useTheme } from './hooks/useTheme';
 import { useWeekPersistence } from './hooks/useWeekPersistence';
+import { usePreferences } from './hooks/usePreferences';
 
 // Modals — lazy-loaded on demand so their code stays out of the initial bundle.
 // The gate renders a modal only when its `isOpen` prop is true, which means the
@@ -94,12 +90,7 @@ const GlobalSearchModal = makeLazyModal(() => import('./components/Modals/Global
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
 export default function App() {
-  // 0. Week Start Day Preference (saturday / sunday / monday)
-  const [weekStartDay, setWeekStartDay] = useState<WeekStartDay>(() => {
-    return (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday';
-  });
-
-  // 0.1 Brain Dump & Todo Inbox State
+  // 0. Brain Dump & Todo Inbox State
   const [todoInbox, setTodoInbox] = useState<TodoItem[]>(() => {
     try {
       const local = localStorage.getItem('time_log_todo_inbox');
@@ -109,6 +100,8 @@ export default function App() {
     }
   });
   const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
+  // Stable callback so usePreferences can close the drawer without re-subscribing
+  const closeTodoDrawer = useCallback(() => setTodoDrawerOpen(false), []);
 
   // 1. Core Date & Data State
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
@@ -173,88 +166,9 @@ export default function App() {
     handleChangeThemeMode
   } = useTheme(currentUser);
 
-  // Default is Compact View (false/مدمج), unless user explicitly saved 'true'
-  const [isDetailedView, setIsDetailedView] = useState<boolean>(() => {
-    return localStorage.getItem('isDetailedView') === 'true';
-  });
-
-  const handleToggleDetailedView = useCallback((explicitValue?: unknown) => {
-    setIsDetailedView((prev) => {
-      const next = typeof explicitValue === 'boolean' ? explicitValue : !prev;
-      localStorage.setItem('isDetailedView', String(next));
-      if (db && currentUser) {
-        const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-        setDoc(docRef, { isDetailedView: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
-      }
-      return next;
-    });
-  }, [currentUser]);
-  const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('devToolsEnabled') !== 'false';
-  });
-  const [showAgeBadge, setShowAgeBadge] = useState<boolean>(() => {
-    return localStorage.getItem('showAgeBadge') === 'true';
-  });
-  const [showStreakBadge, setShowStreakBadge] = useState<boolean>(() => {
-    return localStorage.getItem('showStreakBadge') !== 'false';
-  });
-  const [showFocusModeButton, setShowFocusModeButton] = useState<boolean>(() => {
-    return localStorage.getItem('showFocusModeButton') === 'true';
-  });
-  const [showGoldenGoal, setShowGoldenGoal] = useState<boolean>(() => {
-    const saved = localStorage.getItem('showGoldenGoal');
-    return saved !== null ? saved === 'true' : localStorage.getItem('showPrioritiesSection') === 'true';
-  });
-  const [showPriorityMatrix, setShowPriorityMatrix] = useState<boolean>(() => {
-    const saved = localStorage.getItem('showPriorityMatrix');
-    return saved !== null ? saved === 'true' : localStorage.getItem('showPrioritiesSection') === 'true';
-  });
-  const [showTodoInbox, setShowTodoInbox] = useState<boolean>(() => {
-    return localStorage.getItem('showTodoInbox') !== 'false';
-  });
-  const showPrioritiesSection = showGoldenGoal || showPriorityMatrix;
-  const [morningNudgeEnabled, setMorningNudgeEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('morningNudgeEnabled') === 'true';
-  });
-  const [morningNudgeOpen, setMorningNudgeOpen] = useState<boolean>(false);
-  const [tagTargets, setTagTargets] = useState<TagTargets>(() => {
-    try {
-      const saved = localStorage.getItem('tagTargets');
-      return saved ? { ...DEFAULT_TAG_TARGETS, ...JSON.parse(saved) } : DEFAULT_TAG_TARGETS;
-    } catch {
-      return DEFAULT_TAG_TARGETS;
-    }
-  });
-  const [focusModeActive, setFocusModeActive] = useState<boolean>(false);
-  const [calSyncEnabled, setCalSyncEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('calSyncEnabled') !== 'false';
-  });
-
-  // Auto Cloud Sync — syncs all local weeks to Firestore on login when enabled
-  const [autoCloudSync, setAutoCloudSync] = useState<boolean>(() => {
-    return localStorage.getItem('autoCloudSync') === 'true';
-  });
-  const [isSyncingAllWeeks, setIsSyncingAllWeeks] = useState(false);
-
-  const handleSyncAllWeeksNow = useCallback(async () => {
-    if (!currentUser || !db) return;
-    setIsSyncingAllWeeks(true);
-    try {
-      return await syncAllWeeksToCloud(currentUser.uid, db, doc, setDoc);
-    } finally {
-      setIsSyncingAllWeeks(false);
-    }
-  }, [currentUser]);
-  const [userBirthDate, setUserBirthDate] = useState<string>(() => {
-    return localStorage.getItem('userBirthDate') || '';
-  });
-  const [ageDisplayOpt, setAgeDisplayOpt] = useState<AgeDisplayOpt>(() => {
-    const saved = localStorage.getItem('ageDisplayOpt');
-    if (saved === 'days' || saved === 'years') return saved;
-    return 'none';
-  });
-
-  // 3. Sleep Window State (extracted to useSleepWindow)
+  // 4. Sleep Window State (extracted to useSleepWindow).
+  // Declared before usePreferences because the sleep window is stored with the
+  // other preferences in Firestore.
   const {
     sleepSettings,
     setSleepSettings,
@@ -264,7 +178,50 @@ export default function App() {
     activeHoursKeys
   } = useSleepWindow();
 
-  // 4. Google Calendar & Suggestions (extracted to useCalendar)
+  // 5. Preferences State (extracted to usePreferences)
+  const {
+    weekStartDay,
+    setWeekStartDay,
+    isDetailedView,
+    setIsDetailedView,
+    handleToggleDetailedView,
+    devToolsEnabled,
+    setDevToolsEnabled,
+    showAgeBadge,
+    setShowAgeBadge,
+    showStreakBadge,
+    setShowStreakBadge,
+    showFocusModeButton,
+    setShowFocusModeButton,
+    showGoldenGoal,
+    setShowGoldenGoal,
+    showPriorityMatrix,
+    setShowPriorityMatrix,
+    showTodoInbox,
+    setShowTodoInbox,
+    showPrioritiesSection,
+    morningNudgeEnabled,
+    setMorningNudgeEnabled,
+    tagTargets,
+    setTagTargets,
+    focusModeActive,
+    setFocusModeActive,
+    calSyncEnabled,
+    setCalSyncEnabled,
+    autoCloudSync,
+    setAutoCloudSync,
+    userBirthDate,
+    setUserBirthDate,
+    ageDisplayOpt,
+    setAgeDisplayOpt,
+    syncPreferences,
+    updatePlanningVisibility
+  } = usePreferences({ currentUser, sleepSettings, themeMode, closeTodoDrawer });
+
+  // Ephemeral UI state (not a stored preference)
+  const [morningNudgeOpen, setMorningNudgeOpen] = useState<boolean>(false);
+
+  // 6. Google Calendar & Suggestions (extracted to useCalendar)
   const {
     gcalAccessToken,
     setGcalAccessToken,
@@ -273,7 +230,19 @@ export default function App() {
     setDismissedSuggestions
   } = useCalendar(calSyncEnabled, currentDate);
 
-  // 5. Modals State (extracted to useModalState to keep App.tsx smaller)
+  // Manual "sync all local weeks to the cloud" action (not a preference)
+  const [isSyncingAllWeeks, setIsSyncingAllWeeks] = useState(false);
+  const handleSyncAllWeeksNow = useCallback(async () => {
+    if (!currentUser || !db) return;
+    setIsSyncingAllWeeks(true);
+    try {
+      return await syncAllWeeksToCloud(currentUser.uid, db, doc, setDoc);
+    } finally {
+      setIsSyncingAllWeeks(false);
+    }
+  }, [currentUser]);
+
+  // 7. Modals State (extracted to useModalState to keep App.tsx smaller)
   const {
     authModalOpen,
     setAuthModalOpen,
@@ -363,92 +332,6 @@ export default function App() {
     }
   } catch { }
   const { streak: dailyStreak, hasToday: streakHasToday } = calculateDailyStreak(allDaysHours, allDaysGolden);
-
-  // Sync Preferences to Firestore & Local
-  const syncPreferences = useCallback(
-    async (
-      user: User | null,
-      customWeekStartDay?: WeekStartDay,
-      prefOverrides?: { showGoldenGoal?: boolean; showPriorityMatrix?: boolean; showTodoInbox?: boolean }
-    ) => {
-      const activeWeekStartDay = customWeekStartDay || weekStartDay;
-      const nextGolden = prefOverrides?.showGoldenGoal ?? showGoldenGoal;
-      const nextMatrix = prefOverrides?.showPriorityMatrix ?? showPriorityMatrix;
-      const nextTodo = prefOverrides?.showTodoInbox ?? showTodoInbox;
-      const nextPrioritiesSection = nextGolden || nextMatrix;
-
-      localStorage.setItem('sleepSettings', JSON.stringify(sleepSettings));
-      localStorage.setItem('userBirthDate', userBirthDate);
-      localStorage.setItem('ageDisplayOpt', ageDisplayOpt);
-      localStorage.setItem('weekStartDay', activeWeekStartDay);
-      localStorage.setItem('devToolsEnabled', String(devToolsEnabled));
-      localStorage.setItem('showAgeBadge', String(showAgeBadge));
-      localStorage.setItem('showStreakBadge', String(showStreakBadge));
-      localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
-      localStorage.setItem('showGoldenGoal', String(nextGolden));
-      localStorage.setItem('showPriorityMatrix', String(nextMatrix));
-      localStorage.setItem('showTodoInbox', String(nextTodo));
-      localStorage.setItem('showPrioritiesSection', String(nextPrioritiesSection));
-      localStorage.setItem('morningNudgeEnabled', String(morningNudgeEnabled));
-      localStorage.setItem('tagTargets', JSON.stringify(tagTargets));
-      localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
-      localStorage.setItem('themeMode', themeMode);
-      localStorage.setItem('isDetailedView', String(isDetailedView));
-      localStorage.setItem('autoCloudSync', String(autoCloudSync));
-
-      if (db && user) {
-        try {
-          const docRef = doc(db, 'users', user.uid, 'settings', 'preferences');
-          await setDoc(
-            docRef,
-            {
-              sleepWindow: sleepSettings,
-              birthDate: userBirthDate,
-              ageDisplayOpt,
-              weekStartDay: activeWeekStartDay,
-              devToolsEnabled,
-              showAgeBadge,
-              showStreakBadge,
-              showFocusModeButton,
-              showGoldenGoal: nextGolden,
-              showPriorityMatrix: nextMatrix,
-              showTodoInbox: nextTodo,
-              showPrioritiesSection: nextPrioritiesSection,
-              morningNudgeEnabled,
-              tagTargets,
-              calSyncEnabled,
-              themeMode,
-              isDetailedView,
-              autoCloudSync,
-              updatedAt: new Date().toISOString()
-            },
-            { merge: true }
-          );
-        } catch (err) {
-          console.warn('Failed to sync preferences to Firestore:', err);
-        }
-      }
-    },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
-  );
-
-  const updatePlanningVisibility = useCallback(
-    (updates: { showGoldenGoal?: boolean; showPriorityMatrix?: boolean; showTodoInbox?: boolean }) => {
-      const nextGolden = updates.showGoldenGoal ?? showGoldenGoal;
-      const nextMatrix = updates.showPriorityMatrix ?? showPriorityMatrix;
-      const nextTodo = updates.showTodoInbox ?? showTodoInbox;
-      setShowGoldenGoal(nextGolden);
-      setShowPriorityMatrix(nextMatrix);
-      setShowTodoInbox(nextTodo);
-      if (!nextTodo) setTodoDrawerOpen(false);
-      syncPreferences(currentUser, undefined, {
-        showGoldenGoal: nextGolden,
-        showPriorityMatrix: nextMatrix,
-        showTodoInbox: nextTodo
-      });
-    },
-    [showGoldenGoal, showPriorityMatrix, showTodoInbox, currentUser, syncPreferences]
-  );
 
   // Auth State Listener (runs once on mount; uses refs for active date/weekStart to avoid infinite re-subscribe loop)
   const currentDateRef = useRef<Date>(currentDate);
