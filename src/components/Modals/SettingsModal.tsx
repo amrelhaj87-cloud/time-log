@@ -3,6 +3,7 @@ import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, TagTargets } fro
 import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG, APP_VERSION } from '../../constants/config';
 import { soundManager } from '../../utils/soundEffects';
 import KofiButton from '../KofiButton';
+import './settingsFlat.css';
 import {
   X,
   Settings,
@@ -204,7 +205,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
 
           {/* 1. TOP PRIORITY: Primary Quick Preferences */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:grid-flow-row-dense">
+          <div className="settings-flat">
             {/* Theme Mode 3-Way Selector Card */}
             <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3 flex flex-col justify-between gap-2.5 shadow-xs">
               <div className="flex items-center justify-between">
