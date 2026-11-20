@@ -43,6 +43,7 @@
 | **31** | دمج Sentry رسمياً (اختياري) | ⏸️ مؤجل | Observability | يحتاج DSN + مصدر npm يدعم `@sentry/core` (المصدر الحالي أعطى ETARGET). |
 | **32** | مراجعة ثغرات `npm audit` (16 ثغرة مُبلّغ عنها) | ⏸️ مؤجل | Security / Deps | معظمها على الأرجح في تبعيات تطويرية (vitest) وغير مشحونة في bundle الإنتاج؛ تستحق مراجعة عند التحديث القادم. |
 | **33** | نشر `version.json` للتحقق من الـ deployments | ✅ معتمد ومطبق (v4.7) | DevOps / Verification | ملف يُولَّد وقت البناء (postbuild) فيه الإصدار + commit SHA + وقت البناء للتحقق من النشر عبر HTTP. |
+| **34** | تحديث تلقائي للعملاء القدامى (Auto-Update) | ✅ معتمد ومطبق (v4.7) | PWA / Reliability | فحص `/version.json` عند التشغيل ودورياً؛ لو النسخة مختلفة → إلغاء Service Worker قديم + reload (بحماية من الحلقات عبر sessionStorage). |
 
 ---
 

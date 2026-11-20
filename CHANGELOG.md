@@ -43,6 +43,8 @@
       - تحميل بيانات localStorage فوراً بآخر UID قبل Firebase، لمنع "0 من 24" اللحظي بعد إعادة التحميل.
       - استخراج `useCalendar` (توكن/أحداث/اقتراحات/جلب) إلى `src/hooks/`.
       - استخراج `useTheme` (الثيم/الوضع الليلي/تفضيل النظام) إلى `src/hooks/`.
+  12. **التحديث التلقائي (Auto-Update):**
+      - حقن `__BUILD_COMMIT__` في `vite.config.ts`، و`updateChecker.ts` يفحص `/version.json` ويحدّث العميل القديم تلقائياً (بإلغاء SW قديم + reload مع حماية من الحلقات).
 
 ---
 

@@ -166,6 +166,11 @@
 - استخراج `useCalendar` (توكن + أحداث التقويم + الاقتراحات + effect الجلب) إلى `src/hooks/`.
 - استخراج `useTheme` (الثيم + الوضع الليلي + تفضيل النظام + كلاس `dark`) إلى `src/hooks/`. (خطوة 4)
 
+**13. التحديث التلقائي (Auto-Update):**
+- **المشكلة:** العملاء القدامى كانوا بيفضلوا على نسخة كاش قديمة (Service Worker) ومش بيشوفوا التحديثات حتى بعد Hard Refresh.
+- **القرار:** `src/services/updateChecker.ts` يفحص `/version.json` عند التشغيل + كل 5 دقائق + عند رجوع التبويب؛ لو `commit` مختلف عن `__BUILD_COMMIT__` (المحقون وقت البناء) → يلغي تسجيلات Service Worker القديمة ويعمل reload، مع حارس `sessionStorage` يمنع أي حلقة.
+- **التعديلات:** حقن `__BUILD_COMMIT__` عبر `define` في `vite.config.ts` + `initAutoUpdate()` في `main.tsx` + `src/vite-env.d.ts`.
+
 ---
 
 *آخر تحديث: 2026-11-20 | الإصدار الحالي: v4.7*
