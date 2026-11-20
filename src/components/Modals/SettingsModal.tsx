@@ -204,7 +204,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
 
           {/* 1. TOP PRIORITY: Primary Quick Preferences */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:grid-flow-row-dense">
             {/* Theme Mode 3-Way Selector Card */}
             <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3 flex flex-col justify-between gap-2.5 shadow-xs">
               <div className="flex items-center justify-between">
@@ -435,7 +435,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               const masterChecked = enabledCount > 0;
 
               return (
-                <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
+                <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs sm:col-span-2">
                   {/* Master Toggle Row */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
