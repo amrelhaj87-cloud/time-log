@@ -137,6 +137,15 @@
 **6. تقييد قواعد Firestore بالـ git:**
 - إنشاء `firestore.rules` + `firebase.json` + `.firebaserc` بحيث يصل كل مستخدم لبياناته فقط، وإغلاق المسار القديم `/weeks` نهائياً. (نشر القواعد يدوياً على Firebase يبقى خطوة منفصلة على المستخدم.)
 
+**7. بنية تحتية للجودة (CI + اختبارات):**
+- إضافة `.github/workflows/ci.yml` يشغّل `tsc --noEmit` + `vitest` + `vite build` على كل push/PR إلى `main`.
+- إضافة `vitest` + 13 اختباراً للوحدات الحرجة: `dateUtils` (تقسيم البومودورو وحساب الأسابيع)، `streakUtils` (الستريك)، `backupUtils` (صلاحية النسخ الاحتياطي).
+
+**8. تحسينات PWA والمراقبة + تصحيح README:**
+- إشعار "تحديث جديد متاح" عبر الاشتراك في انتظار Service Worker (`UpdateToast` + `subscribeUpdateAvailable`).
+- مراقبة أخطاء خفيفة بدون اعتماد خارجي (`errorMonitoring.ts`) تلتقط `error`/`unhandledrejection` وتحفظ آخر 20 خطأ، مع ربطها بـ `ErrorBoundary`.
+- تصحيح خريطة التاقات في `README.md` (V=الرؤية، R=التعافي، SC=الرعاية) بدل الوصف الخاطئ.
+
 ---
 
 *آخر تحديث: 2026-11-20 | الإصدار الحالي: v4.7*

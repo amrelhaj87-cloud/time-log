@@ -46,6 +46,7 @@ import { HoursList } from './components/HoursList';
 import { PrioritiesSection } from './components/PrioritiesSection';
 import { TagLegend } from './components/TagLegend';
 import { SaveToast } from './components/SaveToast';
+import { UpdateToast } from './components/UpdateToast';
 
 // Modals — lazy-loaded on demand so their code stays out of the initial bundle.
 // The gate renders a modal only when its `isOpen` prop is true, which means the
@@ -2389,6 +2390,9 @@ export default function App() {
 
       {/* Floating Save Toast Notification */}
       <SaveToast status={saveStatus} />
+
+      {/* New-version prompt when a Service Worker update is waiting */}
+      <UpdateToast />
     </div>
   );
 }

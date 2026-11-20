@@ -16,10 +16,13 @@ declare global {
 
 type InstallPromptListener = (canInstall: boolean) => void;
 type OnlineStatusListener = (isOnline: boolean) => void;
+type UpdateListener = (available: boolean) => void;
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
+let pendingWorker: ServiceWorker | null = null;
 const installListeners: Set<InstallPromptListener> = new Set();
 const onlineListeners: Set<OnlineStatusListener> = new Set();
+const updateListeners: Set<UpdateListener> = new Set();
 
 // Check if running as installed standalone PWA
 export const isStandalonePWA = (): boolean => {
@@ -51,12 +54,20 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
     console.info('[PWA] Service Worker registered successfully with scope:', registration.scope);
 
+    // A new worker may already be waiting (e.g. after a reload while an update was pending)
+    if (registration.waiting) {
+      pendingWorker = registration.waiting;
+      updateListeners.forEach((listener) => listener(true));
+    }
+
     // Check for updates
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;
       if (newWorker) {
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            pendingWorker = newWorker;
+            updateListeners.forEach((listener) => listener(true));
             console.info('[PWA] New version available, ready for offline usage');
           }
         });
@@ -134,4 +145,25 @@ export const subscribeOnlineStatus = (listener: OnlineStatusListener): (() => vo
   return () => {
     onlineListeners.delete(listener);
   };
+};
+
+// Subscribe to Service Worker update availability (fired when a new build is waiting)
+export const subscribeUpdateAvailable = (listener: UpdateListener): (() => void) => {
+  updateListeners.add(listener);
+  // Immediately notify of current state
+  listener(pendingWorker !== null);
+  return () => {
+    updateListeners.delete(listener);
+  };
+};
+
+// Apply a waiting Service Worker update and reload to serve the new version
+export const applyServiceWorkerUpdate = (): void => {
+  try {
+    pendingWorker?.postMessage({ type: 'SKIP_WAITING' });
+  } catch {
+    /* ignore */
+  }
+  // Give the waiting worker a moment to activate before reloading
+  window.setTimeout(() => window.location.reload(), 150);
 };
