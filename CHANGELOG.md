@@ -45,6 +45,13 @@
       - استخراج `useTheme` (الثيم/الوضع الليلي/تفضيل النظام) إلى `src/hooks/`.
   12. **التحديث التلقائي (Auto-Update):**
       - حقن `__BUILD_COMMIT__` في `vite.config.ts`، و`updateChecker.ts` يفحص `/version.json` ويحدّث العميل القديم تلقائياً (بإلغاء SW قديم + reload مع حماية من الحلقات).
+  13. **تفكيك `App.tsx` — خطوة 5 (`useWeekPersistence`):**
+      - استخراج `weekData` / `saveStatus` / `isDataLoaded` + `saveTimeoutRef` / `pendingSaveRef` + `loadWeekData` / `flushSaveToCloud` / `saveWeekData` / `flushPendingSaveNow` + حارسَي `beforeunload` / `visibilitychange` إلى `src/hooks/useWeekPersistence.ts`.
+      - نفس التوقيت والسلوك تماماً: كتابة فورية في localStorage، مزامنة Firestore مؤجلة 3 ثوانٍ، حفظ فوري عند Enter/التاق/الإجراء، وتفريغ صامت عند إخفاء التبويب وتغيير الأسبوع.
+  14. **تفكيك `App.tsx` — خطوة 6 (`usePreferences`) واكتمال #28:**
+      - استخراج كل تفضيلات المستخدم + `weekStartDay` + `handleToggleDetailedView` + `syncPreferences` + `updatePlanningVisibility` إلى `src/hooks/usePreferences.ts`، مع معامل `closeTodoDrawer` الثابت لإغلاق درج المهام عند إخفاء صندوق المهام.
+      - ترتيب الهوكس صار: `useTheme` ← `useSleepWindow` ← `usePreferences` ← `useCalendar`؛ و`App.tsx` نزل من 2298 إلى 2016 سطراً (6 هوكس في `src/hooks/`).
+      - التحقق: `tsc` + 13 اختباراً + `build` + تحميل فعلي في Chrome + اختبار تفاعلي (كتابة/حفظ وتفعيل تفضيل) قبل الرفع.
 
 ---
 

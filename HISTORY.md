@@ -174,6 +174,31 @@
 **14. تأجيل خطوتي #28 (5 و6) للجلسة القادمة:**
 - **القرار:** تأجيل `useWeekPersistence` و`usePreferences` — تلمسان قلب الحفظ/التحميل/المزامنة، والقيام بهما في نهاية جلسة طويلة يخاطر بتعطيل الحفظ بصمت.
 - **المرجع:** خطة التنفيذ الكاملة (ما يُنقل، الاعتماديات، النقاط الحساسة، الطريقة الآمنة) مسجّلة في `RECOMMENDATIONS.md` ضمن قسم "خطة استكمال تفكيك App.tsx (#28)".
+- **تحديث:** أُنجزت الخطوتان لاحقاً **في نفس اليوم** — انظر البند 15.
+
+**15. إتمام خطوتي #28 (5 و6) واكتمال تفكيك `App.tsx`:**
+
+- **ما تم:**
+  1. **`useWeekPersistence` (خطوة 5):** استُخرجت حالة الأسبوع وآلية حفظها بالكامل — `weekData` / `saveStatus` / `isDataLoaded`، و`saveTimeoutRef` / `pendingSaveRef`، و`loadWeekData` (Firestore ← localStorage ← أسبوع فارغ، مع ترحيل `/weeks` القديم)، و`flushSaveToCloud`، و`saveWeekData`، و`flushPendingSaveNow`، وحارسَي `beforeunload` / `visibilitychange`. التوقيع: `useWeekPersistence(lang)`.
+  2. **`usePreferences` (خطوة 6):** استُخرجت كل تفضيلات المستخدم (`weekStartDay` + 15 تفضيلاً) مع `handleToggleDetailedView` و`syncPreferences` و`updatePlanningVisibility`. التوقيع: `usePreferences({ currentUser, sleepSettings, themeMode, closeTodoDrawer })`.
+  3. إعادة ترتيب الهوكس بشكل مقصود: `useTheme` ← `useSleepWindow` ← `usePreferences` ← `useCalendar`، مع إبقاء `useWeekPersistence` بعد `lang` وقبل حساب الستريك.
+  4. إبقاء `isSyncingAllWeeks` / `handleSyncAllWeeksNow` في `App.tsx` لأنهما إجراء تنفيذي لا تفضيل مخزَّن.
+
+- **لماذا الآن:** كانتا آخر خطوتين في خطة #28 وبقية التفكيك جاهزة؛ وتم تنفيذهما في بداية جلسة جديدة (لا في نهاية جلسة طويلة) مع تحقق كامل بعد كل خطوة، وهو ما عالجه التأجيل السابق.
+
+- **كيف تم التحقق (إلزامي قبل أي كومت):**
+  1. `npx tsc --noEmit` نظيف.
+  2. `npm run test` — 13/13 ناجحة.
+  3. `npm run build` ناجح، مع `dist/version.json`.
+  4. **تحميل فعلي للنسخة المبنية في Chrome (headless):** الواجهة كاملة، بلا شاشة بيضاء، بلا `ErrorBoundary`، و`v4.7` ظاهر.
+  5. **اختبار تفاعلي عبر Chrome DevTools Protocol:** الكتابة في خانة الساعة ظهرت فوراً في `time_log_week_guest_*`، وتفعيل تفضيل من نافذة الإعدادات كتب 18 مفتاح تفضيلات في localStorage وأخفى قسم التخطيط — أي أن مسارَي الحفظ والتفضيلات يعملان فعلياً لا نظرياً.
+
+- **ما استُبعد ولماذا:**
+  - **`handleSyncAllWeeksNow` داخل `usePreferences`:** رُفض لأن الهوك مخصص للتفضيلات؛ خلط الإجراءات فيه يزيد سطح الاختبار بلا فائدة.
+  - **`updatePlanningVisibility` في `App.tsx`:** فُضّل نقله للهوك عبر معامل `closeTodoDrawer` بدل ترك دالة تنسّق بين الهوك وحالة درج المهام — أنظف وأقرب للخطة الأصلية.
+  - **تقديم `usePreferences` قبل `useSleepWindow`:** كان سيقطع اعتماد `syncPreferences` على `sleepSettings`.
+
+- **قرار الإصدار:** بقي **`v4.7`** ولم يُرفع إلى `v5.0` رغم ما ورد في خطة الجلسة السابقة، لأن قاعدة AGENTS.md رقم 2 (زيادة واحدة لكل يوم) استُهلكت بزيادة اليوم نفسها. رفع `v5.0` مؤجَّل لأول تعديل في يوم عمل جديد، ويحتاج موافقة صريحة لأنه رقم رئيسي.
 
 ---
 

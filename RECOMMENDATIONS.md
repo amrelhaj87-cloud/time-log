@@ -37,7 +37,7 @@
 | **25** | اختبارات الوحدات الحرجة (Vitest) | ✅ معتمد ومطبق (v4.7) | Testing / Quality | 13 اختباراً لتقسيم البومودورو، الأسابيع، التطبيع، الستريك، وصلاحية النسخ الاحتياطي. |
 | **26** | إشعار "تحديث متاح" لـ PWA | ✅ معتمد ومطبق (v4.7) | UX / PWA | إشعار فوري عند وجود Service Worker جديد منتظر بزر تفعيل وإعادة تحميل. |
 | **27** | مراقبة الأخطاء بدون اعتماد خارجي | ✅ معتمد ومطبق (v4.7) | Observability | التقاط الأخطاء غير المعالجة وحفظ آخر 20 خطأ في localStorage + ربط ErrorBoundary. |
-| **28** | تفكيك `App.tsx` إلى hooks مستقلة | 🚧 4/6 مكتملة (v4.7) | Architecture / Tech Debt | مكتمل: `useModalState` + `useSleepWindow` + `useCalendar` + `useTheme`. **متبقٍ: خطوة 5 `useWeekPersistence` وخطوة 6 `usePreferences`** — الخطة الكاملة والتفاصيل في القسم التالي. |
+| **28** | تفكيك `App.tsx` إلى hooks مستقلة | ✅ معتمد ومطبق (v4.7) | Architecture / Tech Debt | اكتملت الخطوات الست: `useModalState` + `useSleepWindow` + `useCalendar` + `useTheme` + `useWeekPersistence` + `usePreferences`. `App.tsx` نزل من 2298 إلى 2016 سطراً بنفس أسماء المتغيرات ودون تغيير سلوك. |
 | **29** | تحميل Firebase ديناميكياً (Lazy Firebase) | ✅ معتمد ومطبق (v4.7) | Performance | استيراد SDK ديناميكياً + live bindings: التحميل الأولي نزل من ~293KB إلى ~171KB gzip، وحزمة Firebase (~761KB) بقت lazy بعد أول رسم. |
 | **30** | إضافة ESLint + Prettier | ⏸️ مؤجل | DX / Tooling | توحيد الأسلوب ومنع الأخطاء الشائعة؛ يولّد تعديلات كثيرة في الملفات. |
 | **31** | دمج Sentry رسمياً (اختياري) | ⏸️ مؤجل | Observability | يحتاج DSN + مصدر npm يدعم `@sentry/core` (المصدر الحالي أعطى ETARGET). |
@@ -47,26 +47,30 @@
 
 ---
 
-### 📋 خطة استكمال تفكيك `App.tsx` (#28) — للجلسة القادمة
+### ✅ تفكيك `App.tsx` (#28) — مكتمل في `v4.7`
 
-> **الوضع الحالي:** 4 من 6 هوكس مكتملة (`useModalState` + `useSleepWindow` + `useCalendar` + `useTheme`). آخر نشر: commit `2381d0e`، الإصدار `v4.7`. المتبقي خطوتان كبيرتان **تأجلتا بطلب المستخدم** لأن الجلسة كانت طويلة جداً، والخطوتان تلمسان **قلب الحفظ/التحميل/المزامنة** — والقيام بهما في نهاية جلسة طويلة يخاطر بتعطيل الحفظ بصمت، وهو ما يمنعه بروتوكول AGENTS.md.
+> **الوضع:** اكتملت الخطوات الست. كل الهوكس في `src/hooks/`: `useModalState` + `useSleepWindow` + `useTheme` + `useCalendar` + `useWeekPersistence` + `usePreferences`. و`App.tsx` نزل من **2298** إلى **2016** سطراً.
+> **الطريقة المتبعة:** هوك واحد = كومت منفصل، والهوك يرجّع **نفس أسماء المتغيرات** فيبقى باقي `App.tsx` كما هو (أقل مخاطر انحدار).
 
-**خطوة 5 — `useWeekPersistence`:**
-- **ما يُنقل من `App.tsx` (≈170 سطر):** `weekData` / `saveStatus` / `isDataLoaded` + `saveTimeoutRef` / `pendingSaveRef` + `loadWeekData` + `flushSaveToCloud` + `saveWeekData` + `flushPendingSaveNow` + effect الـ `beforeunload`/`visibilitychange`.
-- **يعتمد على:** `db` / `doc` / `getDoc` / `setDoc` (live bindings من `services/firebase`) + `lang` + `STRINGS` + `isoDate` / `mondayOf` / `normalizeWeekData` / `emptyDay` / `startOfWeekFor`.
-- **التوقيع:** `useWeekPersistence(lang)` يرجّع **نفس أسماء المتغيرات** (`weekData`, `setWeekData`, `saveStatus`, `setSaveStatus`, `isDataLoaded`, `setIsDataLoaded`, `loadWeekData`, `saveWeekData`, `flushPendingSaveNow`).
-- **⚠️ نقطة حساسة:** يُستدعى الهوك **بعد تعريف `lang`** (حالياً ~سطر 159) و**قبل حساب الستريك** (الذي يستخدم `weekData.days`) — وإلا تنكسر الستريك.
+**خطوة 5 — `useWeekPersistence` (✅ منجزة):**
+- نقلت `weekData` / `saveStatus` / `isDataLoaded` + `saveTimeoutRef` / `pendingSaveRef` + `loadWeekData` + `flushSaveToCloud` + `saveWeekData` + `flushPendingSaveNow` + effect الـ `beforeunload`/`visibilitychange`.
+- **التوقيع:** `useWeekPersistence(lang)`، ويُستدعى **بعد تعريف `lang`** و**قبل حساب الستريك** (لأنه يقرأ `weekData.days`).
+- **السلوك لم يتغيّر:** كتابة فورية في localStorage، مزامنة Firestore مؤجلة 3 ثوانٍ، حفظ فوري عند Enter/التاق، وتفريغ صامت قبل تغيير الأسبوع أو إخفاء التبويب.
 
-**خطوة 6 — `usePreferences`:**
-- **ما يُنقل من `App.tsx` (≈170 سطر):** `isDetailedView` / `devToolsEnabled` / `showAgeBadge` / `showStreakBadge` / `showFocusModeButton` / `showGoldenGoal` / `showPriorityMatrix` / `showTodoInbox` / `morningNudgeEnabled` / `tagTargets` / `focusModeActive` / `calSyncEnabled` / `autoCloudSync` / `userBirthDate` / `ageDisplayOpt` + `syncPreferences` + `updatePlanningVisibility`.
-- **يعتمد على:** `db` / `doc` / `setDoc` + `currentUser` + `sleepSettings` + `weekStartDay` + `themeMode`.
-- **⚠️ نقطة حساسة:** `syncPreferences` يقرأ معظم هذه الحالات؛ الهوك يجمعها ويصدّرها مع التأكد أن auth effect و`onPrefsRestored` يستخدمان نفس الـ setters.
+**خطوة 6 — `usePreferences` (✅ منجزة):**
+- نقلت `weekStartDay` + `isDetailedView` / `devToolsEnabled` / `showAgeBadge` / `showStreakBadge` / `showFocusModeButton` / `showGoldenGoal` / `showPriorityMatrix` / `showTodoInbox` / `morningNudgeEnabled` / `tagTargets` / `focusModeActive` / `calSyncEnabled` / `autoCloudSync` / `userBirthDate` / `ageDisplayOpt` + `handleToggleDetailedView` + `syncPreferences` + `updatePlanningVisibility`.
+- **التوقيع:** `usePreferences({ currentUser, sleepSettings, themeMode, closeTodoDrawer })`، وترتيب الهوكس صار: `useTheme` ← `useSleepWindow` ← `usePreferences` ← `useCalendar`.
+- `closeTodoDrawer` هو المعامل الوحيد الجديد: دالة ثابتة (`useCallback`) تُغلق درج المهام عند إخفاء صندوق المهام من الإعدادات — نفس سلوك السابق تماماً.
+- **قرار:** `handleSyncAllWeeksNow` (زر "مزامنة الكل الآن") **لم يُنقل** لأنه إجراء تنفيذي لا تفضيل؛ مكانه الأنسب يبقى `App.tsx`.
 
-**الطريقة الآمنة (نفس ما اتُّبع في 1→4):**
-1. **هوك واحد = كومت منفصل**.
-2. الهوك يرجّع **نفس أسماء المتغيرات** → باقي `App.tsx` لا يتغيّر (أقل مخاطر).
-3. فحص كامل قبل الرفع: `npx tsc --noEmit` + `npm run test` + `npm run build` + تحقق حي عبر `GET /version.json`.
-4. بعد الخطوتين → **رفع الإصدار إلى `v5.0`** (تحديث `APP_VERSION` + `HISTORY` + `CHANGELOG` + `RECOMMENDATIONS`).
+**التحقق المنفَّذ قبل الرفع:**
+1. `npx tsc --noEmit` — بلا أخطاء.
+2. `npm run test` — 13 اختباراً ناجحاً.
+3. `npm run build` — بناء ناجح + توليد `dist/version.json`.
+4. **تحميل فعلي للنسخة المبنية في Chrome:** الواجهة ظهرت كاملة بلا شاشة بيضاء وبلا `ErrorBoundary`، ورقم `v4.7` ظاهر في الترويسة والتذييل.
+5. **اختبار تفاعلي (CDP):** الكتابة في خانة الساعة حفظت البيانات فوراً في `time_log_week_*`، وتفعيل تفضيل من نافذة الإعدادات كتب **كل** مفاتيح التفضيلات في localStorage — أي أن مساري الحفظ والمزامنة سليمان بعد التفكيك.
+
+**⚠️ ملاحظة الإصدار (قرار مقصود):** بقي الإصدار **`v4.7`** ولم يُرفع إلى `v5.0`، لأن قاعدة `AGENTS.md` رقم 2 تسمح بزيادة **واحدة فقط في اليوم**، وزيادة هذا اليوم استُهلكت عند `v4.7`. الخطوة المتبقية على جدول الإصدارات: رفع `v5.0` في **أول تعديل بيوم عمل جديد** — وهي زيادة رئيسية تحتاج **موافقة صريحة من المستخدم** وفق القاعدة نفسها.
 
 ---
 
