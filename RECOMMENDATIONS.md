@@ -37,7 +37,7 @@
 | **25** | اختبارات الوحدات الحرجة (Vitest) | ✅ معتمد ومطبق (v4.7) | Testing / Quality | 13 اختباراً لتقسيم البومودورو، الأسابيع، التطبيع، الستريك، وصلاحية النسخ الاحتياطي. |
 | **26** | إشعار "تحديث متاح" لـ PWA | ✅ معتمد ومطبق (v4.7) | UX / PWA | إشعار فوري عند وجود Service Worker جديد منتظر بزر تفعيل وإعادة تحميل. |
 | **27** | مراقبة الأخطاء بدون اعتماد خارجي | ✅ معتمد ومطبق (v4.7) | Observability | التقاط الأخطاء غير المعالجة وحفظ آخر 20 خطأ في localStorage + ربط ErrorBoundary. |
-| **28** | تفكيك `App.tsx` إلى hooks مستقلة | 🚧 قيد التنفيذ (v4.7) | Architecture / Tech Debt | خطوات مكتملة: `useModalState` + `useSleepWindow`. متبقٍ: `usePreferences` / `useCalendar` / `useWeekPersistence` / `useTheme`. |
+| **28** | تفكيك `App.tsx` إلى hooks مستقلة | 🚧 قيد التنفيذ (v4.7) | Architecture / Tech Debt | خطوات مكتملة: `useModalState` + `useSleepWindow` + `useCalendar`. متبقٍ: `usePreferences` / `useWeekPersistence` / `useTheme`. |
 | **29** | تحميل Firebase ديناميكياً (Lazy Firebase) | ✅ معتمد ومطبق (v4.7) | Performance | استيراد SDK ديناميكياً + live bindings: التحميل الأولي نزل من ~293KB إلى ~171KB gzip، وحزمة Firebase (~761KB) بقت lazy بعد أول رسم. |
 | **30** | إضافة ESLint + Prettier | ⏸️ مؤجل | DX / Tooling | توحيد الأسلوب ومنع الأخطاء الشائعة؛ يولّد تعديلات كثيرة في الملفات. |
 | **31** | دمج Sentry رسمياً (اختياري) | ⏸️ مؤجل | Observability | يحتاج DSN + مصدر npm يدعم `@sentry/core` (المصدر الحالي أعطى ETARGET). |

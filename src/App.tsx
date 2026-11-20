@@ -49,6 +49,7 @@ import { SaveToast } from './components/SaveToast';
 import { UpdateToast } from './components/UpdateToast';
 import { useModalState } from './hooks/useModalState';
 import { useSleepWindow } from './hooks/useSleepWindow';
+import { useCalendar } from './hooks/useCalendar';
 
 // Modals — lazy-loaded on demand so their code stays out of the initial bundle.
 // The gate renders a modal only when its `isOpen` prop is true, which means the
@@ -306,18 +307,14 @@ export default function App() {
     activeHoursKeys
   } = useSleepWindow();
 
-  // 4. Google Calendar & Suggestions
-  const [gcalAccessToken, setGcalAccessToken] = useState<string | null>(() => {
-    return sessionStorage.getItem('gcal_access_token') || null;
-  });
-  const [googleCalendarEvents, setGoogleCalendarEvents] = useState<Record<string, { text: string; tag: TagCode }>>({});
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('dismissedSuggestions') || '{}');
-    } catch {
-      return {};
-    }
-  });
+  // 4. Google Calendar & Suggestions (extracted to useCalendar)
+  const {
+    gcalAccessToken,
+    setGcalAccessToken,
+    googleCalendarEvents,
+    dismissedSuggestions,
+    setDismissedSuggestions
+  } = useCalendar(calSyncEnabled, currentDate);
 
   // 5. Modals State (extracted to useModalState to keep App.tsx smaller)
   const {
@@ -1561,39 +1558,9 @@ export default function App() {
     }
   }, [userBirthDate]);
 
-  // Sync calendar token expiration event
-  useEffect(() => {
-    const handleExpired = () => {
-      setGcalAccessToken(null);
-    };
-    window.addEventListener('gcal-token-expired', handleExpired);
-    return () => window.removeEventListener('gcal-token-expired', handleExpired);
-  }, []);
+  // Calendar token-expiry listener now lives inside useCalendar.
 
-  // Google Calendar Events Fetcher for the active day (uses live fetch if token available, or local day cache)
-  useEffect(() => {
-    if (!calSyncEnabled) {
-      setGoogleCalendarEvents({});
-      return;
-    }
-
-    let isMounted = true;
-    fetchCalendarEventsForDate(currentDate, gcalAccessToken).then((events) => {
-      if (!isMounted) return;
-      // Filter out dismissed suggestions for this date
-      const activeEvents: Record<string, { text: string; tag: TagCode }> = {};
-      Object.entries(events).forEach(([k, val]) => {
-        if (!dismissedSuggestions[`${dateStr}_${k}`]) {
-          activeEvents[k] = val;
-        }
-      });
-      setGoogleCalendarEvents(activeEvents);
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [calSyncEnabled, gcalAccessToken, currentDate, dateStr, dismissedSuggestions]);
+  // Google Calendar event fetching now lives inside useCalendar.
 
   // Google Calendar Connection
   const handleConnectGCal = async () => {

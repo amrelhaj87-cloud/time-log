@@ -159,7 +159,11 @@
 **11. تفكيك `App.tsx` (خطوة 1-2 من N):**
 - استخراج `useModalState` (12 حالة مودال + مؤشر البومودورو الخلفي) و`useSleepWindow` (نافذة النوم + الاستثناءات + ساعات النشاط) إلى `src/hooks/`.
 - **الطريقة:** كل هوك يرجّع نفس أسماء المتغيرات، فباقي `App.tsx` لم يتغيّر — تقليل مخاطر الانحدار مع الحفاظ على السلوك.
-- **المتبقي:** `usePreferences` / `useCalendar` / `useWeekPersistence` / `useTheme`.
+- **المتبقي:** `usePreferences` / `useWeekPersistence` / `useTheme`.
+
+**12. إصلاح تحميل البيانات بعد Lazy Firebase + `useCalendar` (خطوة 3):**
+- إصلاح انحدار: تحميل بيانات localStorage فوراً (بآخر UID) قبل اكتمال تحميل Firebase، لمنع ظهور "0 من 24" لحظياً. (commit `dc08ae6`)
+- استخراج `useCalendar` (توكن + أحداث التقويم + الاقتراحات + effect الجلب) إلى `src/hooks/`.
 
 ---
 
