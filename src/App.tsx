@@ -1310,14 +1310,12 @@ export default function App() {
         setGcalAccessToken(credential);
         sessionStorage.setItem('gcal_access_token', credential);
         setCalSyncEnabled(true);
-        localStorage.setItem('calSyncEnabled', 'true');
-        syncPreferences(currentUser);
+        syncPreferences(currentUser, { calSyncEnabled: true });
         setSaveStatus(lang === 'ar' ? '🎉 تم ربط Google Calendar بنجاح' : '🎉 Google Calendar connected successfully');
         setTimeout(() => setSaveStatus(''), 4000);
       } else {
         setCalSyncEnabled(true);
-        localStorage.setItem('calSyncEnabled', 'true');
-        syncPreferences(currentUser);
+        syncPreferences(currentUser, { calSyncEnabled: true });
         setSaveStatus(lang === 'ar' ? '✅ تم الاتصال بحساب Google' : '✅ Connected to Google account');
         setTimeout(() => setSaveStatus(''), 4000);
       }
@@ -1336,8 +1334,7 @@ export default function App() {
     sessionStorage.removeItem('gcal_access_token');
     clearAllCachedCalendarEvents();
     setCalSyncEnabled(false);
-    localStorage.setItem('calSyncEnabled', 'false');
-    syncPreferences(currentUser);
+    syncPreferences(currentUser, { calSyncEnabled: false });
     setSaveStatus(lang === 'ar' ? 'تم فصل حساب تقويم Google' : 'Google Calendar disconnected');
     setTimeout(() => setSaveStatus(''), 3000);
   };
@@ -1390,7 +1387,7 @@ export default function App() {
     const newWs = startOfWeekFor(currentDate, newDay);
     setWeekStart(newWs);
     loadWeekData(newWs, currentUser);
-    syncPreferences(currentUser, newDay);
+    syncPreferences(currentUser, { weekStartDay: newDay });
     setSaveStatus(lang === 'ar' ? '✓ تم تغيير بداية الأسبوع' : '✓ Week start day updated');
     setTimeout(() => setSaveStatus(''), 2000);
   };
@@ -1740,26 +1737,19 @@ export default function App() {
         sleepSettings={sleepSettings}
         onChangeSleepSettings={(s) => {
           setSleepSettings(s);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { sleepWindow: s });
         }}
         userBirthDate={userBirthDate}
         ageDisplayOpt={ageDisplayOpt}
         showAgeBadge={showAgeBadge}
         onToggleAgeBadge={(en) => {
           setShowAgeBadge(en);
-          localStorage.setItem('showAgeBadge', en ? 'true' : 'false');
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { showAgeBadge: en });
         }}
         onSaveAge={(bDate, opt) => {
           setUserBirthDate(bDate);
           setAgeDisplayOpt(opt);
-          if (!bDate) {
-            localStorage.removeItem('userBirthDate');
-          } else {
-            localStorage.setItem('userBirthDate', bDate);
-          }
-          localStorage.setItem('ageDisplayOpt', opt);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { birthDate: bDate, ageDisplayOpt: opt });
         }}
         weekStartDay={weekStartDay}
         onChangeWeekStartDay={handleChangeWeekStartDay}
@@ -1768,20 +1758,18 @@ export default function App() {
         devToolsEnabled={devToolsEnabled}
         onToggleDevTools={(en) => {
           setDevToolsEnabled(en);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { devToolsEnabled: en });
         }}
         showStreakBadge={showStreakBadge}
         onToggleStreakBadge={(en) => {
           setShowStreakBadge(en);
-          localStorage.setItem('showStreakBadge', en ? 'true' : 'false');
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { showStreakBadge: en });
         }}
         showFocusModeButton={showFocusModeButton}
         onToggleShowFocusModeButton={(en) => {
           setShowFocusModeButton(en);
-          localStorage.setItem('showFocusModeButton', en ? 'true' : 'false');
           if (!en) setFocusModeActive(false);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { showFocusModeButton: en });
         }}
         showGoldenGoal={showGoldenGoal}
         onToggleShowGoldenGoal={(en) => updatePlanningVisibility({ showGoldenGoal: en })}
@@ -1795,20 +1783,17 @@ export default function App() {
         morningNudgeEnabled={morningNudgeEnabled}
         onToggleMorningNudge={(en) => {
           setMorningNudgeEnabled(en);
-          localStorage.setItem('morningNudgeEnabled', en ? 'true' : 'false');
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { morningNudgeEnabled: en });
         }}
         eveningWrapUpEnabled={eveningWrapUpEnabled}
         onToggleEveningWrapUp={(en) => {
           setEveningWrapUpEnabled(en);
-          localStorage.setItem('eveningWrapUpEnabled', en ? 'true' : 'false');
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { eveningWrapUpEnabled: en });
         }}
         tagTargets={tagTargets}
         onChangeTagTargets={(targets) => {
           setTagTargets(targets);
-          localStorage.setItem('tagTargets', JSON.stringify(targets));
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { tagTargets: targets });
         }}
         isCalSyncConnected={!!gcalAccessToken}
         currentUserEmail={currentUser?.email}
@@ -1817,13 +1802,12 @@ export default function App() {
         calSyncEnabled={calSyncEnabled}
         onToggleCalSync={(en) => {
           setCalSyncEnabled(en);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { calSyncEnabled: en });
         }}
         autoCloudSync={autoCloudSync}
         onToggleAutoCloudSync={(en) => {
           setAutoCloudSync(en);
-          localStorage.setItem('autoCloudSync', en ? 'true' : 'false');
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { autoCloudSync: en });
         }}
         onSyncAllToCloudNow={handleSyncAllWeeksNow}
         isSyncingAllWeeks={isSyncingAllWeeks}
@@ -1945,11 +1929,12 @@ export default function App() {
         onClose={() => setSleepOnboardModalOpen(false)}
         onApply={(s) => {
           setSleepSettings(s);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { sleepWindow: s });
         }}
         onSkip={() => {
-          setSleepSettings((prev) => ({ ...prev, enabled: false, onboarded: true }));
-          syncPreferences(currentUser);
+          const next = { ...sleepSettings, enabled: false, onboarded: true };
+          setSleepSettings(next);
+          syncPreferences(currentUser, { sleepWindow: next });
         }}
         lang={lang}
       />
@@ -1962,7 +1947,7 @@ export default function App() {
         onSave={(bDate, opt) => {
           setUserBirthDate(bDate);
           setAgeDisplayOpt(opt);
-          syncPreferences(currentUser);
+          syncPreferences(currentUser, { birthDate: bDate, ageDisplayOpt: opt });
         }}
         lang={lang}
       />

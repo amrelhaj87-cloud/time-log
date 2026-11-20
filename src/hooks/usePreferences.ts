@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { db, doc, setDoc } from '../services/firebase';
 import { DEFAULT_TAG_TARGETS } from '../constants/config';
+import { mergePreferences, preferencesStorageEntries, preferencesFirestorePayload } from '../utils/preferences';
+import type { PreferencesPatch } from '../utils/preferences';
 import type { AgeDisplayOpt, SleepSettings, TagTargets, ThemeMode, WeekStartDay } from '../types';
 
 interface UsePreferencesOptions {
@@ -106,66 +108,48 @@ export function usePreferences({
     return 'none';
   });
 
-  // Sync Preferences to Firestore & Local
+  // Sync Preferences to Firestore & Local.
+  // `patch` MUST carry every value that is changing in this interaction: React
+  // applies the state setters only after the handler returns, so persisting the
+  // closure values would save the previous value and silently revert the change
+  // on the next reload (the "sleep toggle does not save" bug).
   const syncPreferences = useCallback(
-    async (
-      user: User | null,
-      customWeekStartDay?: WeekStartDay,
-      prefOverrides?: { showGoldenGoal?: boolean; showPriorityMatrix?: boolean; showTodoInbox?: boolean }
-    ) => {
-      const activeWeekStartDay = customWeekStartDay || weekStartDay;
-      const nextGolden = prefOverrides?.showGoldenGoal ?? showGoldenGoal;
-      const nextMatrix = prefOverrides?.showPriorityMatrix ?? showPriorityMatrix;
-      const nextTodo = prefOverrides?.showTodoInbox ?? showTodoInbox;
-      const nextPrioritiesSection = nextGolden || nextMatrix;
+    async (user: User | null, patch: PreferencesPatch = {}) => {
+      const next = mergePreferences(
+        {
+          sleepWindow: sleepSettings,
+          birthDate: userBirthDate,
+          ageDisplayOpt,
+          weekStartDay,
+          devToolsEnabled,
+          showAgeBadge,
+          showStreakBadge,
+          showFocusModeButton,
+          showGoldenGoal,
+          showPriorityMatrix,
+          showTodoInbox,
+          showPrioritiesSection,
+          morningNudgeEnabled,
+          eveningWrapUpEnabled,
+          tagTargets,
+          calSyncEnabled,
+          themeMode,
+          isDetailedView,
+          autoCloudSync
+        },
+        patch
+      );
 
-      localStorage.setItem('sleepSettings', JSON.stringify(sleepSettings));
-      localStorage.setItem('userBirthDate', userBirthDate);
-      localStorage.setItem('ageDisplayOpt', ageDisplayOpt);
-      localStorage.setItem('weekStartDay', activeWeekStartDay);
-      localStorage.setItem('devToolsEnabled', String(devToolsEnabled));
-      localStorage.setItem('showAgeBadge', String(showAgeBadge));
-      localStorage.setItem('showStreakBadge', String(showStreakBadge));
-      localStorage.setItem('showFocusModeButton', String(showFocusModeButton));
-      localStorage.setItem('showGoldenGoal', String(nextGolden));
-      localStorage.setItem('showPriorityMatrix', String(nextMatrix));
-      localStorage.setItem('showTodoInbox', String(nextTodo));
-      localStorage.setItem('showPrioritiesSection', String(nextPrioritiesSection));
-      localStorage.setItem('morningNudgeEnabled', String(morningNudgeEnabled));
-      localStorage.setItem('eveningWrapUpEnabled', String(eveningWrapUpEnabled));
-      localStorage.setItem('tagTargets', JSON.stringify(tagTargets));
-      localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
-      localStorage.setItem('themeMode', themeMode);
-      localStorage.setItem('isDetailedView', String(isDetailedView));
-      localStorage.setItem('autoCloudSync', String(autoCloudSync));
+      for (const [key, value] of preferencesStorageEntries(next)) {
+        localStorage.setItem(key, value);
+      }
 
       if (db && user) {
         try {
           const docRef = doc(db, 'users', user.uid, 'settings', 'preferences');
           await setDoc(
             docRef,
-            {
-              sleepWindow: sleepSettings,
-              birthDate: userBirthDate,
-              ageDisplayOpt,
-              weekStartDay: activeWeekStartDay,
-              devToolsEnabled,
-              showAgeBadge,
-              showStreakBadge,
-              showFocusModeButton,
-              showGoldenGoal: nextGolden,
-              showPriorityMatrix: nextMatrix,
-              showTodoInbox: nextTodo,
-              showPrioritiesSection: nextPrioritiesSection,
-              morningNudgeEnabled,
-              eveningWrapUpEnabled,
-              tagTargets,
-              calSyncEnabled,
-              themeMode,
-              isDetailedView,
-              autoCloudSync,
-              updatedAt: new Date().toISOString()
-            },
+            { ...preferencesFirestorePayload(next), updatedAt: new Date().toISOString() },
             { merge: true }
           );
         } catch (err) {
@@ -173,7 +157,7 @@ export function usePreferences({
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, eveningWrapUpEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, showPrioritiesSection, morningNudgeEnabled, eveningWrapUpEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
   );
 
   const updatePlanningVisibility = useCallback(
@@ -185,7 +169,7 @@ export function usePreferences({
       setShowPriorityMatrix(nextMatrix);
       setShowTodoInbox(nextTodo);
       if (!nextTodo) closeTodoDrawer();
-      syncPreferences(currentUser, undefined, {
+      syncPreferences(currentUser, {
         showGoldenGoal: nextGolden,
         showPriorityMatrix: nextMatrix,
         showTodoInbox: nextTodo
