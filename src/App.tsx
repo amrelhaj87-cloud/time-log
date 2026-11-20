@@ -50,6 +50,7 @@ import { UpdateToast } from './components/UpdateToast';
 import { useModalState } from './hooks/useModalState';
 import { useSleepWindow } from './hooks/useSleepWindow';
 import { useCalendar } from './hooks/useCalendar';
+import { useTheme } from './hooks/useTheme';
 
 // Modals — lazy-loaded on demand so their code stays out of the initial bundle.
 // The gate renders a modal only when its `isOpen` prop is true, which means the
@@ -159,62 +160,14 @@ export default function App() {
     return (localStorage.getItem('lang') as 'ar' | 'en') || 'ar';
   });
 
-  // 3-State Theme Mode ('system' | 'light' | 'dark'), default is 'light' (نهاري)
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('themeMode');
-    if (saved === 'system' || saved === 'light' || saved === 'dark') return saved as ThemeMode;
-    // Check legacy darkMode boolean if exists
-    const legacy = localStorage.getItem('darkMode');
-    if (legacy === 'true') return 'dark';
-    if (legacy === 'false') return 'light';
-    return 'light';
-  });
-
-  const [systemIsDark, setSystemIsDark] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
-
-  // Track system theme changes dynamically in real-time
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemIsDark(e.matches);
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const isDarkEffective = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
-
-  const handleCycleThemeMode = useCallback(() => {
-    setThemeMode((prev) => {
-      let next: ThemeMode;
-      if (prev === 'light') next = 'dark';
-      else if (prev === 'dark') next = 'system';
-      else next = 'light';
-      localStorage.setItem('themeMode', next);
-      localStorage.setItem('darkMode', String(next === 'dark' || (next === 'system' && systemIsDark)));
-      if (db && currentUser) {
-        const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-        setDoc(docRef, { themeMode: next, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
-      }
-      return next;
-    });
-  }, [systemIsDark, currentUser]);
-
-  const handleChangeThemeMode = useCallback((mode: ThemeMode) => {
-    setThemeMode(mode);
-    localStorage.setItem('themeMode', mode);
-    localStorage.setItem('darkMode', String(mode === 'dark' || (mode === 'system' && systemIsDark)));
-    if (db && currentUser) {
-      const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
-      setDoc(docRef, { themeMode: mode, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => { });
-    }
-  }, [systemIsDark, currentUser]);
+  // 3-State Theme Mode (extracted to useTheme)
+  const {
+    themeMode,
+    setThemeMode,
+    isDarkEffective,
+    handleCycleThemeMode,
+    handleChangeThemeMode
+  } = useTheme(currentUser);
 
   // Default is Compact View (false/مدمج), unless user explicitly saved 'true'
   const [isDetailedView, setIsDetailedView] = useState<boolean>(() => {
@@ -350,14 +303,7 @@ export default function App() {
     document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
   }, [lang]);
 
-  // Set Dark mode class dynamically based on effective theme
-  useEffect(() => {
-    if (isDarkEffective) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkEffective]);
+  // Dark-mode class effect now lives inside useTheme.
 
   // Sleep hour keys are derived inside useSleepWindow (sleepHourKeys / activeHoursKeys).
 
