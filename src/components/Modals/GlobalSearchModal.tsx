@@ -395,7 +395,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3 flex items-center justify-between gap-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-2xs group"
+                    className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-2xs group"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       {/* Date & Time Badge */}
@@ -426,15 +426,16 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Tag Badge */}
+                    <div className="flex items-center gap-2 shrink-0 justify-start sm:justify-end">
+                      {/* Tag Badge — on phones only the code fits, the full label shows from sm up */}
                       {tagCfg ? (
                         <span
-                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
+                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs whitespace-nowrap"
                           style={{ backgroundColor: tagCfg.color }}
                           title={tagCfg.fullTitle[lang]}
                         >
-                          {item.tag} - {tagCfg.fullTitle[lang]}
+                          {item.tag}
+                          <span className="hidden sm:inline"> - {tagCfg.fullTitle[lang]}</span>
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 rounded text-[10px] text-[var(--ink-soft)] bg-[var(--card)] border border-[var(--line)]">
