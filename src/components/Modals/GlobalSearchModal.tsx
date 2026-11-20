@@ -8,7 +8,8 @@ import {
   buildSearchIndex,
   querySearchIndex,
   sortSearchEntries,
-  buildFrequencyGroups
+  buildFrequencyGroups,
+  countFuzzyMatches
 } from '../../utils/searchUtils';
 import {
   X,
@@ -53,7 +54,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<TagCode | 'ALL' | 'UNTAGGED'>('ALL');
-  const [sortMode, setSortMode] = useState<SortMode>('date-desc');
+  const [sortMode, setSortMode] = useState<SortMode>('relevance');
+  // Typo tolerance (#17) — on by default, remembered per browser.
+  const [fuzzyEnabled, setFuzzyEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('globalSearchFuzzy') !== 'false';
+  });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -66,7 +71,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     } else {
       setQuery('');
       setSelectedTag('ALL');
-      setSortMode('date-desc');
+      setSortMode('relevance');
       setExpandedGroups({});
     }
   }, [isOpen]);
@@ -91,8 +96,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   // Filter entries
   const filteredEntries = useMemo(() => {
     const effectiveTag = selectedTag === 'UNTAGGED' ? ('' as TagCode) : selectedTag;
-    return querySearchIndex(fullIndex, query, effectiveTag);
-  }, [fullIndex, query, selectedTag]);
+    return querySearchIndex(fullIndex, query, effectiveTag, { fuzzy: fuzzyEnabled });
+  }, [fullIndex, query, selectedTag, fuzzyEnabled]);
+
+  // Results that only matched thanks to typo tolerance
+  const fuzzyMatchCount = useMemo(() => countFuzzyMatches(filteredEntries), [filteredEntries]);
 
   // Sort entries
   const sortedEntries = useMemo(() => {
@@ -202,8 +210,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           </div>
 
           {/* Stats & Sort Selector Bar */}
-          <div className="flex items-center justify-between text-xs pt-1 border-t border-[var(--line)]/50">
-            <div className="text-[var(--ink-soft)] font-medium">
+          <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-[var(--line)]/50 flex-wrap">
+            <div className="text-[var(--ink-soft)] font-medium flex items-center gap-2 flex-wrap">
               {sortMode === 'frequency' ? (
                 <span>
                   {lang === 'ar'
@@ -217,15 +225,48 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     : `📋 Found ${filteredEntries.length} logs across ${uniqueDatesCount} days`}
                 </span>
               )}
+              {fuzzyEnabled && fuzzyMatchCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-bold text-[10px] border border-amber-200/70 dark:border-amber-800/60"
+                  title={lang === 'ar' ? 'نتائج ظهرت بفضل التسامح مع الأخطاء الإملائية' : 'Results found via typo tolerance'}
+                >
+                  ≈ {fuzzyMatchCount} {lang === 'ar' ? 'تقريبية' : 'approximate'}
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !fuzzyEnabled;
+                  setFuzzyEnabled(next);
+                  localStorage.setItem('globalSearchFuzzy', String(next));
+                  if (next && sortMode === 'date-desc') setSortMode('relevance');
+                }}
+                aria-pressed={fuzzyEnabled}
+                title={
+                  lang === 'ar'
+                    ? 'بحث متسامح: يتجاهل الأخطاء الإملائية وتنويعات الهمزة والتاء المربوطة'
+                    : 'Fuzzy search: tolerates typos and Arabic letter variants'
+                }
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                  fuzzyEnabled
+                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xs'
+                    : 'border-[var(--line)] bg-[var(--bg)] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:border-indigo-400'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{lang === 'ar' ? 'بحث متسامح' : 'Fuzzy'}</span>
+              </button>
+
               <ArrowUpDown className="w-3.5 h-3.5 text-[var(--ink-soft)] shrink-0" />
               <select
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
                 className="bg-[var(--bg)] border border-[var(--line)] text-[var(--ink)] text-xs font-bold rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:border-indigo-500"
               >
+                <option value="relevance">{lang === 'ar' ? '🎯 الأنسب أولاً' : '🎯 Best match'}</option>
                 <option value="date-desc">{lang === 'ar' ? '📅 الأحدث أولاً' : '📅 Newest first'}</option>
                 <option value="date-asc">{lang === 'ar' ? '📅 الأقدم أولاً' : '📅 Oldest first'}</option>
                 <option value="alpha-asc">{lang === 'ar' ? '🔤 أبجدياً (أ - ي)' : '🔤 Alphabetical (A-Z)'}</option>
@@ -374,6 +415,14 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                         <p className="text-xs sm:text-sm font-semibold text-[var(--ink)] break-words">
                           {item.text}
                         </p>
+                        {item.matchKind === 'fuzzy' && (
+                          <span
+                            className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-200/70 dark:border-amber-800/60"
+                            title={lang === 'ar' ? 'مطابقة تقريبية — الكلمة ليست مطابقة حرفياً' : 'Approximate match — not an exact hit'}
+                          >
+                            ≈ {lang === 'ar' ? 'تقريبي' : 'approx'}
+                          </span>
+                        )}
                       </div>
                     </div>
 
