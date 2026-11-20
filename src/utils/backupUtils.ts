@@ -39,6 +39,8 @@ export interface BackupPreferences {
   showPriorityMatrix: boolean;
   showTodoInbox: boolean;
   morningNudgeEnabled: boolean;
+  /** #09 — optional so backups exported before v5.0 still validate. */
+  eveningWrapUpEnabled?: boolean;
 }
 
 export interface FullBackup {
@@ -134,6 +136,7 @@ export function gatherFullBackup(uid: string | null, appVersion: string): FullBa
     showPriorityMatrix: localStorage.getItem('showPriorityMatrix') !== 'false',
     showTodoInbox: localStorage.getItem('showTodoInbox') !== 'false',
     morningNudgeEnabled: localStorage.getItem('morningNudgeEnabled') === 'true',
+    eveningWrapUpEnabled: localStorage.getItem('eveningWrapUpEnabled') === 'true',
   };
 
   return {
@@ -241,6 +244,7 @@ export function restoreFullBackup(data: FullBackup, callbacks: RestoreCallbacks)
   localStorage.setItem('showPriorityMatrix', String(p.showPriorityMatrix ?? true));
   localStorage.setItem('showTodoInbox', String(p.showTodoInbox ?? true));
   localStorage.setItem('morningNudgeEnabled', String(p.morningNudgeEnabled ?? false));
+  localStorage.setItem('eveningWrapUpEnabled', String(p.eveningWrapUpEnabled ?? false));
 
   callbacks.onPrefsRestored?.(p);
 }

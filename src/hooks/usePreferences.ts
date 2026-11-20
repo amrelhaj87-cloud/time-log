@@ -75,6 +75,10 @@ export function usePreferences({
   const [morningNudgeEnabled, setMorningNudgeEnabled] = useState<boolean>(() => {
     return localStorage.getItem('morningNudgeEnabled') === 'true';
   });
+  // Evening Wrap-up (#09) — offered once from 05:00 for the day that ended.
+  const [eveningWrapUpEnabled, setEveningWrapUpEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('eveningWrapUpEnabled') === 'true';
+  });
   const [tagTargets, setTagTargets] = useState<TagTargets>(() => {
     try {
       const saved = localStorage.getItem('tagTargets');
@@ -128,6 +132,7 @@ export function usePreferences({
       localStorage.setItem('showTodoInbox', String(nextTodo));
       localStorage.setItem('showPrioritiesSection', String(nextPrioritiesSection));
       localStorage.setItem('morningNudgeEnabled', String(morningNudgeEnabled));
+      localStorage.setItem('eveningWrapUpEnabled', String(eveningWrapUpEnabled));
       localStorage.setItem('tagTargets', JSON.stringify(tagTargets));
       localStorage.setItem('calSyncEnabled', String(calSyncEnabled));
       localStorage.setItem('themeMode', themeMode);
@@ -153,6 +158,7 @@ export function usePreferences({
               showTodoInbox: nextTodo,
               showPrioritiesSection: nextPrioritiesSection,
               morningNudgeEnabled,
+              eveningWrapUpEnabled,
               tagTargets,
               calSyncEnabled,
               themeMode,
@@ -167,7 +173,7 @@ export function usePreferences({
         }
       }
     },
-    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
+    [sleepSettings, userBirthDate, ageDisplayOpt, showAgeBadge, weekStartDay, devToolsEnabled, showStreakBadge, showFocusModeButton, showGoldenGoal, showPriorityMatrix, showTodoInbox, morningNudgeEnabled, eveningWrapUpEnabled, tagTargets, calSyncEnabled, themeMode, isDetailedView, autoCloudSync]
   );
 
   const updatePlanningVisibility = useCallback(
@@ -211,6 +217,8 @@ export function usePreferences({
     showPrioritiesSection,
     morningNudgeEnabled,
     setMorningNudgeEnabled,
+    eveningWrapUpEnabled,
+    setEveningWrapUpEnabled,
     tagTargets,
     setTagTargets,
     focusModeActive,

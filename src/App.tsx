@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor, onAuthStateChanged, loadFirebase } from './services/firebase';
 import {
@@ -28,6 +28,13 @@ import {
   PomodoroSplit
 } from './utils/dateUtils';
 import { calculateDailyStreak } from './utils/streakUtils';
+import { findDayDataAcrossWeeks, hasLoggedHours } from './utils/dayLookup';
+import {
+  buildWrapUpSummary,
+  getWrapUpDayKey,
+  getWrapUpSeenKey,
+  shouldOfferEveningWrapUp
+} from './utils/eveningWrapUp';
 import { soundManager } from './utils/soundEffects';
 import { restoreFullBackup, syncAllWeeksToCloud, type FullBackup } from './utils/backupUtils';
 import confetti from 'canvas-confetti';
@@ -85,6 +92,7 @@ const SettingsModal = makeLazyModal(() => import('./components/Modals/SettingsMo
 const GuideModal = makeLazyModal(() => import('./components/Modals/GuideModal'), 'GuideModal');
 const TodoInboxDrawer = makeLazyModal(() => import('./components/Modals/TodoInboxDrawer'), 'TodoInboxDrawer');
 const MorningNudgeModal = makeLazyModal(() => import('./components/Modals/MorningNudgeModal'), 'MorningNudgeModal');
+const EveningWrapUpModal = makeLazyModal(() => import('./components/Modals/EveningWrapUpModal'), 'EveningWrapUpModal');
 const GlobalSearchModal = makeLazyModal(() => import('./components/Modals/GlobalSearchModal'), 'GlobalSearchModal');
 
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
@@ -202,6 +210,8 @@ export default function App() {
     showPrioritiesSection,
     morningNudgeEnabled,
     setMorningNudgeEnabled,
+    eveningWrapUpEnabled,
+    setEveningWrapUpEnabled,
     tagTargets,
     setTagTargets,
     focusModeActive,
@@ -220,6 +230,10 @@ export default function App() {
 
   // Ephemeral UI state (not a stored preference)
   const [morningNudgeOpen, setMorningNudgeOpen] = useState<boolean>(false);
+  // Evening Wrap-up (#09): the reviewed day is captured when the prompt opens
+  const [eveningWrapUpOpen, setEveningWrapUpOpen] = useState<boolean>(false);
+  const [wrapUpDay, setWrapUpDay] = useState<DayData | null>(null);
+  const [wrapUpDayKey, setWrapUpDayKey] = useState<string>('');
 
   // 6. Google Calendar & Suggestions (extracted to useCalendar)
   const {
@@ -399,6 +413,10 @@ export default function App() {
               setMorningNudgeEnabled(data.morningNudgeEnabled);
               localStorage.setItem('morningNudgeEnabled', String(data.morningNudgeEnabled));
             }
+            if (data.eveningWrapUpEnabled !== undefined) {
+              setEveningWrapUpEnabled(data.eveningWrapUpEnabled);
+              localStorage.setItem('eveningWrapUpEnabled', String(data.eveningWrapUpEnabled));
+            }
             if (data.tagTargets) {
               setTagTargets(data.tagTargets);
               localStorage.setItem('tagTargets', JSON.stringify(data.tagTargets));
@@ -459,26 +477,77 @@ export default function App() {
     }, 150);
   }, [weekData.days, showGoldenGoal]);
 
-  // Initial load: Morning Nudge check (between 8:00 AM and 2:00 PM once daily) or fallback to startup focus
+  // Startup prompts: the Evening Wrap-up (05:00+, reviews yesterday) takes
+  // precedence over the Morning Nudge (08:00–14:00), which is offered once the
+  // wrap-up is dismissed.
+  const isMorningNudgeDue = useCallback(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const seen = localStorage.getItem(`morning_nudge_seen_${isoDate(now)}`) === 'true';
+    return morningNudgeEnabled && hour >= 8 && hour < 14 && !seen;
+  }, [morningNudgeEnabled]);
+
   const initialStartupFocusDoneRef = useRef(false);
   useEffect(() => {
     if (!isDataLoaded || initialStartupFocusDoneRef.current) return;
     initialStartupFocusDoneRef.current = true;
 
     const now = new Date();
-    const todayStr = isoDate(now);
-    const curHour = now.getHours();
+    const reviewedKey = getWrapUpDayKey(now);
+    const reviewedDay = findDayDataAcrossWeeks(reviewedKey, currentUser?.uid ?? null, weekData);
+    const alreadySeen = localStorage.getItem(getWrapUpSeenKey(reviewedKey)) === 'true';
 
-    // Check Morning Nudge eligibility: enabled, between 8 AM and 2 PM, and not seen today
-    const seenKey = `morning_nudge_seen_${todayStr}`;
-    const alreadySeen = localStorage.getItem(seenKey) === 'true';
+    if (
+      shouldOfferEveningWrapUp({
+        enabled: eveningWrapUpEnabled,
+        now,
+        hasData: hasLoggedHours(reviewedDay),
+        alreadySeen
+      })
+    ) {
+      setWrapUpDayKey(reviewedKey);
+      setWrapUpDay(reviewedDay);
+      setEveningWrapUpOpen(true);
+      return;
+    }
 
-    if (morningNudgeEnabled && curHour >= 8 && curHour < 14 && !alreadySeen) {
+    if (isMorningNudgeDue()) {
       setMorningNudgeOpen(true);
     } else {
       delegateStartupFocus();
     }
-  }, [isDataLoaded, morningNudgeEnabled, delegateStartupFocus]);
+  }, [isDataLoaded, eveningWrapUpEnabled, isMorningNudgeDue, currentUser, weekData, delegateStartupFocus]);
+
+  const handleCloseEveningWrapUp = useCallback(() => {
+    setEveningWrapUpOpen(false);
+    if (wrapUpDayKey) {
+      localStorage.setItem(getWrapUpSeenKey(wrapUpDayKey), 'true');
+    }
+    if (isMorningNudgeDue()) {
+      setMorningNudgeOpen(true);
+    } else {
+      delegateStartupFocus();
+    }
+  }, [wrapUpDayKey, isMorningNudgeDue, delegateStartupFocus]);
+
+  // Yesterday (for the Morning Nudge) and the wrap-up summary, derived once per data change.
+  const yesterdayNudgeData = useMemo(
+    () => findDayDataAcrossWeeks(isoDate(addDays(new Date(), -1)), currentUser?.uid ?? null, weekData),
+    [weekData, currentUser]
+  );
+
+  const wrapUpSummary = useMemo(
+    () => (wrapUpDay ? buildWrapUpSummary(wrapUpDay, tagTargets, activeHoursKeys.length) : null),
+    [wrapUpDay, tagTargets, activeHoursKeys.length]
+  );
+
+  const wrapUpDayLabel = wrapUpDayKey
+    ? new Date(`${wrapUpDayKey}T00:00:00`).toLocaleDateString(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      })
+    : '';
 
   // Handlers for Hours List
   const handleChangeHour = (key: string, text: string, tag: TagCode, immediate = false) => {
@@ -1733,6 +1802,12 @@ export default function App() {
           localStorage.setItem('morningNudgeEnabled', en ? 'true' : 'false');
           syncPreferences(currentUser);
         }}
+        eveningWrapUpEnabled={eveningWrapUpEnabled}
+        onToggleEveningWrapUp={(en) => {
+          setEveningWrapUpEnabled(en);
+          localStorage.setItem('eveningWrapUpEnabled', en ? 'true' : 'false');
+          syncPreferences(currentUser);
+        }}
         tagTargets={tagTargets}
         onChangeTagTargets={(targets) => {
           setTagTargets(targets);
@@ -1860,6 +1935,7 @@ export default function App() {
               setShowPriorityMatrix(prefs.showPriorityMatrix ?? true);
               setShowTodoInbox(prefs.showTodoInbox ?? true);
               setMorningNudgeEnabled(prefs.morningNudgeEnabled ?? false);
+              setEveningWrapUpEnabled(prefs.eveningWrapUpEnabled ?? false);
               // Reload current week from the restored localStorage
               loadWeekData(weekStart, currentUser);
             },
@@ -1936,6 +2012,16 @@ export default function App() {
         lang={lang}
       />
 
+      {/* Evening Wrap-up — light review of the day that ended (offered from 05:00) */}
+      <EveningWrapUpModal
+        isOpen={eveningWrapUpOpen}
+        dayLabel={wrapUpDayLabel}
+        summary={wrapUpSummary}
+        lang={lang}
+        onClose={handleCloseEveningWrapUp}
+        onViewDay={wrapUpDayKey ? () => handleNavigateToDate(wrapUpDayKey) : undefined}
+      />
+
       {/* Morning Nudge Mindful Dialog */}
       <MorningNudgeModal
         isOpen={morningNudgeOpen}
@@ -1945,54 +2031,7 @@ export default function App() {
           localStorage.setItem(`morning_nudge_seen_${todayStr}`, 'true');
           delegateStartupFocus();
         }}
-        yesterdayData={(() => {
-          const yDate = addDays(new Date(), -1);
-          const yStr = isoDate(yDate);
-
-          // 1. If yesterday exists in currently loaded week and has logged hours, use it directly
-          const currentWeekEntry = weekData.days[yStr];
-          if (currentWeekEntry) {
-            const hasHours = Object.values(currentWeekEntry.hours || {}).some(
-              (h) => h && h.text && h.text.trim() !== ''
-            );
-            if (hasHours) return currentWeekEntry;
-          }
-
-          // 2. If at a week boundary (e.g. today is first day of week), check previous week in localStorage
-          try {
-            const yMonday = isoDate(mondayOf(yDate));
-            const userPrefix = currentUser ? currentUser.uid : 'guest';
-            const targetKey = `time_log_week_${userPrefix}_${yMonday}`;
-            const fallbackKey = `time_log_week_guest_${yMonday}`;
-            const raw = localStorage.getItem(targetKey) || localStorage.getItem(fallbackKey);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (parsed?.days?.[yStr]) {
-                return parsed.days[yStr];
-              }
-            }
-
-            // 3. Scan any cached time_log_week_ documents for yesterday
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i);
-              if (k && k.startsWith('time_log_week_')) {
-                const itemRaw = localStorage.getItem(k);
-                if (itemRaw) {
-                  const itemParsed = JSON.parse(itemRaw);
-                  if (itemParsed?.days?.[yStr]) {
-                    const entry = itemParsed.days[yStr];
-                    const hasLogged = Object.values(entry.hours || {}).some(
-                      (h: any) => h && h.text && h.text.trim() !== ''
-                    );
-                    if (hasLogged) return entry;
-                  }
-                }
-              }
-            }
-          } catch { }
-
-          return currentWeekEntry || null;
-        })()}
+        yesterdayData={yesterdayNudgeData}
         tagTargets={tagTargets}
         lang={lang}
       />

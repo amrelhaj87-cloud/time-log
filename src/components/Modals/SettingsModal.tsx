@@ -63,6 +63,8 @@ interface SettingsModalProps {
   onToggleAllPlanningSuite?: (enabled: boolean) => void;
   morningNudgeEnabled?: boolean;
   onToggleMorningNudge?: (enabled: boolean) => void;
+  eveningWrapUpEnabled?: boolean;
+  onToggleEveningWrapUp?: (enabled: boolean) => void;
   tagTargets?: TagTargets;
   onChangeTagTargets?: (targets: TagTargets) => void;
   isCalSyncConnected: boolean;
@@ -116,6 +118,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleAllPlanningSuite,
   morningNudgeEnabled = false,
   onToggleMorningNudge,
+  eveningWrapUpEnabled = false,
+  onToggleEveningWrapUp,
   tagTargets = DEFAULT_TAG_TARGETS,
   onChangeTagTargets,
   isCalSyncConnected,
@@ -523,6 +527,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className="sr-only peer"
                   checked={morningNudgeEnabled}
                   onChange={(e) => onToggleMorningNudge?.(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            {/* Evening Wrap-up Toggle */}
+            <div className="bg-[var(--bg)] border border-[var(--line)] rounded-xl p-3.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                  <Moon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-[var(--ink)] block">
+                    {lang === 'ar' ? 'حصاد المساء (مراجعة اليوم المنتهي)' : 'Evening Wrap-up (Yesterday Review)'}
+                  </h4>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {eveningWrapUpEnabled
+                      ? (lang === 'ar' ? 'مفعل (يظهر من 5 صباحاً مرة لكل يوم)' : 'Active (from 5 AM, once per day)')
+                      : (lang === 'ar' ? 'معطل' : 'Disabled')}
+                  </span>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={eveningWrapUpEnabled}
+                  onChange={(e) => onToggleEveningWrapUp?.(e.target.checked)}
                 />
                 <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
