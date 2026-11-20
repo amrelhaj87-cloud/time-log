@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="main-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA Integrated Recovery Suite: Goals Pages & Time Recording</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .lang-en { font-family: 'Inter', sans-serif; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            height: 260px;
+            margin: auto;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="leading-relaxed text-slate-800 text-sm antialiased">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white">
+        <nav class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <span class="text-2xl">🌱</span>
+                <div>
+                    <h1 class="font-extrabold text-base md:text-lg text-amber-400 leading-tight" id="nav-title">
+                        زمالة قليلي الكسب (UA) | المنظومة التكاملية للتعافي
+                    </h1>
+                    <p class="text-[11px] text-slate-400 hidden sm:block" id="nav-sub">
+                        Top-Down Strategy & Bottom-Up Time Audit
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Navigation & Language Toggle -->
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="hidden lg:flex space-x-4 space-x-reverse text-xs font-semibold text-slate-300">
+                    <a href="#synergy" class="hover:text-amber-400 transition" id="menu-synergy">العلاقة التكاملية</a>
+                    <a href="#goals-pages" class="hover:text-amber-400 transition" id="menu-goals">أوراق الأهداف</a>
+                    <a href="#time-recording" class="hover:text-amber-400 transition" id="menu-time">تسجيل الوقت</a>
+                    <a href="#app-features" class="hover:text-amber-400 transition text-indigo-300 font-bold" id="menu-features">أدوات التطبيق</a>
+                    <a href="#matrix" class="hover:text-amber-400 transition" id="menu-matrix">مصفوفة الأعراض</a>
+                    <a href="#calculator" class="hover:text-amber-400 transition" id="menu-calc">حاسبة التوافق</a>
+                </div>
+
+                <a href="/" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5" id="nav-app-btn">
+                    <span>⏱️</span>
+                    <span id="nav-app-text">فتح تطبيق سجل الوقت</span>
+                </a>
+
+                <button onclick="toggleLanguage()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition shadow-sm flex items-center gap-1.5">
+                    <span>🌐</span>
+                    <span id="lang-btn-text">English</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-10 px-4 border-b border-slate-800">
+        <div class="max-w-5xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 mb-3 text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-500/30 rounded-full">
+                <span>🔄</span>
+                <span id="hero-badge">التكامل السلوكي بين الأداة الاستراتيجية والأداة التكتيكية</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-3 leading-tight" id="hero-title">
+                من الرؤية إلى الواقع: التوافق بين أوراق الأهداف وتسجيل الوقت
+            </h2>
+            <p class="text-xs md:text-sm text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6" id="hero-desc">
+                تُقدم **أوراق الأهداف (Goals Pages)** البوصلة الاستراتيجية والرؤية (Top-Down)، بينما تمنحك أداة **تسجيل الوقت (Time Recording)** الحقيقة الميدانية والمرآة الرقمية (Bottom-Up Audit). تم توحيد التاقات الخمسة الرئيسية (E, V, R, S, SC) لضمان الربط الكامل بين ما تخططه وما تنفذه فعلياً.
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-right dir-rtl max-w-3xl mx-auto" id="hero-cards-container">
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 shadow-md">
+                    <div class="flex items-center gap-2 text-amber-400 font-bold text-sm mb-1">
+                        <span>📄</span>
+                        <span id="hero-card1-title">أوراق الأهداف (Goals Pages)</span>
+                    </div>
+                    <p class="text-xs text-slate-300" id="hero-card1-desc">
+                        **البوصلة والرؤية (Top-Down):** تحدد الرؤية (Vision)، وتفككها إلى أهداف (Goals)، وتصيغها في إجراءات صغرى (Action Items) من 15-30 دقيقة ضمن الفئات الـ5 (E, V, R, S, SC).
+                    </p>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 shadow-md">
+                    <div class="flex items-center gap-2 text-orange-400 font-bold text-sm mb-1">
+                        <span>⏱️</span>
+                        <span id="hero-card2-title">تسجيل الوقت (Time Recording)</span>
+                    </div>
+                    <p class="text-xs text-slate-300" id="hero-card2-desc">
+                        **المرآة والحقيقة (Bottom-Up):** توثق الـ 24 ساعة بدقة لحظية باستخدام نفس رموز الفئات الـ5 (E, V, R, S, SC)، لكشف الغموض الزمني (Time Vagueness) ومقايسة الالتزام.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Synergy Engine & Feedback Loop Section -->
+    <section id="synergy" class="py-10 px-4 max-w-7xl mx-auto">
+        <div class="text-center mb-6">
+            <h3 class="text-xl md:text-2xl font-bold text-slate-900" id="syn-heading">حلقة التغذية الراجعة بين الأداتين (The Feedback Loop)</h3>
+            <p class="text-xs md:text-sm text-slate-600 mt-1" id="syn-sub">اضغط على أي مرحلة لاستكشاف تدفق الطاقة والبيانات بين أوراق الأهداف وتسجيل الوقت.</p>
+        </div>
+
+        <!-- Dynamic Synergy Flow Selector -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4" id="synergy-steps-container">
+            <!-- Injected via JavaScript -->
+        </div>
+
+        <!-- Active Step Details Card -->
+        <div id="synergy-detail-box" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 font-mono" id="syn-code">STEP 1</span>
+                <span class="text-xs text-slate-400" id="syn-status">تفاعل حي لمسار التعافي</span>
+            </div>
+            <h4 id="syn-title" class="text-base md:text-lg font-bold text-slate-900 mb-2"></h4>
+            <p id="syn-desc" class="text-xs md:text-sm text-slate-700 leading-relaxed mb-4"></p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="syn-extra">
+                <!-- Additional Insights Injected via JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Tool #1: Goals Pages Module -->
+    <section id="goals-pages" class="py-10 px-4 bg-white border-y border-slate-200">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <div class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full mb-1">
+                        <span>📄</span> <span id="gp-badge">الأداة الأولى (Tool #1)</span>
+                    </div>
+                    <h3 class="text-xl md:text-2xl font-bold text-slate-900" id="gp-title">أوراق الأهداف (Goals Pages): صياغة الرؤية والإجراءات</h3>
+                    <p class="text-xs text-slate-500 mt-0.5" id="gp-sub">تحديد الرؤية والأهداف والإجراءات الصغرى (Action Items) مقسمة عبر التاقات الـ5 الموحدة.</p>
+                </div>
+
+                <!-- Goals Pages Harmonized Category Tabs (5 Tabs) -->
+                <div class="flex flex-wrap gap-1.5" id="gp-tabs-container">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- Dynamic Goals Sector Content -->
+            <div id="gp-sector-content" class="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Tool #2: Time Recording Module -->
+    <section id="time-recording" class="py-10 px-4 max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-200 pb-4">
+            <div>
+                <div class="inline-flex items-center gap-1.5 text-xs font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full mb-1">
+                    <span>⏱️</span> <span id="tr-badge">الأداة الثانية (Tool #2)</span>
+                </div>
+                <h3 class="text-xl md:text-2xl font-bold text-slate-900" id="tr-title">أداة تسجيل الوقت (Time Recording Tool): قياس الواقع الميداني</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="tr-sub">تتبع الـ 24 ساعة بدقة لحظية عبر نفس التاقات الـ5 لتفريغ الضبابية وتحديد الأفعال الواقعية.</p>
+            </div>
+
+            <!-- Time Categories Switcher (5 Tabs) -->
+            <div class="flex flex-wrap gap-1.5" id="tr-categories-container">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Dynamic Category Details Display with 8+ Examples -->
+        <div id="tr-category-detail" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-fade-in mb-6">
+            <!-- Injected via JavaScript -->
+        </div>
+    </section>
+
+    <!-- Section: Modern Tools in Time Log App -->
+    <section id="app-features" class="py-10 px-4 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 text-white border-t border-indigo-900/40">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 mb-2 text-xs font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-500/30 rounded-full">
+                    <span>⚡</span>
+                    <span id="feat-badge">التحسينات البرمجية الداعمة للفلسفة</span>
+                </div>
+                <h3 class="text-xl md:text-2xl font-black text-white" id="feat-title">أدوات التطبيق الرقمية: تحويل الفلسفة إلى واقع يومي سلس</h3>
+                <p class="text-xs md:text-sm text-slate-300 max-w-3xl mx-auto leading-relaxed mt-1" id="feat-sub">
+                    تم تطوير تطبيق Time Log ليجسد هذه المنظومة بأعلى درجات السلاسة والأمان، عبر أدوات ذكية تراعي نفسية التعافي:
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <!-- Card 1: Smart Pomodoro -->
+                <div class="bg-slate-800/80 p-5 rounded-2xl border border-indigo-500/20 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl mb-3">
+                            🎯
+                        </div>
+                        <h4 class="font-bold text-sm text-white mb-1.5" id="feat-card1-title">مؤقت بومودورو وتقسيم ذكي (15 دقيقة)</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed" id="feat-card1-desc">
+                            تنفيذ مباشر للإجراءات الصغرى (Action Items) مع توزيع ذكي للجلسات التي تمتد بين ساعتين لبلوكات ١٥ دقيقة، وخيار إلغاء الجلسات المنسية دون تدوين.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-700/60 text-[11px] font-mono text-indigo-300 flex items-center gap-1">
+                        <span>✓</span>
+                        <span id="feat-card1-tag">تنفيذ الإجراءات الصغرى دون تسويف</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Global Search & Audit -->
+                <div class="bg-slate-800/80 p-5 rounded-2xl border border-indigo-500/20 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl mb-3">
+                            🔍
+                        </div>
+                        <h4 class="font-bold text-sm text-white mb-1.5" id="feat-card2-title">البحث الشامل والمراجعة الذاتية (Audit)</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed" id="feat-card2-desc">
+                            محرك بحث فوري عبر كافة الأسابيع السابقة مع فلترة بالتاقات الخمسة وترتيب الأنشطة بالأكثر تكراراً (🔥 Most Frequent) لاكتشاف أنماط تشتت الوقت ومعالجتها.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-700/60 text-[11px] font-mono text-amber-300 flex items-center gap-1">
+                        <span>✓</span>
+                        <span id="feat-card2-tag">كشف الغموض الزمني بالأدلة الرقمية</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Cloud Sync & Backup -->
+                <div class="bg-slate-800/80 p-5 rounded-2xl border border-indigo-500/20 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl mb-3">
+                            ☁️
+                        </div>
+                        <h4 class="font-bold text-sm text-white mb-1.5" id="feat-card3-title">مزامنة سحابية ونسخ احتياطي كامل</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed" id="feat-card3-desc">
+                            حفظ أوتوماتيكي ومزامنة عبر أجهزتك مع إمكانية تصدير واستيراد ملف JSON شامل لكافة أسابيعك ومهامك بضغطة زر لضمان عدم ضياع أي دقيقة مسجلة.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-700/60 text-[11px] font-mono text-emerald-300 flex items-center gap-1">
+                        <span>✓</span>
+                        <span id="feat-card3-tag">أمان واستمرارية وموثوقية تامة</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call to action bar -->
+            <div class="mt-8 p-4 bg-indigo-900/40 border border-indigo-500/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-center sm:text-start">
+                    <h5 class="text-sm font-bold text-white" id="cta-heading">جاهز لتسجيل وتتبع يومك الآن؟</h5>
+                    <p class="text-xs text-indigo-200 mt-0.5" id="cta-sub">افتح التطبيق وابدأ في تدوين ساعاتك وتطبيق الفلسفة مباشرة.</p>
+                </div>
+                <a href="/" class="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs rounded-xl shadow-md transition transform hover:scale-105 flex items-center gap-2 whitespace-nowrap">
+                    <span>⏱️</span>
+                    <span id="cta-btn">فتح تطبيق Time Log</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Symptoms & Synergy Matrix -->
+    <section id="matrix" class="py-10 px-4 bg-slate-900 text-white border-t border-slate-800">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-6">
+                <h3 class="text-xl md:text-2xl font-bold text-white" id="matrix-title">مصفوفة معالجة أعراض نقص الكسب (Symptoms vs. Tools Matrix)</h3>
+                <p class="text-xs text-slate-400 mt-1" id="matrix-sub">كيف تتضافر أوراق الأهداف وتسجيل الوقت لعلاج انحرافات التعافي المالية والمهنية.</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-300 border-b border-slate-700">
+                            <th class="p-3 font-bold" id="th-symptom">العرض المرضي (UA Symptom)</th>
+                            <th class="p-3 font-bold text-amber-400" id="th-goals">دور أوراق الأهداف (Goals Pages)</th>
+                            <th class="p-3 font-bold text-orange-400" id="th-time">دور تسجيل الوقت (Time Recording)</th>
+                            <th class="p-3 font-bold text-emerald-400" id="th-synergy">النتيجة التآزرية (Synergistic Outcome)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-table-body" class="divide-y divide-slate-800">
+                        <!-- Injected via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Interactive Balance & Alignment Calculator -->
+    <section id="calculator" class="py-10 px-4 max-w-7xl mx-auto">
+        <div class="text-center mb-6">
+            <h3 class="text-xl md:text-2xl font-bold text-slate-900" id="calc-title">حاسبة التوافق بين النية والواقع (Intent vs. Reality Alignment)</h3>
+            <p class="text-xs text-slate-600 mt-1" id="calc-sub">قارن بين توزيع الساعات المستهدف في أوراق أهدافك وبين الساعات المسجلة فعلياً في جدول تسجيل الوقت.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <!-- Inputs Panel -->
+            <div class="lg:col-span-6 space-y-3.5">
+                <h4 class="font-bold text-xs md:text-sm text-slate-800 border-b border-slate-100 pb-2" id="calc-input-heading">
+                    أدخل الساعات الأسبوعية المسجلة فعلياً لكل تاق (Weekly Hours Logged):
+                </h4>
+
+                <div class="space-y-2.5">
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span id="lbl-e">الكسب (Earning - E):</span>
+                            <span id="val-e" class="text-amber-600 font-mono font-bold">25 ساعة</span>
+                        </div>
+                        <input type="range" min="0" max="60" value="25" class="w-full accent-amber-600" id="range-e" oninput="updateCalculator()">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span id="lbl-v">الرؤية (Vision - V):</span>
+                            <span id="val-v" class="text-blue-600 font-mono font-bold">10 ساعات</span>
+                        </div>
+                        <input type="range" min="0" max="40" value="10" class="w-full accent-blue-600" id="range-v" oninput="updateCalculator()">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span id="lbl-r">الترويح والتعافي (Recreation - R):</span>
+                            <span id="val-r" class="text-emerald-600 font-mono font-bold">15 ساعة</span>
+                        </div>
+                        <input type="range" min="0" max="40" value="15" class="w-full accent-emerald-600" id="range-r" oninput="updateCalculator()">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span id="lbl-s">الخدمة (Service - S):</span>
+                            <span id="val-s" class="text-purple-600 font-mono font-bold">8 ساعات</span>
+                        </div>
+                        <input type="range" min="0" max="30" value="8" class="w-full accent-purple-600" id="range-s" oninput="updateCalculator()">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span id="lbl-sc">العناية بالذات (Self-Care - SC):</span>
+                            <span id="val-sc" class="text-slate-600 font-mono font-bold">56 ساعة</span>
+                        </div>
+                        <input type="range" min="20" max="80" value="56" class="w-full accent-slate-600" id="range-sc" oninput="updateCalculator()">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed font-medium" id="calc-feedback">
+                    <!-- Dynamic Feedback Injected -->
+                </div>
+            </div>
+
+            <!-- Chart Display Panel -->
+            <div class="lg:col-span-6 flex flex-col items-center justify-center">
+                <h4 class="font-bold text-xs text-slate-500 mb-2" id="calc-chart-heading">توزيع الطاقة الفعلي مقابل التوازن المطلوب</h4>
+                <div class="chart-container">
+                    <canvas id="alignmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-400 py-6 px-4 text-center text-xs border-t border-slate-800">
+        <p class="font-bold text-slate-200 mb-1" id="footer-title">
+            دليل المنظومة التكاملية الموحدة | Underearners Anonymous (UA) Integrated Suite
+        </p>
+        <p class="text-slate-500 max-w-2xl mx-auto" id="footer-sub">
+            أوراق الأهداف توجهك، وتسجيل الوقت يحميك، والشريك يدعمك. تم تصميم هذا الدليل التفاعلي لمساندة التعافي المالي والمهني الشامل.
+        </p>
+    </footer>
+
+    <script>
+        let currentLang = 'ar';
+        let activeSynergyStep = 0;
+        let activeGpCategory = 'e';
+        let activeTrCategory = 'e';
+        let chartInstance = null;
+
+        const uiTranslations = {
+            ar: {
+                "nav-title": "زمالة قليلي الكسب (UA) | المنظومة التكاملية للتعافي",
+                "nav-sub": "Top-Down Strategy & Bottom-Up Time Audit",
+                "menu-synergy": "العلاقة التكاملية",
+                "menu-goals": "أوراق الأهداف",
+                "menu-time": "تسجيل الوقت",
+                "menu-matrix": "مصفوفة الأعراض",
+                "menu-calc": "حاسبة التوافق",
+                "lang-btn-text": "English",
+                "hero-badge": "التكامل السلوكي بين الأداة الاستراتيجية والأداة التكتيكية",
+                "hero-title": "من الرؤية إلى الواقع: التوافق بين أوراق الأهداف وتسجيل الوقت",
+                "hero-desc": "تُقدم أوراق الأهداف (Goals Pages) البوصلة الاستراتيجية والرؤية (Top-Down)، بينما تمنحك أداة تسجيل الوقت (Time Recording) الحقيقة الميدانية والمرآة الرقمية (Bottom-Up Audit). تم توحيد التاقات الخمسة الرئيسية (E, V, R, S, SC) لضمان الربط الكامل بين ما تخططه وما تنفذه فعلياً.",
+                "hero-card1-title": "أوراق الأهداف (Goals Pages)",
+                "hero-card1-desc": "البوصلة والرؤية (Top-Down): تحدد الرؤية (Vision)، وتفككها إلى أهداف (Goals)، وتصيغها في إجراءات صغرى (Action Items) من 15-30 دقيقة ضمن الفئات الـ5 (E, V, R, S, SC).",
+                "hero-card2-title": "تسجيل الوقت (Time Recording)",
+                "hero-card2-desc": "المرآة والحقيقة (Bottom-Up): توثق الـ 24 ساعة بدقة لحظية باستخدام نفس رموز الفئات الـ5 (E, V, R, S, SC)، لكشف الغموض الزمني (Time Vagueness) ومقايسة الالتزام.",
+                "syn-heading": "حلقة التغذية الراجعة بين الأداتين (The Feedback Loop)",
+                "syn-sub": "اضغط على أي مرحلة لاستكشاف تدفق الطاقة والبيانات بين أوراق الأهداف وتسجيل الوقت.",
+                "syn-status": "تفاعل حي لمسار التعافي",
+                "gp-badge": "الأداة الأولى (Tool #1)",
+                "gp-title": "أوراق الأهداف (Goals Pages): صياغة الرؤية والإجراءات",
+                "gp-sub": "تحديد الرؤية والأهداف والإجراءات الصغرى (Action Items) مقسمة عبر التاقات الـ5 الموحدة.",
+                "tr-badge": "الأداة الثانية (Tool #2)",
+                "tr-title": "أداة تسجيل الوقت (Time Recording Tool): قياس الواقع الميداني",
+                "tr-sub": "تتبع الـ 24 ساعة بدقة لحظية عبر نفس التاقات الـ5 لتفريغ الضبابية وتحديد الأفعال الواقعية.",
+                "matrix-title": "مصفوفة معالجة أعراض نقص الكسب (Symptoms vs. Tools Matrix)",
+                "matrix-sub": "كيف تتضافر أوراق الأهداف وتسجيل الوقت لعلاج انحرافات التعافي المالية والمهنية.",
+                "th-symptom": "العرض المرضي (UA Symptom)",
+                "th-goals": "دور أوراق الأهداف (Goals Pages)",
+                "th-time": "دور تسجيل الوقت (Time Recording)",
+                "th-synergy": "النتيجة التآزرية (Synergistic Outcome)",
+                "calc-title": "حاسبة التوافق بين النية والواقع (Intent vs. Reality Alignment)",
+                "calc-sub": "قارن بين توزيع الساعات المستهدف في أوراق أهدافك وبين الساعات المسجلة فعلياً في جدول تسجيل الوقت.",
+                "calc-input-heading": "أدخل الساعات الأسبوعية المسجلة فعلياً لكل تاق (Weekly Hours Logged):",
+                "lbl-e": "الكسب (Earning - E):",
+                "lbl-v": "الرؤية (Vision - V):",
+                "lbl-r": "الترويح والتعافي (Recreation - R):",
+                "lbl-s": "الخدمة (Service - S):",
+                "lbl-sc": "العناية بالذات (Self-Care - SC):",
+                "calc-chart-heading": "توزيع الطاقة الفعلي مقابل التوازن المطلوب",
+                "footer-title": "دليل المنظومة التكاملية الموحدة | Underearners Anonymous (UA) Integrated Suite",
+                "footer-sub": "أوراق الأهداف توجهك، وتسجيل الوقت يحميك، والشريك يدعمك. تم تصميم هذا الدليل التفاعلي لمساندة التعافي المالي والمهني الشامل."
+            },
+            en: {
+                "nav-title": "Underearners Anonymous (UA) | Integrated Recovery Suite",
+                "nav-sub": "Top-Down Strategy & Bottom-Up Time Audit",
+                "menu-synergy": "Feedback Loop",
+                "menu-goals": "Goals Pages",
+                "menu-time": "Time Recording",
+                "menu-matrix": "Symptoms Matrix",
+                "menu-calc": "Alignment Calculator",
+                "lang-btn-text": "العربية",
+                "hero-badge": "Behavioral Integration of Strategic & Tactical Tools",
+                "hero-title": "From Vision to Reality: Goals Pages & Time Recording Synergy",
+                "hero-desc": "Goals Pages provide the strategic Compass & Vision (Top-Down), while Time Recording provides the ground reality Mirror (Bottom-Up Audit). The 5 unified tags (E, V, R, S, SC) ensure complete alignment between intentions and actual execution.",
+                "hero-card1-title": "Goals Pages (Tool #1)",
+                "hero-card1-desc": "Top-Down Strategy: Formulates written Vision, breaks it into concrete Goals, and crafts 15-30 min Action Items across the 5 categories (E, V, R, S, SC).",
+                "hero-card2-title": "Time Recording (Tool #2)",
+                "hero-card2-desc": "Bottom-Up Audit: Logs the 24 hours real-time using identical 5 tag codes (E, V, R, S, SC), eliminating Time Vagueness and verifying actual commitment.",
+                "syn-heading": "The Feedback Loop Between Both Tools",
+                "syn-sub": "Click any phase below to explore energy & data flow between Goals Pages and Time Recording.",
+                "syn-status": "Live Recovery Dynamic Interaction",
+                "gp-badge": "Tool #1",
+                "gp-title": "Goals Pages: Strategic Vision & Micro-Action Items",
+                "gp-sub": "Defines Vision, Goals, and 15-30 min Action Items across the 5 unified tags.",
+                "tr-badge": "Tool #2",
+                "tr-title": "Time Recording Tool: Measuring Ground Reality",
+                "tr-sub": "Real-time 24-hour tracking using identical 5 tags to eliminate time vagueness.",
+                "matrix-title": "Symptoms vs. Tools Treatment Matrix",
+                "matrix-sub": "How Goals Pages and Time Recording unite to cure financial and professional underearning.",
+                "th-symptom": "UA Symptom",
+                "th-goals": "Goals Pages Role (Top-Down)",
+                "th-time": "Time Recording Role (Bottom-Up)",
+                "th-synergy": "Synergistic Recovery Outcome",
+                "calc-title": "Intent vs. Reality Alignment Calculator",
+                "calc-sub": "Compare intended hourly allocation in Goals Pages against actual logged hours in Time Recording.",
+                "calc-input-heading": "Enter Actual Weekly Hours Logged Per Tag:",
+                "lbl-e": "Earning (E):",
+                "lbl-v": "Vision (V):",
+                "lbl-r": "Recreation (R):",
+                "lbl-s": "Service (S):",
+                "lbl-sc": "Self-Care (SC):",
+                "calc-chart-heading": "Actual Energy Distribution vs. Targeted Balance",
+                "footer-title": "Integrated Recovery Suite | Underearners Anonymous (UA)",
+                "footer-sub": "Goals Pages guide you, Time Recording protects you, Action Partners support you."
+            }
+        };
+
+        const synergyData = {
+            ar: [
+                {
+                    code: "مرحلة 1",
+                    title: "1. صياغة النية في أوراق الأهداف (Top-Down Intent)",
+                    desc: "تبدأ العملية بصياغة كشوف الأهداف ورؤيتك المستقبلية بوضوح. تُفكك الأهداف الكبرى إلى أفعال صغرى محددة بوقت (15-30 دقيقة) ومصنفة ضمن الفئات الخمس الموحدة (E, V, R, S, SC).",
+                    insights: [
+                        "تحديد النية الواعية والاتجاه الإستراتيجي قبل البدء.",
+                        "تقسيم الرؤية العائمة إلى خطوات إجرائية حاسمة ومحددة."
+                    ]
+                },
+                {
+                    code: "مرحلة 2",
+                    title: "2. التوثيق الميداني في سجل الوقت (Bottom-Up Audit)",
+                    desc: "خلال اليوم، تقوم بتتبع وتسجيل الـ 24 ساعة بدقة لحظية باستخدام نفس رموز التاقات الـ 5. ينشئ ذلك مرآة رقمية تحميك من الغموض الزمني والمغالطة التقديرية.",
+                    insights: [
+                        "رصد الواقع الفعلي بدون تزييف أو تبرير نفساني.",
+                        "تفريغ الضبابية الذهنية حول أين تذهب الساعات يومياً."
+                    ]
+                },
+                {
+                    code: "مرحلة 3",
+                    title: "3. المقايسة ومقارنة النية بالواقع (Gap Analysis)",
+                    desc: "في نهاية الأسبوع، تقارن الساعات المسجلة فعلياً في جدول تسجيل الوقت مع النوايا المسجلة في أوراق الأهداف. تكشف هذه الخطوة الفجوة بين ما نويت فعله وما نفذته حقاً.",
+                    insights: [
+                        "كشف أنماط المماطلة أو الانشغال الوهمي غير المنتِج.",
+                        "التعرف المبكر على مناطق الاحتراق المهني أو إهمال النفس."
+                    ]
+                },
+                {
+                    code: "مرحلة 4",
+                    title: "4. المعايرة والضبط الأسبوعي (Strategic Calibration)",
+                    desc: "بناءً على نتائج المقايسة، تعيد صياغة أوراق الأهداف للأسبوع القادم، وتناقش التحديات مع شريك الإنجاز (Action Partner) لإغلاق الفجوة وتعديل السلوك التدريجي.",
+                    insights: [
+                        "تعديل خطط العمل لتكون أكثر واقعية واستدامة.",
+                        "تعزيز المساءلة الإيجابية والدعم مع شريك التعافي."
+                    ]
+                }
+            ],
+            en: [
+                {
+                    code: "STEP 1",
+                    title: "1. Vision & Goals Drafting (Top-Down Intent)",
+                    desc: "The cycle begins by articulating your vision on Goals Pages. Major goals are broken into small 15-30 min action items categorized under the 5 unified tags (E, V, R, S, SC).",
+                    insights: [
+                        "Establishing conscious intent and strategic focus.",
+                        "Deconstructing abstract vision into actionable micro-steps."
+                    ]
+                },
+                {
+                    code: "STEP 2",
+                    title: "2. Real-Time Time Audit (Bottom-Up Audit)",
+                    desc: "Throughout the day, log all 24 hours in real time using identical 5 tag codes. This provides an objective mirror, removing time vagueness and memory bias.",
+                    insights: [
+                        "Logging actual ground reality without distortion.",
+                        "Eliminating mental fog regarding daily time usage."
+                    ]
+                },
+                {
+                    code: "STEP 3",
+                    title: "3. Gap Analysis (Intent vs. Reality)",
+                    desc: "At week-end, compare actual logged hours in Time Recording against intended priorities on Goals Pages to identify discrepancies between intent and execution.",
+                    insights: [
+                        "Uncovering subtle avoidance or non-earning busywork.",
+                        "Spotting burnout risks or self-care neglect early."
+                    ]
+                },
+                {
+                    code: "STEP 4",
+                    title: "4. Strategic Calibration (Feedback Loop)",
+                    desc: "Use audit findings to calibrate next week's Goals Pages, reviewing adjustments with your Action Partner for incremental behavioral recovery.",
+                    insights: [
+                        "Adjusting action plans for realistic sustainability.",
+                        "Strengthening positive peer accountability."
+                    ]
+                }
+            ]
+        };
+
+        const harmonizedCategoriesData = {
+            ar: {
+                e: {
+                    code: "E",
+                    title: "الكسب (Earning)",
+                    desc: "تتبع وتخطيط الأنشطة المخصصة لتوليد الدخل المباشر، المبيعات، الفواتير، والخدمات المدفوعة.",
+                    visionEx: "«أنا أمتلك عملاً تجارياً مزدهراً يقدم قيمة عالية ويولد دخلاً مكرراً يغطي احتياجاتي وزيادة.»",
+                    goalsEx: "زيادة سعر الساعة بنسبة 20%، التواصل مع 5 عملاء جدد أسبوعياً، تحصيل كافة الفواتير المعلقة.",
+                    gpActions: [
+                        "إرسال فاتورة أو عرض سعر لعميل محتمل (15 دقيقة)",
+                        "إجراء مكالمة تسويق أو متابعة صفقة مفتوحة (15 دقيقة)",
+                        "تحديث قائمة الخدمات وتسعير الساعات (20 دقيقة)",
+                        "التواصل المباشر مع 3 عملاء مستهدفين جدد Prospecting (20 دقيقة)",
+                        "التفاوض على رفع أجر أو قيمة عقد قائم (15 دقيقة)",
+                        "تنفيذ وتسلّم مرحلة من مشروع مدفوع لعميل (30 دقيقة)",
+                        "تحصيل مستحقات مالية متأخرة وتتبع الديون AR (15 دقيقة)",
+                        "إطلاق حملة إعلانية أو ترويجية مباشرة لمبيعات قادمة (20 دقيقة)"
+                    ],
+                    trExamples: [
+                        "إجراء مكالمة مبيعات واستكشاف احتياجات عميل محتمل (Prospecting)",
+                        "إعداد وإرسال فاتورة ماليّة لخدمة مكتملة (Invoicing)",
+                        "تنفيذ ساعات العمل المدفوعة للعملاء (Billable Hours Execution)",
+                        "متابعة صفقات معلقة عبر البريد الإلكتروني (Follow-up Calls/Emails)",
+                        "التفاوض على شروط العقد المالي مع العميل (Contract Negotiation)",
+                        "تقديم عرض تقديمي للخدمات المتاحة أمام جهة شارية (Sales Presentation)",
+                        "تحديث ملف معرض الأعمال والأسعار المعتمدة (Pricing & Portfolio Update)",
+                        "متابعة تحصيل المبالغ المستحقة من العملاء (Collections & Follow-ups)"
+                    ]
+                },
+                v: {
+                    code: "V",
+                    title: "الرؤية (Vision)",
+                    desc: "تخصيص وقت محدد للتخطيط الاستراتيجي، بناء الأنظمة، قراءة الأدبيات، وتطوير المهارات المستقبلية.",
+                    visionEx: "«أنا أخطط لعملي بوضوح وحكمة استراتيجية، وأبني أنظمة أوتوماتيكية تضمن نموي المهني المستدام.»",
+                    goalsEx: "صياغة أوراق الأهداف أسبوعياً، تعلم مهارة عالية العائد، عقد اجتماعات تخطيط منتظمة.",
+                    gpActions: [
+                        "كتابة وتحديث بيان الرؤية وأوراق الأهداف (20 دقيقة)",
+                        "عقد اجتماع تخطيطي مع شريك العمل Action Partner (15 دقيقة)",
+                        "دراسة وتعلم مهارة عالية العائد لرفع أجر الساعة (30 دقيقة)",
+                        "إعداد ميزانية شهرية ودراسة التدفقات النقدية Cash Flow (20 دقيقة)",
+                        "تنظيم وتطوير أنظمة وأدوات العمل الداخلية (20 دقيقة)",
+                        "قراءة كتاب أو مقال استراتيجي في مجال التخصص (20 دقيقة)",
+                        "تحليل وتقييم أداء الأسبوع الماضي واستخراج الدروس (15 دقيقة)",
+                        "تحديد أولويات الأسبوع القادم وتصنيف المهام (15 دقيقة)"
+                    ],
+                    trExamples: [
+                        "صياغة وتنقيب أوراق الأهداف السنوية والشهرية (Drafting Goals Pages)",
+                        "جلسة تخطيط استراتيجي مع شريك العمل (Action Partner Session)",
+                        "حضور دورة تدريبية أو ورشة عمل لرفع المهارات (High-ROI Learning)",
+                        "مراجعة الميزانية المالية وتوقع الإيرادات (Budget & Cash Flow Review)",
+                        "توثيق وهيكلة إجراءات العمل الموحدة SOPs (Workflow Optimization)",
+                        "قراءة أبحاث واستراتيجيات السوق ذات الصلة (Strategic Market Research)",
+                        "تدقيق جدول الوقت ومقارنته بالأهداف (Weekly Time Audit)",
+                        "تحديد وترتيب قائمة أولويات العمل للأسبوع القادم (Priority Block Planning)"
+                    ]
+                },
+                r: {
+                    code: "R",
+                    title: "الترويح والتعافي (Recreation)",
+                    desc: "حضور اجتماعات UA، العمل على الخطوات 12، والهوايات والأنشطة الترفيهية المجددة للنشاط الذهني.",
+                    visionEx: "«حياتي متوازنة ومملوءة بالبهجة، أستمتع بالراحة الكافية والهوايات وتواصل التعافي دون شعور بالذنب.»",
+                    goalsEx: "حضور 3 اجتماعات UA أسبوعياً، العمل مع الموجه Sponsor، ممارسة هواية ممتعة دون مقابل.",
+                    gpActions: [
+                        "حضور اجتماع زمالة UA أسبوعي (60 دقيقة)",
+                        "التواصل الهاتفي مع الموجه Sponsor أو عضو بالزمالة (15 دقيقة)",
+                        "كتابة يوميات التعافي والامتنان المالي Solvency Journaling (15 دقيقة)",
+                        "المشي في الطبيعة بدون أجهزة إلكترونية Digital Detox (30 دقيقة)",
+                        "قراءة فصل من أدبيات الخطوات الاثنتي عشرة 12-Steps (15 دقيقة)",
+                        "ممارسة مهارة أو هواية إبداعية ممتعة غير مدفوعة (30 دقيقة)",
+                        "جلسة تأمل واسترخاء لتهدئة الجهاز العصبي (15 دقيقة)",
+                        "الاستماع إلى تسجيل أو كلمة تعافي من الزمالة UA Speaker Lead (20 دقيقة)"
+                    ],
+                    trExamples: [
+                        "المشاركة الأسبوعية في اجتماع زمالة UA (Attending UA Meeting)",
+                        "اتصال هاتف مخصص مع الموجه للعمل على الخطوات (Sponsor Call)",
+                        "كتابة وتدوين مشاعر التعافي والامتنان المالي (Solvency Journaling)",
+                        "المشي في الهواء الطلق وممارسة التنفس العميق (Outdoor Relaxation)",
+                        "قراءة الأدبيات الخاصة ببرنامج التعافي (12-Step Literature Reading)",
+                        "ممارسة رسم أو عزف أو كتابة حرة كـ هواية مجددة (Creative Restoration)",
+                        "جلسة تأمل ذهني وتأريض للنفس (Mindfulness Meditation)",
+                        "الاستماع لمشاركة عضو تعافي في سجلات الزمالة (UA Recovery Lead)"
+                    ]
+                },
+                s: {
+                    code: "S",
+                    title: "الخدمة (Service)",
+                    desc: "أداء مهام الخدمة المحددة بوقت في زمالة UA والمجتمع مع ضمان عدم طغيانها على وقت الكسب.",
+                    visionEx: "«أنا أشارك خبراتي بكرامة وسخاء في زمالة UA لمساندة الأعضاء الجدد ضمن حدود زمنية صحية.»",
+                    goalsEx: "أداء دور سكرتير الاجتماع، تقديم الدعم لعضو جديد أسبوعياً، تنظيم ورش عمل الزمالة.",
+                    gpActions: [
+                        "إجراء مكالمة دعم وتحفيز لعضو جديد بالزمالة Outreach (15 دقيقة)",
+                        "إدارة ورئاسة اجتماع زمالة UA محلي أو عبر الإنترنت (60 دقيقة)",
+                        "أداء مهام أمين صندوق الاجتماع وتتبع التبرعات (20 دقيقة)",
+                        "إعداد وتنسيق جدول القراءات والخدمات للاجتماع (15 دقيقة)",
+                        "المشاركة في اجتماع لجنة الخدمة الإقليمية للزمالة (40 دقيقة)",
+                        "تنظيم وتحديث موقع أو منصة التواصل الخاصة بالزمالة (20 دقيقة)",
+                        "إعداد ورشة عمل أو تقديم كلمة تجربة في اجتماع (30 دقيقة)",
+                        "تنظيف وتجهيز قاعة الاجتماع الحضوري (15 دقيقة)"
+                    ],
+                    trExamples: [
+                        "مكالمة تواصل مع عضو جديد لمساندته في الزمالة (Newcomer Outreach)",
+                        "إدارة ورئاسة جدول اجتماع الزمالة (Chairing UA Group Meeting)",
+                        "تدقيق وتسجيل تبرعات الجيل السابع لأمين الصندوق (Treasury Reporting)",
+                        "تجهيز وتنسيق ملفات القراءات والروابط للاجتماع (Meeting Format Setup)",
+                        "حضور اجتماع لجنة الخدمة العامة أو الإقليمية (Intergroup Service Committee)",
+                        "تحديث وقائم المواعيد على منصات الزمالة (Fellowship Tech Support)",
+                        "تقديم ورشة عمل تعليمية عن أدوات UA (UA Tools Workshop Host)",
+                        "إعداد وتجهيز القاعة لاستقبال الأعضاء (Physical / Virtual Setup)"
+                    ]
+                },
+                sc: {
+                    code: "SC",
+                    title: "العناية بالذات (Self-Care)",
+                    desc: "ضمان كفاية النوم، التغذية الصحية، والرياضة لحماية البنية الجسدية والنفسية ومنع الانهيار العصبي.",
+                    visionEx: "«جسدي وعقلي صحيان وقويان، أعتني بنفسي بحب وأحصل على القسط الكافي من النوم والراحة.»",
+                    goalsEx: "النوم المنتظم 7-8 ساعات، إعداد وجبات صحية منزلية، ممارسة الرياضة 3 مرات أسبوعياً.",
+                    gpActions: [
+                        "النوم المنتظم الهادئ لمدة 7-8 ساعات متواصلة (8 ساعات)",
+                        "إعداد وتحضير وجبة صحية متوازنة في المنزل (30 دقيقة)",
+                        "ممارسة تمارين رياضية أو إطالات بدنية (30 دقيقة)",
+                        "إجراء الفحوصات الطبية أو زيارة الطبيب الدوري (40 دقيقة)",
+                        "الاستحمام والعناية الجسدية والنظافة الشخصية (20 دقيقة)",
+                        "قضاء وقت عائلي غير مجدول ممتع مع الأحباء (40 دقيقة)",
+                        "شرب القدر الكافي من الماء وتنظيم السوائل (طوال اليوم)",
+                        "أخذ استراحة استرخاء قصيرة بين مهام العمل (15 دقيقة)"
+                    ],
+                    trExamples: [
+                        "ساعات النوم الليلية المنتظمة المجددة للطاقة (Restorative Night Sleep)",
+                        "طهي وإعداد وجبة صحية متوازنة (Healthy Cooking & Nutrition)",
+                        "أداء تمارين للجسم والمشي الرياضي (Physical Workout)",
+                        "حضور موعد الفحص الطبي الوقائي (Medical Doctor Appointment)",
+                        "جلسة عناية شخصية واستجمام بدني (Personal Self-Care Routine)",
+                        "قضاء وقت تواصل اجتماعي غير مجهد مع العائلة (Family Quality Time)",
+                        "جلسة تمارين إطالة وتنفس في منتصف اليوم (Mid-day Stretching Break)",
+                        "الاستراحة والتوقف الكامل بين نوبات العمل (Rest Micro-breaks)"
+                    ]
+                }
+            },
+            en: {
+                e: {
+                    code: "E",
+                    title: "Earning Category",
+                    desc: "Tracks and plans hours dedicated to direct income generation, sales, invoicing, and billable work.",
+                    visionEx: "“I own a thriving professional practice delivering high value and earning abundant recurring income.”",
+                    goalsEx: "Increase billable rates by 20%, prospect 5 new clients weekly, clear all pending invoices.",
+                    gpActions: [
+                        "Send pending client invoice or pricing proposal (15 mins)",
+                        "Conduct 1 sales outreach or follow-up call on open deal (15 mins)",
+                        "Update service rate sheet and hourly pricing (20 mins)",
+                        "Cold outreach or prospecting to 3 targeted clients (20 mins)",
+                        "Negotiate rate increase on an existing contract (15 mins)",
+                        "Deliver billable work / core paid project task (30 mins)",
+                        "Follow up on overdue accounts receivable & payments (15 mins)",
+                        "Launch a direct lead-generation or sales campaign (20 mins)"
+                    ],
+                    trExamples: [
+                        "Sales outreach and discovery call with a prospect (Prospecting)",
+                        "Preparing and issuing official billable client invoices (Invoicing)",
+                        "Executing billable client project hours (Paid Delivery)",
+                        "Following up on pending client proposals via email (Follow-up)",
+                        "Negotiating contract rates and compensation terms (Rate Negotiation)",
+                        "Delivering a formal sales proposal presentation (Sales Pitch)",
+                        "Updating official service rate sheet and portfolio (Rate Updating)",
+                        "Collecting overdue payments and managing AR (Collections Log)"
+                    ]
+                },
+                v: {
+                    code: "V",
+                    title: "Vision Category",
+                    desc: "Allocating dedicated time for strategic planning, system building, literature, and skill development.",
+                    visionEx: "“I plan my business with strategic clarity, building systems that ensure sustainable professional growth.”",
+                    goalsEx: "Draft weekly Goals Pages, learn a high-ROI skill, hold regular Action Partner sessions.",
+                    gpActions: [
+                        "Draft or update written Vision Statement & Goals Pages (20 mins)",
+                        "Hold weekly strategic check-in with Action Partner (15 mins)",
+                        "Study a high-ROI professional skill to boost hourly rate (30 mins)",
+                        "Review monthly budget & cash flow projections (20 mins)",
+                        "Optimize internal workflows, templates, or automation tools (20 mins)",
+                        "Read a chapter of an industry strategy book (20 mins)",
+                        "Perform weekly audit of logged hours vs goals (15 mins)",
+                        "Map out top 3 priority actions for the coming week (15 mins)"
+                    ],
+                    trExamples: [
+                        "Drafting and refining monthly and weekly Goals Pages (Goals Pages Writing)",
+                        "Action Partner strategic planning session (Action Partner Session)",
+                        "Attending a high-ROI professional development workshop (Skill Building)",
+                        "Reviewing business cash flow and financial projections (Budget Review)",
+                        "Documenting Standard Operating Procedures SOPs (Workflow Design)",
+                        "Reading industry strategy publications and market reports (Market Research)",
+                        "Auditing weekly time sheet against written goals (Weekly Time Audit)",
+                        "Prioritizing upcoming weekly action blocks (Priority Block Planning)"
+                    ]
+                },
+                r: {
+                    code: "R",
+                    title: "Recreation Category",
+                    desc: "Attending UA support meetings, 12-Step work, restorative hobbies, and mental renewal activities.",
+                    visionEx: "“My life is balanced and joyful; I enjoy restful breaks, creative hobbies, and recovery without guilt.”",
+                    goalsEx: "Attend 3 UA meetings weekly, work with Sponsor, practice an unbilled creative hobby.",
+                    gpActions: [
+                        "Attend a weekly Underearners Anonymous (UA) meeting (60 mins)",
+                        "Outbound check-in call with Sponsor or UA fellowship member (15 mins)",
+                        "Write solvency & gratitude journal entries (15 mins)",
+                        "Outdoor nature walk without digital devices (30 mins)",
+                        "Read a chapter of 12-Step recovery literature (15 mins)",
+                        "Engage in an unbilled creative hobby or artistic activity (30 mins)",
+                        "Mindful meditation & nervous system regulation (15 mins)",
+                        "Listen to a UA recovery speaker recording (20 mins)"
+                    ],
+                    trExamples: [
+                        "Attending weekly Underearners Anonymous meeting (UA Meeting)",
+                        "Dedicated step-work check-in call with Sponsor (Sponsor Call)",
+                        "Journaling solvency reflections and gratitude (Solvency Journaling)",
+                        "Outdoor walk in nature with digital disconnect (Outdoor Reset)",
+                        "Reading official 12-Step recovery literature (Recovery Reading)",
+                        "Unbilled artistic painting, music, or creative hobby (Creative Renewal)",
+                        "Mindfulness meditation and breathing exercises (Mindfulness Session)",
+                        "Listening to a UA recorded speaker presentation (UA Speaker Lead)"
+                    ]
+                },
+                s: {
+                    code: "S",
+                    title: "Service Category",
+                    desc: "Bounded service duties in UA fellowship and community ensuring volunteering doesn't crowd out earning.",
+                    visionEx: "“I share my experience generously in UA to support newcomers while maintaining firm time boundaries.”",
+                    goalsEx: "Serve as group secretary, conduct newcomer outreach, host UA educational workshops.",
+                    gpActions: [
+                        "Conduct newcomer outreach support call (15 mins)",
+                        "Chair or host a weekly UA group meeting (60 mins)",
+                        "Perform treasurer duties and track 7th tradition funds (20 mins)",
+                        "Prepare meeting format, readings, and speaker agenda (15 mins)",
+                        "Attend regional or intergroup service committee meeting (40 mins)",
+                        "Maintain fellowship group chat or website listings (20 mins)",
+                        "Prepare a presentation lead for a recovery workshop (30 mins)",
+                        "Set up physical meeting space or manage Zoom tech (15 mins)"
+                    ],
+                    trExamples: [
+                        "Outreach support call with a fellowship newcomer (Newcomer Outreach)",
+                        "Chairing and facilitating weekly UA group meeting (Meeting Chairing)",
+                        "Auditing 7th Tradition donations and group treasury (Treasury Reporting)",
+                        "Formatting meeting readings and Zoom links (Format Preparation)",
+                        "Attending regional intergroup service assembly (Intergroup Committee)",
+                        "Updating fellowship website and meeting directories (Tech Service)",
+                        "Hosting a UA tools educational workshop (Workshop Host)",
+                        "Setting up virtual or physical meeting space (Setup & Cleanup)"
+                    ]
+                },
+                sc: {
+                    code: "SC",
+                    title: "Self-Care Category",
+                    desc: "Logging sleep, nutrition, exercise, and wellness to protect physical health and prevent burnout cycles.",
+                    visionEx: "“My body and mind are healthy and vibrant; I treat myself with care and enjoy ample rest.”",
+                    goalsEx: "Maintain 7-8 hours sleep, prepare healthy home meals, exercise 3 times weekly.",
+                    gpActions: [
+                        "Log 7-8 hours of uninterrupted restorative sleep (8 hrs)",
+                        "Prepare a nutritious home-cooked meal (30 mins)",
+                        "Complete a physical workout or stretching session (30 mins)",
+                        "Attend routine medical checkup or doctor visit (40 mins)",
+                        "Personal hygiene, grooming, and self-care routine (20 mins)",
+                        "Quality unhurried social time with family & friends (40 mins)",
+                        "Proper daily hydration and wellness routine (throughout day)",
+                        "Short relaxation micro-breaks between work sessions (15 mins)"
+                    ],
+                    trExamples: [
+                        "7-8 hours of uninterrupted restorative nightly sleep (Night Rest)",
+                        "Cooking and eating a balanced nutritious meal (Healthy Meal Prep)",
+                        "Physical gym workout or cardiovascular exercise (Physical Fitness)",
+                        "Attending a preventative medical checkup (Medical Appointment)",
+                        "Personal grooming and relaxation self-care routine (Self-Care Routine)",
+                        "Quality unhurried connection time with family (Family Time)",
+                        "Mid-day stretching and mindful breathing break (Stretching Break)",
+                        "Complete rest micro-breaks between focus work blocks (Work Rest Break)"
+                    ]
+                }
+            }
+        };
+
+        const matrixData = {
+            ar: [
+                {
+                    symptom: "الغموض الزمني والمماطلة (Time Vagueness)",
+                    goalsRole: "تحديد إجراءات صغرى واضحة (15-30 دقيقة) محددة ضمن التاقات الخمسة (E, V, R, S, SC).",
+                    timeRole: "توثيق الوقت بدقة لحظية لإزالة التبرير ورصد الساعات الضائعة بالكامل.",
+                    synergy: "تحويل الأفكار العائمة إلى واقع ملموس ومتابعة إنجاز دقيقة."
+                },
+                {
+                    symptom: "الانشغال الوهمي بعيداً عن الكسب (Busywork)",
+                    goalsRole: "تركيز الأولويات على تاق الكسب (E) والأنشطة عالية العائد لتوليد الدخل.",
+                    timeRole: "كشف المهام الإدارية الفرعية المستهلكة للوقت بدون عائد مالي ملموس.",
+                    synergy: "توجيه الطاقة نحو المهام المباشرة لتوليد الدخل المستمر."
+                },
+                {
+                    symptom: "العمل المفرط والاحتراق (Burnout Cycle)",
+                    goalsRole: "جدولة أوقات إجبارية للترويح (R) والعناية بالذات (SC) وحظر التمدد.",
+                    timeRole: "مراقبة مستويات الإجهاد وساعات النوم الفعلية لمنع السقوط والانهيار.",
+                    synergy: "حماية الاستقرار النفسي والجسدي لضمان الاستمرارية المهنية."
+                },
+                {
+                    symptom: "تقديم خدمات مجانية وتبخيس السعر (Undervaluation)",
+                    goalsRole: "صياغة أهداف تسعير عادلة وتحديد ساعات الخدمة (S) بحدود صريحة.",
+                    timeRole: "تتبع ساعات العمل غير المدفوع والتطوع للتأكد من عدم طغيانها.",
+                    synergy: "استعادة القيمة الذاتية والالتزام بالحدود المهنيه والمالية."
+                },
+                {
+                    symptom: "العزلة وضياع البوصلة (Isolation & Drift)",
+                    goalsRole: "التخطيط لمراجعات أسبوعية ومشاركة الرؤية (V) مع شريك الإنجاز.",
+                    timeRole: "تقديم سجلات دقيقة وموضوعية للنقاش في مكالمات الشريك اليومية.",
+                    synergy: "بناء مساءلة تشاركية محفزة تدعم النمو والتعافي المستدام."
+                }
+            ],
+            en: [
+                {
+                    symptom: "Time Vagueness & Procrastination",
+                    goalsRole: "Defines clear 15-30 min micro-action items tagged across 5 categories.",
+                    timeRole: "Logs real-time hours, exposing hidden time leaks and excuses.",
+                    synergy: "Transforms vague intentions into measurable daily progress."
+                },
+                {
+                    symptom: "Non-Earning Busywork Trap",
+                    goalsRole: "Prioritizes high-ROI actions tagged under Earning (E).",
+                    timeRole: "Uncovers hours wasted on low-value administrative distractions.",
+                    synergy: "Directs focus towards direct revenue-generating actions."
+                },
+                {
+                    symptom: "Overwork & Burnout Cycle",
+                    goalsRole: "Schedules mandatory blocks for Recreation (R) & Self-Care (SC).",
+                    timeRole: "Monitors rest and sleep hours to prevent physical collapse.",
+                    synergy: "Protects physical and mental health for sustainable productivity."
+                },
+                {
+                    symptom: "Undervaluation & Free Services",
+                    goalsRole: "Sets fair pricing goals and bounded Service (S) quotas.",
+                    timeRole: "Tracks unbilled client hours and excessive volunteering.",
+                    synergy: "Restores self-worth and enforces firm professional boundaries."
+                },
+                {
+                    symptom: "Isolation & Strategic Drift",
+                    goalsRole: "Plans weekly Vision (V) reviews and Action Partner check-ins.",
+                    timeRole: "Provides verifiable objective data for peer accountability calls.",
+                    synergy: "Builds structured fellowship accountability and continuous growth."
+                }
+            ]
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.getElementById('main-html').lang = currentLang;
+            document.getElementById('main-html').dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            
+            if (currentLang === 'en') {
+                document.body.classList.add('lang-en');
+            } else {
+                document.body.classList.remove('lang-en');
+            }
+
+            updateStaticTexts();
+            renderSynergySteps();
+            renderSynergyDetail();
+            renderGoalsTabs();
+            renderGoalsSector();
+            renderTimeCategoriesTabs();
+            renderTimeCategoryDetail();
+            renderMatrixTable();
+            updateCalculator();
+        }
+
+        function updateStaticTexts() {
+            const dict = uiTranslations[currentLang];
+            Object.keys(dict).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.textContent = dict[key];
+            });
+        }
+
+        function renderSynergySteps() {
+            const container = document.getElementById('synergy-steps-container');
+            const steps = synergyData[currentLang];
+            
+            container.innerHTML = steps.map((st, idx) => {
+                const isActive = idx === activeSynergyStep;
+                const activeStyle = isActive 
+                    ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-md scale-[1.02]' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50 hover:border-amber-300';
+
+                return `
+                    <button onclick="selectSynergyStep(${idx})" class="p-3 rounded-xl border text-right transition-all font-bold text-xs flex flex-col justify-between h-20 ${activeStyle}">
+                        <span class="font-mono text-[10px] opacity-80 px-1.5 py-0.5 rounded bg-slate-900/10 w-fit">${st.code}</span>
+                        <span class="truncate">${st.title}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectSynergyStep(idx) {
+            activeSynergyStep = idx;
+            renderSynergySteps();
+            renderSynergyDetail();
+        }
+
+        function renderSynergyDetail() {
+            const st = synergyData[currentLang][activeSynergyStep];
+            document.getElementById('syn-code').textContent = st.code;
+            document.getElementById('syn-title').textContent = st.title;
+            document.getElementById('syn-desc').textContent = st.desc;
+
+            const extraContainer = document.getElementById('syn-extra');
+            extraContainer.innerHTML = st.insights.map(ins => `
+                <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 font-semibold flex items-center gap-2">
+                    <span class="text-amber-600 font-extrabold text-sm">✓</span>
+                    <span>${ins}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderGoalsTabs() {
+            const container = document.getElementById('gp-tabs-container');
+            const categories = harmonizedCategoriesData[currentLang];
+            
+            container.innerHTML = Object.keys(categories).map(key => {
+                const cat = categories[key];
+                const isActive = key === activeGpCategory;
+                const activeStyle = isActive 
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-md' 
+                    : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-amber-50';
+
+                return `
+                    <button onclick="selectGoalsCategory('${key}')" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 ${activeStyle}">
+                        <span class="font-mono text-[10px] px-1.5 py-0.5 rounded ${isActive ? 'bg-amber-700 text-white' : 'bg-slate-200 text-slate-700'}">${cat.code}</span>
+                        <span>${cat.title}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectGoalsCategory(key) {
+            activeGpCategory = key;
+            renderGoalsTabs();
+            renderGoalsSector();
+        }
+
+        function renderGoalsSector() {
+            const cat = harmonizedCategoriesData[currentLang][activeGpCategory];
+            const container = document.getElementById('gp-sector-content');
+
+            container.innerHTML = `
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="bg-amber-600 text-white font-mono font-black text-xs px-2.5 py-1 rounded-md">${cat.code}</span>
+                    <h4 class="text-base md:text-lg font-bold text-slate-900">${cat.title}</h4>
+                </div>
+                <p class="text-xs md:text-sm text-slate-600 mb-4 leading-relaxed">${cat.desc}</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-[11px] font-bold text-amber-700 block mb-1">🎯 ${currentLang === 'ar' ? 'مثال بيان الرؤية (Vision Statement):' : 'Vision Statement Example:'}</span>
+                        <p class="text-xs text-slate-800 italic font-medium leading-relaxed">${cat.visionEx}</p>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-[11px] font-bold text-blue-700 block mb-1">📌 ${currentLang === 'ar' ? 'مثال الأهداف المحددة (Goals Examples):' : 'Goals Example:'}</span>
+                        <p class="text-xs text-slate-800 font-medium leading-relaxed">${cat.goalsEx}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h5 class="text-xs font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
+                        <span>⚡</span>
+                        <span>${currentLang === 'ar' ? 'إجراءات صغرى قابلة للتنفيذ المباشر (8+ Action Items from 15-30 mins):' : '8+ Action Items (15-30 mins each):'}</span>
+                    </h5>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        ${cat.gpActions.map(act => `
+                            <div class="p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-start gap-2 shadow-sm hover:border-amber-300 transition">
+                                <span class="text-amber-500 font-bold shrink-0">►</span>
+                                <span>${act}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTimeCategoriesTabs() {
+            const container = document.getElementById('tr-categories-container');
+            const categories = harmonizedCategoriesData[currentLang];
+            
+            container.innerHTML = Object.keys(categories).map(key => {
+                const cat = categories[key];
+                const isActive = key === activeTrCategory;
+                const activeStyle = isActive 
+                    ? 'bg-orange-600 text-white border-orange-600 shadow-md' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-orange-50';
+
+                return `
+                    <button onclick="selectTimeCategory('${key}')" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 ${activeStyle}">
+                        <span class="font-mono text-[10px] px-1.5 py-0.5 rounded ${isActive ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700'}">${cat.code}</span>
+                        <span>${cat.title}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectTimeCategory(key) {
+            activeTrCategory = key;
+            renderTimeCategoriesTabs();
+            renderTimeCategoryDetail();
+        }
+
+        function renderTimeCategoryDetail() {
+            const cat = harmonizedCategoriesData[currentLang][activeTrCategory];
+            const container = document.getElementById('tr-category-detail');
+
+            container.innerHTML = `
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-orange-600 text-white font-mono font-black text-xs px-2.5 py-1 rounded-md">${cat.code}</span>
+                    <h4 class="text-base md:text-lg font-bold text-slate-900">${cat.title}</h4>
+                </div>
+                <p class="text-xs md:text-sm text-slate-600 mb-4 leading-relaxed">${cat.desc}</p>
+
+                <h5 class="text-xs font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
+                    <span>⏱️</span>
+                    <span>${currentLang === 'ar' ? 'أمثلة عمليّة لتسجيل الوقت في هذه الفئة (8+ Real-world Log Examples):' : '8+ Real-World Log Examples:'}</span>
+                </h5>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    ${cat.trExamples.map((ex, i) => `
+                        <div class="p-3 bg-orange-50/70 border border-orange-200/80 rounded-xl text-xs font-semibold text-orange-950 flex items-start gap-2 shadow-sm">
+                            <span class="text-orange-600 font-mono font-extrabold shrink-0">#${i+1}</span>
+                            <span>${ex}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderMatrixTable() {
+            const body = document.getElementById('matrix-table-body');
+            const rows = matrixData[currentLang];
+
+            body.innerHTML = rows.map(r => `
+                <tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-3 font-bold text-slate-200 border-b border-slate-800">${r.symptom}</td>
+                    <td class="p-3 text-amber-300/90 border-b border-slate-800 leading-relaxed">${r.goalsRole}</td>
+                    <td class="p-3 text-orange-300/90 border-b border-slate-800 leading-relaxed">${r.timeRole}</td>
+                    <td class="p-3 text-emerald-400 font-semibold border-b border-slate-800 leading-relaxed">${r.synergy}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateCalculator() {
+            const e = parseInt(document.getElementById('range-e').value);
+            const v = parseInt(document.getElementById('range-v').value);
+            const r = parseInt(document.getElementById('range-r').value);
+            const s = parseInt(document.getElementById('range-s').value);
+            const sc = parseInt(document.getElementById('range-sc').value);
+
+            document.getElementById('val-e').textContent = `${e} ${currentLang === 'ar' ? 'ساعة' : 'hrs'}`;
+            document.getElementById('val-v').textContent = `${v} ${currentLang === 'ar' ? 'ساعة' : 'hrs'}`;
+            document.getElementById('val-r').textContent = `${r} ${currentLang === 'ar' ? 'ساعة' : 'hrs'}`;
+            document.getElementById('val-s').textContent = `${s} ${currentLang === 'ar' ? 'ساعة' : 'hrs'}`;
+            document.getElementById('val-sc').textContent = `${sc} ${currentLang === 'ar' ? 'ساعة' : 'hrs'}`;
+
+            const totalLogged = e + v + r + s + sc;
+            const feedbackEl = document.getElementById('calc-feedback');
+
+            let alertMsg = "";
+            if (e < 15) {
+                alertMsg += currentLang === 'ar' 
+                    ? "⚠️ تنبيه: ساعات الكسب المباشر (E) منخفضة جداً (أقل من 15 ساعة). يرجى مراجعة أوراق الأهداف لزيادة الإجراءات المباشرة." 
+                    : "⚠️ Warning: Direct earning hours (E) are low (<15 hrs). Review Goals Pages to add direct action items.";
+            } else if (r < 10) {
+                alertMsg += currentLang === 'ar'
+                    ? "⚠️ تنبيه: ساعات الترويح والتعافي (R) منخفضة. خطر التعرض للاحتراق المهني (Burnout)."
+                    : "⚠️ Warning: Recreation hours (R) are low. Risk of Burnout!";
+            } else if (sc < 49) {
+                alertMsg += currentLang === 'ar'
+                    ? "⚠️ تنبيه: ساعات النوم والعناية بالذات (SC) غير كافية (<49 ساعة أسبوعياً). احرص على حماية طاقتك البدنية."
+                    : "⚠️ Warning: Sleep & Self-Care hours (SC) are low (<49 hrs/week). Protect physical stamina.";
+            } else {
+                alertMsg = currentLang === 'ar'
+                    ? "✅ التوزيع متوازن ومناسب لتحقيق أهداف الرؤية الحالية وحماية الاستقرار المالي والنفسي."
+                    : "✅ Healthy energy allocation aligned with Goals Pages vision and burnout protection.";
+            }
+
+            feedbackEl.innerHTML = `
+                <div><strong>${currentLang === 'ar' ? 'إجمالي الساعات المسجلة أسبوعياً:' : 'Total Weekly Hours Logged:'} ${totalLogged} / 168 ${currentLang === 'ar' ? 'ساعة' : 'hrs'}</strong></div>
+                <div class="mt-1">${alertMsg}</div>
+            `;
+
+            renderChart(e, v, r, s, sc);
+        }
+
+        function renderChart(e, v, r, s, sc) {
+            const ctx = document.getElementById('alignmentChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const labels = currentLang === 'ar' 
+                ? ['الكسب (E)', 'الرؤية (V)', 'الترويح (R)', 'الخدمة (S)', 'العناية بالذات (SC)'] 
+                : ['Earning (E)', 'Vision (V)', 'Recreation (R)', 'Service (S)', 'Self-Care (SC)'];
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: [e, v, r, s, sc],
+                        backgroundColor: ['#d97706', '#2563eb', '#059669', '#9333ea', '#475569'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: currentLang === 'ar' ? 'Cairo' : 'Inter',
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = function() {
+            renderSynergySteps();
+            renderSynergyDetail();
+            renderGoalsTabs();
+            renderGoalsSector();
+            renderTimeCategoriesTabs();
+            renderTimeCategoryDetail();
+            renderMatrixTable();
+            updateCalculator();
+        };
+    </script>
+</body>
+</html>

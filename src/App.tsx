@@ -47,21 +47,43 @@ import { PrioritiesSection } from './components/PrioritiesSection';
 import { TagLegend } from './components/TagLegend';
 import { SaveToast } from './components/SaveToast';
 
-// Modals
-import { AuthModal } from './components/Modals/AuthModal';
-import { DayDistModal } from './components/Modals/DayDistModal';
-import { ChartsModal } from './components/Modals/ChartsModal';
-import { AiSummaryModal } from './components/Modals/AiSummaryModal';
-import { ExportModal } from './components/Modals/ExportModal';
-import { SleepOnboardModal } from './components/Modals/SleepOnboardModal';
-import { AgeSettingsModal } from './components/Modals/AgeSettingsModal';
-import { PwaModal } from './components/Modals/PwaModal';
-import { SettingsModal } from './components/Modals/SettingsModal';
-import { GuideModal } from './components/Modals/GuideModal';
+// Modals — lazy-loaded on demand so their code stays out of the initial bundle.
+// The gate renders a modal only when its `isOpen` prop is true, which means the
+// dynamic import (and its chunk download) only happens the first time it is opened.
+// FocusPomodoroView stays eagerly imported because it must remain mounted so the
+// background timer keeps running even while its window is minimized.
 import { FocusPomodoroView } from './components/FocusPomodoroView';
-import { TodoInboxDrawer } from './components/Modals/TodoInboxDrawer';
-import { MorningNudgeModal } from './components/Modals/MorningNudgeModal';
-import { GlobalSearchModal } from './components/Modals/GlobalSearchModal';
+
+const makeLazyModal = (
+  loader: () => Promise<any>,
+  exportName: string
+) => {
+  const LazyModal = React.lazy(() =>
+    loader().then((m) => ({ default: m[exportName] as React.ComponentType<any> }))
+  );
+  return function LazyModalGate(props: { isOpen?: boolean } & Record<string, any>) {
+    if (!props.isOpen) return null;
+    return (
+      <React.Suspense fallback={null}>
+        <LazyModal {...props} />
+      </React.Suspense>
+    );
+  };
+};
+
+const AuthModal = makeLazyModal(() => import('./components/Modals/AuthModal'), 'AuthModal');
+const DayDistModal = makeLazyModal(() => import('./components/Modals/DayDistModal'), 'DayDistModal');
+const ChartsModal = makeLazyModal(() => import('./components/Modals/ChartsModal'), 'ChartsModal');
+const AiSummaryModal = makeLazyModal(() => import('./components/Modals/AiSummaryModal'), 'AiSummaryModal');
+const ExportModal = makeLazyModal(() => import('./components/Modals/ExportModal'), 'ExportModal');
+const SleepOnboardModal = makeLazyModal(() => import('./components/Modals/SleepOnboardModal'), 'SleepOnboardModal');
+const AgeSettingsModal = makeLazyModal(() => import('./components/Modals/AgeSettingsModal'), 'AgeSettingsModal');
+const PwaModal = makeLazyModal(() => import('./components/Modals/PwaModal'), 'PwaModal');
+const SettingsModal = makeLazyModal(() => import('./components/Modals/SettingsModal'), 'SettingsModal');
+const GuideModal = makeLazyModal(() => import('./components/Modals/GuideModal'), 'GuideModal');
+const TodoInboxDrawer = makeLazyModal(() => import('./components/Modals/TodoInboxDrawer'), 'TodoInboxDrawer');
+const MorningNudgeModal = makeLazyModal(() => import('./components/Modals/MorningNudgeModal'), 'MorningNudgeModal');
+const GlobalSearchModal = makeLazyModal(() => import('./components/Modals/GlobalSearchModal'), 'GlobalSearchModal');
 
 import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
@@ -297,7 +319,7 @@ export default function App() {
 
   // 4. Google Calendar & Suggestions
   const [gcalAccessToken, setGcalAccessToken] = useState<string | null>(() => {
-    return localStorage.getItem('gcal_access_token') || sessionStorage.getItem('gcal_access_token') || null;
+    return sessionStorage.getItem('gcal_access_token') || null;
   });
   const [googleCalendarEvents, setGoogleCalendarEvents] = useState<Record<string, { text: string; tag: TagCode }>>({});
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>(() => {
@@ -1603,7 +1625,6 @@ export default function App() {
 
       if (credential) {
         setGcalAccessToken(credential);
-        localStorage.setItem('gcal_access_token', credential);
         sessionStorage.setItem('gcal_access_token', credential);
         setCalSyncEnabled(true);
         localStorage.setItem('calSyncEnabled', 'true');
@@ -1629,7 +1650,6 @@ export default function App() {
 
   const handleDisconnectGCal = () => {
     setGcalAccessToken(null);
-    localStorage.removeItem('gcal_access_token');
     sessionStorage.removeItem('gcal_access_token');
     clearAllCachedCalendarEvents();
     setCalSyncEnabled(false);

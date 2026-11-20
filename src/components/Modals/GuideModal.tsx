@@ -26,7 +26,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, lang })
 
   if (!isOpen) return null;
 
-  const guideExternalUrl = 'https://amrelhaj87-cloud.github.io/time_recording-guide/';
+  const guideExternalUrl = '/guide';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">

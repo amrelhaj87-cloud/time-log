@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Time Log — Firestore Security Rules
+// ─────────────────────────────────────────────────────────────────────────────
+// كل مستخدم يصل إلى بياناته فقط (users/{uid}/... والمسار المؤرشف).
+// أي مسار غير مطابق يُرفض تلقائياً (deny-by-default في Firestore).
+// لا توجد أي قراءة/كتابة عامة أو غير مصادَقة.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // تفضيلات المستخدم وإعداداته: users/{uid}/settings/preferences
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // أسابيع السجل + صندوق المهام + أي مستندات مستقبلية تحت مسار التطبيق
+    // artifacts/time-log-app/users/{uid}/{weeks|inbox|...}/...
+    match /artifacts/time-log-app/users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // المسار القديم المشترك (قبل ترحيل البيانات لكل مستخدم) — مغلق نهائياً
+    // لمنع أي تسريب أو تعديل متبادل بين المستخدمين.
+    match /weeks/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

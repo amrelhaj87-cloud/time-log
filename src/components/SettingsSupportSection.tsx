@@ -272,7 +272,7 @@ export const SettingsSupportSection: React.FC<SettingsSupportSectionProps> = ({
                 </div>
               </div>
               <a
-                href="https://amrelhaj87-cloud.github.io/time_recording-guide/"
+                href="/guide"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[var(--card)] hover:bg-indigo-600 hover:text-white border border-[var(--line)] hover:border-indigo-600 text-[var(--ink)] px-3 py-1 rounded-lg font-medium transition-all text-xs shrink-0 shadow-xs inline-flex items-center gap-1"

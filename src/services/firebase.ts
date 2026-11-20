@@ -92,7 +92,8 @@ export const signInWithGoogle = async (): Promise<UserCredential> => {
     const cred = GoogleAuthProvider.credentialFromResult(res);
     const token = cred?.accessToken || (res as any)._tokenResponse?.oauthAccessToken;
     if (token) {
-      localStorage.setItem('gcal_access_token', token);
+      // Store the Google Calendar access token only in sessionStorage (cleared on tab close)
+      // to avoid persisting it long-term in localStorage where it is more exposed to XSS.
       sessionStorage.setItem('gcal_access_token', token);
     }
   } catch {}
