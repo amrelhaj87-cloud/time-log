@@ -47,6 +47,8 @@ import { PrioritiesSection } from './components/PrioritiesSection';
 import { TagLegend } from './components/TagLegend';
 import { SaveToast } from './components/SaveToast';
 import { UpdateToast } from './components/UpdateToast';
+import { useModalState } from './hooks/useModalState';
+import { useSleepWindow } from './hooks/useSleepWindow';
 
 // Modals — lazy-loaded on demand so their code stays out of the initial bundle.
 // The gate renders a modal only when its `isOpen` prop is true, which means the
@@ -294,29 +296,15 @@ export default function App() {
     return 'none';
   });
 
-  // 3. Sleep Window State
-  const [sleepSettings, setSleepSettings] = useState<SleepSettings>(() => {
-    const saved = localStorage.getItem('sleepSettings');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch { }
-    }
-    return {
-      enabled: true,
-      start: 23, // 11pm
-      end: 7,    // 7am
-      onboarded: true
-    };
-  });
-
-  const [sleepExceptionDays, setSleepExceptionDays] = useState<Record<string, boolean>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('sleepExceptionDays') || '{}');
-    } catch {
-      return {};
-    }
-  });
+  // 3. Sleep Window State (extracted to useSleepWindow)
+  const {
+    sleepSettings,
+    setSleepSettings,
+    sleepExceptionDays,
+    setSleepExceptionDays,
+    sleepHourKeys,
+    activeHoursKeys
+  } = useSleepWindow();
 
   // 4. Google Calendar & Suggestions
   const [gcalAccessToken, setGcalAccessToken] = useState<string | null>(() => {
@@ -331,27 +319,33 @@ export default function App() {
     }
   });
 
-  // 5. Modals State
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [dayDistModalOpen, setDayDistModalOpen] = useState(false);
-  const [chartsModalOpen, setChartsModalOpen] = useState(false);
-  const [aiSummaryModalOpen, setAiSummaryModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [sleepOnboardModalOpen, setSleepOnboardModalOpen] = useState(false);
-  const [ageModalOpen, setAgeModalOpen] = useState(false);
-  const [pwaModalOpen, setPwaModalOpen] = useState(false);
-  const [guideModalOpen, setGuideModalOpen] = useState(false);
-  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
-  const [pomoBgState, setPomoBgState] = useState<{
-    isRunning: boolean;
-    timeFormatted: string;
-    mode: 'focus' | 'break';
-  }>({
-    isRunning: false,
-    timeFormatted: '25:00',
-    mode: 'focus'
-  });
+  // 5. Modals State (extracted to useModalState to keep App.tsx smaller)
+  const {
+    authModalOpen,
+    setAuthModalOpen,
+    settingsModalOpen,
+    setSettingsModalOpen,
+    dayDistModalOpen,
+    setDayDistModalOpen,
+    chartsModalOpen,
+    setChartsModalOpen,
+    aiSummaryModalOpen,
+    setAiSummaryModalOpen,
+    exportModalOpen,
+    setExportModalOpen,
+    sleepOnboardModalOpen,
+    setSleepOnboardModalOpen,
+    ageModalOpen,
+    setAgeModalOpen,
+    pwaModalOpen,
+    setPwaModalOpen,
+    guideModalOpen,
+    setGuideModalOpen,
+    globalSearchOpen,
+    setGlobalSearchOpen,
+    pomoBgState,
+    setPomoBgState
+  } = useModalState();
 
   // Set HTML dir & lang
   useEffect(() => {
@@ -368,24 +362,7 @@ export default function App() {
     }
   }, [isDarkEffective]);
 
-  // Sleep hours keys calculation
-  const getSleepHourKeys = useCallback(() => {
-    if (!sleepSettings.enabled) return [];
-    const { start, end } = sleepSettings;
-    return HOURS_LIST.filter((k) => {
-      const h = HOUR_TO_24[k];
-      if (h === undefined) return false;
-      if (start < end) {
-        return h >= start && h < end;
-      } else if (start > end) {
-        return h >= start || h < end;
-      }
-      return false;
-    });
-  }, [sleepSettings]);
-
-  const sleepHourKeys = getSleepHourKeys();
-  const activeHoursKeys = HOURS_LIST.filter((k) => !sleepHourKeys.includes(k));
+  // Sleep hour keys are derived inside useSleepWindow (sleepHourKeys / activeHoursKeys).
 
   // Current selected day data
   const dateStr = isoDate(currentDate);
@@ -795,14 +772,7 @@ export default function App() {
     };
   }, [loadWeekData]);
 
-  // Sleep settings are managed cleanly through the Settings Modal, so disable automatic popup spam
-  useEffect(() => {
-    // Only if explicitly triggered, never auto-popup
-    if (!sleepSettings.onboarded) {
-      setSleepSettings((prev) => ({ ...prev, onboarded: true }));
-      localStorage.setItem('sleepSettings', JSON.stringify({ ...sleepSettings, onboarded: true }));
-    }
-  }, [sleepSettings]);
+  // Sleep onboarding effect now lives inside useSleepWindow.
 
   // Handlers for Focus Delegation
   const delegateStartupFocus = useCallback(() => {

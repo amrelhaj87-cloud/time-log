@@ -36,6 +36,9 @@
      - `src/services/firebase.ts` يستورد SDK ديناميكياً ويصدّر live bindings تُملأ عند `loadFirebase()`؛ الـ UI يعمل في وضع الضيف أولاً ثم تُفعّل السحابة.
      - `main.tsx` يبدأ التحميل بعد أول رسم؛ auth effect ينتظر التحميل؛ `handleConnectGCal` ينتظر التحميل؛ `Header.tsx` يستورد `User` type-only.
      - النتيجة: التحميل الأولي ~171KB gzip بدلاً من ~293KB (Firebase ~761KB أصبح lazy).
+  10. **تفكيك `App.tsx` (خطوة 1-2):**
+      - استخراج `useModalState` (حالات المودالات + مؤشر البومودورو) و`useSleepWindow` (نافذة النوم وساعات النشاط) إلى `src/hooks/`.
+      - كل هوك يرجّع نفس أسماء المتغيرات لتقليل مخاطر أي تغيير في `App.tsx`.
 
 ---
 
