@@ -169,7 +169,8 @@ export default function App() {
     isDataLoaded,
     loadWeekData,
     saveWeekData,
-    flushPendingSaveNow
+    flushPendingSaveNow,
+    discardPendingSave
   } = useWeekPersistence(lang);
 
   // 3-State Theme Mode (extracted to useTheme)
@@ -1808,6 +1809,7 @@ export default function App() {
         onSyncAllToCloudNow={handleSyncAllWeeksNow}
         isSyncingAllWeeks={isSyncingAllWeeks}
         isUserLoggedIn={!!currentUser}
+        onBeforeDeleteData={discardPendingSave}
         onOpenPwaModal={() => setPwaModalOpen(true)}
         onOpenGuide={() => setGuideModalOpen(true)}
         darkMode={isDarkEffective}

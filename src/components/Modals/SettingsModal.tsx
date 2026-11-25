@@ -4,6 +4,7 @@ import { THEME_PALETTES } from '../../constants/themes';
 import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG, APP_VERSION } from '../../constants/config';
 import { soundManager } from '../../utils/soundEffects';
 import KofiButton from '../KofiButton';
+import { DeleteDataSection } from '../DeleteDataSection';
 import './settingsFlat.css';
 import {
   X,
@@ -75,6 +76,8 @@ interface SettingsModalProps {
   onSyncAllToCloudNow?: () => Promise<{ synced: number; skipped: number; errors: number } | undefined>;
   isSyncingAllWeeks?: boolean;
   isUserLoggedIn?: boolean;
+  /** Drops a pending cloud save right before the user deletes their data. */
+  onBeforeDeleteData?: () => void;
   onOpenPwaModal: () => void;
   onOpenGuide: () => void;
   darkMode: boolean;
@@ -132,6 +135,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSyncAllToCloudNow,
   isSyncingAllWeeks = false,
   isUserLoggedIn = false,
+  onBeforeDeleteData,
   onOpenPwaModal,
   onOpenGuide,
   themeMode = 'light',
@@ -1181,6 +1185,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </form>
           </div>
+
+          {/* Delete account / local data (privacy policy §6) */}
+          <DeleteDataSection lang={lang} isUserLoggedIn={isUserLoggedIn} onBeforeDelete={onBeforeDeleteData} />
 
         </div>
 

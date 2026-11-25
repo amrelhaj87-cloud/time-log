@@ -166,6 +166,15 @@ export function useWeekPersistence(lang: 'ar' | 'en') {
     [flushSaveToCloud]
   );
 
+  /** Drops a pending debounced save without writing it (used before deleting the account). */
+  const discardPendingSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    pendingSaveRef.current = null;
+  }, []);
+
   // Silent instant flush on page unload or tab hide if typing debounce is still pending
   useEffect(() => {
     const flushOnLeave = () => flushPendingSaveNow(false);
@@ -193,6 +202,7 @@ export function useWeekPersistence(lang: 'ar' | 'en') {
     setIsDataLoaded,
     loadWeekData,
     saveWeekData,
-    flushPendingSaveNow
+    flushPendingSaveNow,
+    discardPendingSave
   };
 }
