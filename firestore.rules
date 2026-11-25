@@ -29,7 +29,7 @@ service cloud.firestore {
     // so older documents with extra legacy fields keep working).
     function changedKeys() {
       return resource == null
-        ? request.resource.data.keys()
+        ? request.resource.data.keys().toSet()
         : request.resource.data.diff(resource.data).affectedKeys();
     }
 
