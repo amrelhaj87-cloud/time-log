@@ -32,6 +32,9 @@ import {
 import {
   ambientAudio,
   AMBIENT_SOUND_OPTIONS,
+  soundOptionsFor,
+  loadSoundChoice,
+  saveSoundChoice,
   AmbientSoundType
 } from '../utils/ambientAudio';
 import { calculatePomodoroHourSplits, PomodoroSplit } from '../utils/dateUtils';
@@ -94,7 +97,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [selectedTag, setSelectedTag] = useState<TagCode>('E');
 
   // Ambient Audio State
-  const [ambientSound, setAmbientSound] = useState<AmbientSoundType>(() => ambientAudio.getCurrentType());
+  // Focus and break each remember their own sound (different, shorter lists).
+  const [focusSound, setFocusSound] = useState<AmbientSoundType>(() => loadSoundChoice('focus'));
+  const [breakSound, setBreakSound] = useState<AmbientSoundType>(() => loadSoundChoice('break'));
+  const ambientSound = mode === 'focus' ? focusSound : breakSound;
   const [volume, setVolume] = useState<number>(() => Math.round(ambientAudio.getVolume() * 100));
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [showAmbientMenu, setShowAmbientMenu] = useState<boolean>(false);
@@ -127,7 +133,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
 
   // Sync ambient audio changes
   const handleSelectSound = (soundType: AmbientSoundType) => {
-    setAmbientSound(soundType);
+    if (mode === 'focus') setFocusSound(soundType);
+    else setBreakSound(soundType);
+    saveSoundChoice(mode, soundType);
     if (soundType === 'none') {
       ambientAudio.stop();
     } else {
@@ -674,8 +682,9 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                   </div>
 
                   {/* Sound Options List */}
-                  <div className="flex flex-col gap-0.5 max-h-40 overflow-y-auto custom-scrollbar">
-                    {AMBIENT_SOUND_OPTIONS.map((opt) => {
+                  {/* Short per-tab list: always fits, never scrolls */}
+                  <div className="flex flex-col gap-0.5">
+                    {soundOptionsFor(mode).map((opt) => {
                       const isSelected = ambientSound === opt.id;
                       return (
                         <button

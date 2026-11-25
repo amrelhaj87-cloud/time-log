@@ -1,7 +1,10 @@
 // Web Audio API synthesized Ambient Background Sounds & Focus Music Engine
 // 100% offline, zero latency, no external mp3 assets needed.
 
-export type AmbientSoundType = 'none' | 'rain' | 'waves' | 'forest' | 'cafe' | 'whitenoise' | 'brownnoise' | 'binaural';
+export type AmbientSoundType = 'none' | 'rain' | 'waves' | 'forest' | 'whitenoise' | 'brownnoise' | 'binaural' | 'calm';
+
+/** Which Pomodoro tab a sound list belongs to. */
+export type AmbientMode = 'focus' | 'break';
 
 export interface AmbientSoundOption {
   id: AmbientSoundType;
@@ -10,16 +13,54 @@ export interface AmbientSoundOption {
   icon: string;
 }
 
-export const AMBIENT_SOUND_OPTIONS: AmbientSoundOption[] = [
-  { id: 'none', labelAr: 'صامت (بدون صوت)', labelEn: 'Mute (No Sound)', icon: '🔇' },
-  { id: 'rain', labelAr: 'مطر هادئ', labelEn: 'Gentle Rain', icon: '🌧️' },
-  { id: 'waves', labelAr: 'أمواج البحر', labelEn: 'Ocean Waves', icon: '🌊' },
-  { id: 'forest', labelAr: 'غابة وطبيعة', labelEn: 'Zen Forest', icon: '🍃' },
-  { id: 'cafe', labelAr: 'أجواء مقهى', labelEn: 'Cafe Ambience', icon: '☕' },
-  { id: 'whitenoise', labelAr: 'ضوضاء بيضاء', labelEn: 'White Noise', icon: '🎧' },
-  { id: 'brownnoise', labelAr: 'ضوضاء بنية عميقة', labelEn: 'Deep Brown Noise', icon: '🟤' },
-  { id: 'binaural', labelAr: 'نغمات ألفا للتركيز', labelEn: 'Alpha Wave Focus', icon: '🎵' },
+const MUTE_OPTION: AmbientSoundOption = { id: 'none', labelAr: 'بدون صوت', labelEn: 'No sound', icon: '🔇' };
+
+/**
+ * Focus sounds: steady, low-detail backgrounds that mask distractions.
+ * Each one is audibly different (bright noise / deep noise / natural / tonal).
+ */
+export const FOCUS_SOUND_OPTIONS: AmbientSoundOption[] = [
+  MUTE_OPTION,
+  { id: 'whitenoise', labelAr: 'ضوضاء بيضاء', labelEn: 'White noise', icon: '🎧' },
+  { id: 'brownnoise', labelAr: 'ضوضاء بنية عميقة', labelEn: 'Deep brown noise', icon: '🟤' },
+  { id: 'rain', labelAr: 'مطر هادئ', labelEn: 'Gentle rain', icon: '🌧️' },
+  { id: 'binaural', labelAr: 'نغمات ألفا', labelEn: 'Alpha tones', icon: '🎵' }
 ];
+
+/** Break sounds: softer, slower and clearly different from the focus sounds. */
+export const BREAK_SOUND_OPTIONS: AmbientSoundOption[] = [
+  MUTE_OPTION,
+  { id: 'waves', labelAr: 'أمواج البحر', labelEn: 'Ocean waves', icon: '🌊' },
+  { id: 'forest', labelAr: 'غابة وعصافير', labelEn: 'Forest & birds', icon: '🍃' },
+  { id: 'calm', labelAr: 'نغمة هادئة', labelEn: 'Calm tone', icon: '🌙' }
+];
+
+/** Every sound (for looking up a label/icon by id). */
+export const AMBIENT_SOUND_OPTIONS: AmbientSoundOption[] = [
+  ...FOCUS_SOUND_OPTIONS,
+  ...BREAK_SOUND_OPTIONS.filter((o) => o.id !== 'none')
+];
+
+export function soundOptionsFor(mode: AmbientMode): AmbientSoundOption[] {
+  return mode === 'focus' ? FOCUS_SOUND_OPTIONS : BREAK_SOUND_OPTIONS;
+}
+
+const SOUND_STORAGE_KEY: Record<AmbientMode, string> = {
+  focus: 'focus_ambient_type',
+  break: 'break_ambient_type'
+};
+
+/** The saved sound for a tab; anything not in that tab's list (e.g. the removed "cafe") → none. */
+export function loadSoundChoice(mode: AmbientMode): AmbientSoundType {
+  if (typeof window === 'undefined') return 'none';
+  const saved = localStorage.getItem(SOUND_STORAGE_KEY[mode]);
+  return soundOptionsFor(mode).some((o) => o.id === saved) ? (saved as AmbientSoundType) : 'none';
+}
+
+export function saveSoundChoice(mode: AmbientMode, type: AmbientSoundType): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SOUND_STORAGE_KEY[mode], type);
+}
 
 class AmbientAudioEngine {
   private ctx: AudioContext | null = null;
@@ -37,10 +78,6 @@ class AmbientAudioEngine {
       const savedVol = localStorage.getItem('focus_ambient_volume');
       if (savedVol) {
         this.volume = Math.max(0, Math.min(1, parseFloat(savedVol)));
-      }
-      const savedType = localStorage.getItem('focus_ambient_type') as AmbientSoundType;
-      if (savedType && AMBIENT_SOUND_OPTIONS.some((o) => o.id === savedType)) {
-        this.currentType = savedType;
       }
     }
   }
@@ -108,9 +145,6 @@ class AmbientAudioEngine {
 
   public playSound(type: AmbientSoundType) {
     this.currentType = type;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('focus_ambient_type', type);
-    }
 
     this.cleanupNodes();
 
@@ -134,8 +168,8 @@ class AmbientAudioEngine {
       case 'forest':
         this.setupForest(ctx, this.masterGain);
         break;
-      case 'cafe':
-        this.setupCafe(ctx, this.masterGain);
+      case 'calm':
+        this.setupCalm(ctx, this.masterGain);
         break;
       case 'whitenoise':
         this.setupWhiteNoise(ctx, this.masterGain);
@@ -338,11 +372,6 @@ class AmbientAudioEngine {
     this.activeNodes.push(noise, filter, gain);
   }
 
-  // 4. Cozy Cafe Ambience Synthesizer
-  private setupCafe(ctx: AudioContext, dest: GainNode) {
-    this.setupFilteredNoise(ctx, dest, 750, 0.35, 4, 'pink');
-  }
-
   // 5. White Noise Focus Synthesizer
   private setupWhiteNoise(ctx: AudioContext, dest: GainNode) {
     this.setupFilteredNoise(ctx, dest, 2500, 0.3, 4, 'pink');
@@ -395,6 +424,46 @@ class AmbientAudioEngine {
     oscDrone.start();
 
     this.activeNodes.push(oscLeft, oscRight, oscDrone, gainLeft, gainRight, gainDrone, merger);
+  }
+
+  // 7. Calm tone (break): a soft, slowly breathing major chord — no noise at all,
+  // so it never sounds like the focus sounds.
+  private setupCalm(ctx: AudioContext, dest: GainNode) {
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, ctx.currentTime);
+    filter.connect(dest);
+    this.activeNodes.push(filter);
+
+    // C3 · G3 · C4 · E4 — each voice swells on its own slow cycle (10–20 s).
+    const voices: [number, number, number][] = [
+      [130.81, 0.07, 0.05],
+      [196.0, 0.05, 0.07],
+      [261.63, 0.045, 0.09],
+      [329.63, 0.03, 0.06]
+    ];
+    for (const [freq, level, rate] of voices) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(level, ctx.currentTime);
+
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(rate, ctx.currentTime);
+      const lfoDepth = ctx.createGain();
+      lfoDepth.gain.setValueAtTime(level * 0.8, ctx.currentTime);
+      lfo.connect(lfoDepth);
+      lfoDepth.connect(gain.gain);
+
+      osc.connect(gain);
+      gain.connect(filter);
+      osc.start();
+      lfo.start();
+      this.activeNodes.push(osc, gain, lfo, lfoDepth);
+    }
   }
 }
 
