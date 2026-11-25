@@ -35,7 +35,7 @@ export function useWeekPersistence(lang: 'ar' | 'en') {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef<{ updated: WeekData; ws: Date; user: User | null } | null>(null);
 
-  // Load Week Data from Firestore or LocalStorage (with fallback for legacy weeks)
+  // Load Week Data from Firestore or LocalStorage
   const loadWeekData = useCallback(async (ws: Date, user: User | null) => {
     const monKey = isoDate(mondayOf(ws));
     const wsKey = isoDate(ws);
@@ -51,22 +51,6 @@ export function useWeekPersistence(lang: 'ar' | 'en') {
         if (!snap.exists() && wsKey !== monKey) {
           docRef = doc(db, 'artifacts', 'time-log-app', 'users', user.uid, 'weeks', wsKey);
           snap = await getDoc(docRef);
-        }
-
-        // 3. Fallback: Check legacy root collection /weeks and auto-migrate to user-scoped path
-        if (!snap.exists()) {
-          const oldDocRef = doc(db, 'weeks', monKey);
-          const oldSnap = await getDoc(oldDocRef);
-          if (oldSnap.exists()) {
-            snap = oldSnap;
-            const oldData = oldSnap.data();
-            if (oldData && oldData.json) {
-              setDoc(doc(db, 'artifacts', 'time-log-app', 'users', user.uid, 'weeks', monKey), {
-                json: oldData.json,
-                updatedAt: new Date().toISOString()
-              }, { merge: true });
-            }
-          }
         }
 
         // Never overwrite active user typing that occurred while Firestore fetch was in flight

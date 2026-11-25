@@ -1,32 +1,40 @@
 import type { FirebaseApp } from 'firebase/app';
-import type { Auth, UserCredential } from 'firebase/auth';
-import type { Firestore } from 'firebase/firestore';
-import { Capacitor } from '@capacitor/core';
+import type * as AuthSdk from 'firebase/auth';
+import type * as FirestoreSdk from 'firebase/firestore';
+import { initAppCheck } from './appCheck';
 
 /**
  * Firebase is loaded on demand (dynamic import) so its ~500 KB SDK stays out of
- * the initial bundle. Every handle below is null until `loadFirebase()` resolves.
- * App.tsx guards usage with `if (db && user)`, so the UI runs in guest mode first
- * and cloud features light up automatically once Firebase is ready.
+ * the initial bundle. The handles below are null until `loadFirebase()` resolves,
+ * and the SDK functions are bound at the same moment as `db` / `auth`.
+ *
+ * Call sites guard with `if (db && user)` / `if (auth)`, so the UI runs in guest
+ * mode first and cloud features light up automatically once Firebase is ready.
+ * The function bindings are typed as their real SDK signatures; they are only
+ * ever called behind one of those guards, so they are always bound by then.
  */
 
 export let app: FirebaseApp | null = null;
-export let auth: any = null;
-export let db: Firestore | null = null;
-export let googleProvider: any = null;
+export let auth: AuthSdk.Auth | null = null;
+export let db: FirestoreSdk.Firestore | null = null;
+export let googleProvider: AuthSdk.GoogleAuthProvider | null = null;
 
-// SDK functions populated on load (typed as any to keep call sites unchanged).
-export let onAuthStateChanged: any = null;
-export let signInWithPopup: any = null;
-export let signInWithCredential: any = null;
-export let GoogleAuthProvider: any = null;
-export let doc: any = null;
-export let setDoc: any = null;
-export let getDoc: any = null;
-export let onSnapshot: any = null;
+// Live bindings to the SDK, populated by loadFirebase(). Imported elsewhere as
+// `import { doc, setDoc } from './services/firebase'` and called after the guards above.
+const unbound = null as never;
+export let onAuthStateChanged: typeof AuthSdk.onAuthStateChanged = unbound;
+export let signInWithPopup: typeof AuthSdk.signInWithPopup = unbound;
+export let GoogleAuthProvider: typeof AuthSdk.GoogleAuthProvider = unbound;
+export let doc: typeof FirestoreSdk.doc = unbound;
+export let setDoc: typeof FirestoreSdk.setDoc = unbound;
+export let getDoc: typeof FirestoreSdk.getDoc = unbound;
+export let onSnapshot: typeof FirestoreSdk.onSnapshot = unbound;
 
-export { Capacitor };
-
+/**
+ * Public web config. These values are not secrets: they identify the project,
+ * and access is enforced by firestore.rules (+ App Check and API-key
+ * restrictions in the Google Cloud console). See README → "Security".
+ */
 const firebaseConfig = {
   apiKey: 'AIzaSyCHGBQ-RCIzDRBQqlaEBaH7bQQrredUzYk',
   authDomain: 'time-log-ad714.firebaseapp.com',
@@ -52,16 +60,21 @@ export function loadFirebase(): Promise<void> {
       const appInstance =
         appMod.getApps().length > 0 ? appMod.getApps()[0] : appMod.initializeApp(firebaseConfig);
       app = appInstance;
+
+      // App Check must be activated before any Firestore/Auth traffic.
+      await initAppCheck(appInstance);
+
       auth = authMod.getAuth(appInstance);
       db = dbMod.getFirestore(appInstance);
 
       const provider = new authMod.GoogleAuthProvider();
+      // Calendar access is optional: the user only reaches this provider via
+      // "Sign in with Google", and the calendar feature itself is a setting.
       provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
       googleProvider = provider;
 
       onAuthStateChanged = authMod.onAuthStateChanged;
       signInWithPopup = authMod.signInWithPopup;
-      signInWithCredential = authMod.signInWithCredential;
       GoogleAuthProvider = authMod.GoogleAuthProvider;
       doc = dbMod.doc;
       setDoc = dbMod.setDoc;
@@ -74,88 +87,51 @@ export function loadFirebase(): Promise<void> {
   return loadPromise;
 }
 
-/** Waits for the lazy SDK, then forwards an auth call to it. */
-async function callAuth(name: string, ...args: any[]): Promise<any> {
+/** Loads the auth SDK (cached after the first call) once Firebase is ready. */
+async function authSdk(): Promise<typeof AuthSdk> {
   await loadFirebase();
-  const mod = await import('firebase/auth');
-  // Callers pass `auth` as the first argument; replace a stale null with the real instance.
-  if (args.length > 0 && (args[0] === null || args[0] === undefined)) {
-    args[0] = auth;
-  }
-  return (mod as any)[name](...args);
+  return import('firebase/auth');
 }
 
-export const signInWithEmailAndPassword = (...args: any[]) => callAuth('signInWithEmailAndPassword', ...args);
-export const createUserWithEmailAndPassword = (...args: any[]) => callAuth('createUserWithEmailAndPassword', ...args);
-export const updateProfile = (...args: any[]) => callAuth('updateProfile', ...args);
-export const sendPasswordResetEmail = (...args: any[]) => callAuth('sendPasswordResetEmail', ...args);
-export const sendEmailVerification = (...args: any[]) => callAuth('sendEmailVerification', ...args);
-export const signInWithRedirect = (...args: any[]) => callAuth('signInWithRedirect', ...args);
-export const getRedirectResult = (...args: any[]) => callAuth('getRedirectResult', ...args);
+export const signInWithEmailAndPassword: typeof AuthSdk.signInWithEmailAndPassword = async (...args) =>
+  (await authSdk()).signInWithEmailAndPassword(...args);
+export const createUserWithEmailAndPassword: typeof AuthSdk.createUserWithEmailAndPassword = async (...args) =>
+  (await authSdk()).createUserWithEmailAndPassword(...args);
+export const updateProfile: typeof AuthSdk.updateProfile = async (...args) =>
+  (await authSdk()).updateProfile(...args);
+export const sendPasswordResetEmail: typeof AuthSdk.sendPasswordResetEmail = async (...args) =>
+  (await authSdk()).sendPasswordResetEmail(...args);
+export const sendEmailVerification: typeof AuthSdk.sendEmailVerification = async (...args) =>
+  (await authSdk()).sendEmailVerification(...args);
 
 /**
- * Unified Google Sign-In helper:
- * - Native (Android/iOS via Capacitor): native Google dialog + Firebase credential.
- * - Web: standard Firebase popup flow.
+ * Google sign-in (web popup). Keeps the Calendar access token for this tab only
+ * (sessionStorage) so the optional calendar feature can read today's events.
  */
-export const signInWithGoogle = async (): Promise<UserCredential> => {
+export const signInWithGoogle = async (): Promise<AuthSdk.UserCredential> => {
   await loadFirebase();
-  if (!auth) {
+  if (!auth || !googleProvider) {
     throw new Error('Firebase Auth is not initialized');
-  }
-
-  if (Capacitor.isNativePlatform()) {
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-    try {
-      await GoogleAuth.initialize();
-    } catch (initErr) {
-      console.warn('GoogleAuth.initialize notice:', initErr);
-    }
-
-    const googleUser = await GoogleAuth.signIn();
-    const idToken = googleUser?.authentication?.idToken;
-    if (!idToken) {
-      throw new Error('No ID token received from Google Auth');
-    }
-
-    const credential = GoogleAuthProvider.credential(idToken);
-    return await signInWithCredential(auth, credential);
-  }
-
-  if (!googleProvider) {
-    throw new Error('Google Auth Provider is not initialized');
   }
 
   const res = await signInWithPopup(auth, googleProvider);
   try {
-    const cred = GoogleAuthProvider.credentialFromResult(res);
-    const token = cred?.accessToken || (res as any)._tokenResponse?.oauthAccessToken;
+    const token = GoogleAuthProvider.credentialFromResult(res)?.accessToken;
     if (token) {
       // sessionStorage only — never persisted long-term in localStorage.
       sessionStorage.setItem('gcal_access_token', token);
     }
-  } catch {}
+  } catch {
+    /* no calendar token — the calendar feature simply stays disconnected */
+  }
   return res;
 };
 
-/**
- * Unified Sign-Out helper: Firebase Auth + (natively) GoogleAuth sign-out.
- */
-export const signOut = async (authInstance?: Auth | null): Promise<void> => {
+/** Signs the current user out of Firebase Auth. */
+export const signOut = async (authInstance?: AuthSdk.Auth | null): Promise<void> => {
   await loadFirebase();
   const targetAuth = authInstance || auth;
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-      await GoogleAuth.signOut();
-    } catch (err) {
-      console.warn('GoogleAuth.signOut native error:', err);
-    }
-  }
-
   if (targetAuth) {
-    const mod = await import('firebase/auth');
-    await mod.signOut(targetAuth);
+    await (await authSdk()).signOut(targetAuth);
   }
 };

@@ -13,7 +13,7 @@
  *   4. Bump CURRENT_SCHEMA_VERSION and add a migration block in `migrateBackupIfNeeded()`.
  */
 
-import { WeekData, TodoItem, SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, TagTargets } from '../types';
+import { WeekData, TodoItem, SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, ThemePalette, TagTargets } from '../types';
 import { DEFAULT_TAG_TARGETS } from '../constants/config';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -28,6 +28,8 @@ export interface BackupPreferences {
   sleepExceptionDays: Record<string, boolean>;
   weekStartDay: WeekStartDay;
   themeMode: ThemeMode;
+  /** Added in v5.1; absent in older backups. */
+  themePalette?: ThemePalette;
   lang: 'ar' | 'en';
   birthDate: string;
   ageDisplayOpt: AgeDisplayOpt;
@@ -125,6 +127,7 @@ export function gatherFullBackup(uid: string | null, appVersion: string): FullBa
     sleepExceptionDays,
     weekStartDay: (localStorage.getItem('weekStartDay') as WeekStartDay) || 'saturday',
     themeMode: (localStorage.getItem('themeMode') as ThemeMode) || 'light',
+    themePalette: (localStorage.getItem('themePalette') as ThemePalette) || 'classic',
     lang: (localStorage.getItem('lang') as 'ar' | 'en') || 'ar',
     birthDate: localStorage.getItem('userBirthDate') || '',
     ageDisplayOpt: (localStorage.getItem('ageDisplayOpt') as AgeDisplayOpt) || 'none',
@@ -233,6 +236,7 @@ export function restoreFullBackup(data: FullBackup, callbacks: RestoreCallbacks)
   if (p.sleepExceptionDays) localStorage.setItem('sleepExceptionDays', JSON.stringify(p.sleepExceptionDays));
   localStorage.setItem('weekStartDay', p.weekStartDay || 'saturday');
   localStorage.setItem('themeMode', p.themeMode || 'light');
+  if (p.themePalette) localStorage.setItem('themePalette', p.themePalette);
   localStorage.setItem('lang', p.lang || 'ar');
   if (p.birthDate) localStorage.setItem('userBirthDate', p.birthDate);
   localStorage.setItem('ageDisplayOpt', p.ageDisplayOpt || 'none');

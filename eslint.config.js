@@ -14,7 +14,7 @@ import globals from 'globals';
  */
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'android/**', 'public/**', 'scripts/**', 'coverage/**']
+    ignores: ['dist/**', 'node_modules/**', 'public/**', 'scripts/**', 'coverage/**']
   },
   ...tseslint.configs.recommended,
   {

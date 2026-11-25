@@ -47,6 +47,7 @@ export interface SleepSettings {
 export type AgeDisplayOpt = 'none' | 'days' | 'years' | 'compass';
 export type WeekStartDay = 'saturday' | 'sunday' | 'monday';
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type ThemePalette = 'classic' | 'ocean' | 'forest' | 'sunset' | 'rose' | 'paper';
 
 export type TagTargets = Record<'E' | 'V' | 'R' | 'S' | 'SC', number>;
 

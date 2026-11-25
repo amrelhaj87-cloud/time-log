@@ -1,6 +1,0 @@
-{
-  "name": "سجل الوقت - Time Log",
-  "description": "تطبيق متكامل واحترافي لإدارة وتسجيل الوقت اليومي، تحديد الأولويات، تتبع الأنشطة، وتحليل الإنتاجية بنظام التاقات الخمسة ومصفوفة الأولويات.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

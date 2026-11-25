@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, TagTargets } from '../../types';
+import { SleepSettings, AgeDisplayOpt, WeekStartDay, ThemeMode, ThemePalette, TagTargets } from '../../types';
+import { THEME_PALETTES } from '../../constants/themes';
 import { STRINGS, DEFAULT_TAG_TARGETS, TAGS_CONFIG, APP_VERSION } from '../../constants/config';
 import { soundManager } from '../../utils/soundEffects';
 import KofiButton from '../KofiButton';
@@ -81,6 +82,8 @@ interface SettingsModalProps {
   themeMode?: ThemeMode;
   isDarkEffective?: boolean;
   onChangeThemeMode?: (mode: ThemeMode) => void;
+  themePalette?: ThemePalette;
+  onChangeThemePalette?: (palette: ThemePalette) => void;
   lang: 'ar' | 'en';
   onToggleLang: () => void;
 }
@@ -134,6 +137,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   themeMode = 'light',
   isDarkEffective = false,
   onChangeThemeMode,
+  themePalette = 'classic',
+  onChangeThemePalette,
   lang,
   onToggleLang
 }) => {
@@ -274,6 +279,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="truncate">{lang === 'ar' ? 'الجهاز' : 'Auto'}</span>
                 </button>
               </div>
+
+              {/* Color theme (palette) picker */}
+              {onChangeThemePalette && (
+                <div className="flex flex-col gap-1.5 pt-1">
+                  <span className="font-bold text-xs text-[var(--ink)]">
+                    {lang === 'ar' ? 'لون الثيم' : 'Color theme'}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-label={lang === 'ar' ? 'لون الثيم' : 'Color theme'}
+                    className="grid grid-cols-3 sm:grid-cols-6 gap-1.5"
+                  >
+                    {THEME_PALETTES.map((p) => {
+                      const active = themePalette === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => onChangeThemePalette(p.id)}
+                          title={p.label[lang]}
+                          className={`flex flex-col items-center gap-1 rounded-xl border p-1.5 cursor-pointer transition-all select-none ${
+                            active
+                              ? 'border-indigo-600 ring-2 ring-indigo-500/30 bg-[var(--card)]'
+                              : 'border-[var(--line)] bg-[var(--card)] hover:border-[var(--ink-faint)]'
+                          }`}
+                        >
+                          <span
+                            className="relative w-full h-7 rounded-lg border border-black/10 overflow-hidden"
+                            style={{ background: `linear-gradient(135deg, ${p.swatch.light} 0 50%, ${p.swatch.dark} 50% 100%)` }}
+                          >
+                            <span
+                              className="absolute inset-0 m-auto w-3.5 h-3.5 rounded-full ring-2 ring-white/80"
+                              style={{ background: p.swatch.accent }}
+                            />
+                          </span>
+                          <span className={`text-[11px] leading-none ${active ? 'font-bold text-[var(--ink)]' : 'text-[var(--ink-soft)]'}`}>
+                            {p.label[lang]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Language Switch Toggle (Standard Toggle Style) */}
@@ -1136,7 +1187,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Modal Bottom Close Footer */}
         <div className="px-5 py-3 border-t border-[var(--line)] bg-[var(--card)] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-soft)] font-medium">
-            <span>{lang === 'ar' ? 'جميع الحقوق محفوظة © zerocold 2026' : 'All rights reserved © zerocold 2026'}</span>
+            <span>© 2026 zerocold</span>
+            <span className="text-[var(--line)]">•</span>
+            <a href="/privacy/" target="_blank" rel="noopener" className="underline hover:text-[var(--ink)]">
+              {lang === 'ar' ? 'الخصوصية' : 'Privacy'}
+            </a>
             <span className="text-[var(--line)]">•</span>
             <span className="font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400">{APP_VERSION}</span>
           </div>

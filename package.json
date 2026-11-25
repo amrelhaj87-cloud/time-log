@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "time-log",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,18 +9,11 @@
     "postbuild": "node scripts/write-version.mjs",
     "test": "vitest run",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "sync": "vite build && npx cap sync android",
-    "push": "git push",
-    "deploy": "git add -A && git commit -m \"update: deploy changes\" && git push"
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.0",
-    "@capacitor/app": "^8.1.1",
-    "@capacitor/cli": "^8.5.0",
-    "@capacitor/core": "^8.6.2",
-    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",

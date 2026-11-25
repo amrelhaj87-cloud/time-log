@@ -11,6 +11,16 @@ import {
 } from '../../services/firebase';
 import { STRINGS } from '../../constants/config';
 import { X, LogIn, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import type { User } from 'firebase/auth';
+
+/** Reads `code` / `message` from a thrown Firebase error (or anything else). */
+function authError(err: unknown): { code: string; message: string } {
+  const e = (err ?? {}) as { code?: unknown; message?: unknown };
+  return {
+    code: typeof e.code === 'string' ? e.code : '',
+    message: typeof e.message === 'string' ? e.message : ''
+  };
+}
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -34,7 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
-  const [unverifiedUser, setUnverifiedUser] = useState<any>(null);
+  const [unverifiedUser, setUnverifiedUser] = useState<User | null>(null);
 
   const t = STRINGS[lang];
 
@@ -65,9 +75,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Google Sign-In Error:', err);
-      const code = String(err?.code || err?.message || '');
+      const code = String(authError(err).code || authError(err).message || '');
       const codeLower = code.toLowerCase();
 
       if (codeLower.includes('unauthorized-domain')) {
@@ -80,16 +90,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else if (
         codeLower.includes('popup-closed-by-user') ||
         codeLower.includes('cancelled-popup-request') ||
-        codeLower.includes('12501') ||
         codeLower.includes('cancel')
       ) {
         setErrorMsg(lang === 'ar' ? 'تم إلغاء عملية تسجيل الدخول بـ Google.' : 'Google sign-in was cancelled.');
-      } else if (code.includes('10') || code.includes('DEVELOPER_ERROR')) {
-        setErrorMsg(
-          lang === 'ar'
-            ? 'خطأ في تهيئة Google Sign-In (تأكد من مطابقة SHA-1 و serverClientId في Firebase / Google Cloud Console).'
-            : 'Google Sign-In configuration error (verify SHA-1 and serverClientId in Firebase / Google Cloud Console).'
-        );
       } else if (codeLower.includes('popup-blocked')) {
         setErrorMsg(
           lang === 'ar'
@@ -104,7 +107,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         );
       } else {
         setErrorMsg(
-          err?.message || (lang === 'ar' ? 'فشل تسجيل الدخول بـ Google' : 'Google sign in failed')
+          authError(err).message || (lang === 'ar' ? 'فشل تسجيل الدخول بـ Google' : 'Google sign in failed')
         );
       }
     } finally {
@@ -138,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         try {
           await sendEmailVerification(user);
-        } catch (verErr: any) {
+        } catch (verErr: unknown) {
           console.warn('sendEmailVerification error:', verErr);
         }
 
@@ -168,8 +171,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onSuccess();
         onClose();
       }
-    } catch (err: any) {
-      const code = String(err?.code || err?.message || '');
+    } catch (err: unknown) {
+      const code = String(authError(err).code || authError(err).message || '');
       if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) {
         setErrorMsg(lang === 'ar' ? 'البريد أو كلمة المرور غير صحيحة.' : 'Invalid email or password.');
       } else if (code.includes('email-already-in-use')) {
@@ -206,9 +209,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         );
         setErrorMsg('');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (lang === 'ar' ? 'تعذر إعادة إرسال رابط التأكيد' : 'Failed to resend verification email')
+        authError(err).message || (lang === 'ar' ? 'تعذر إعادة إرسال رابط التأكيد' : 'Failed to resend verification email')
       );
     } finally {
       setResendingVerification(false);
@@ -224,8 +227,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       await sendPasswordResetEmail(auth, email.trim());
       setSuccessMsg(lang === 'ar' ? 'تم إرسال رابط استعادة كلمة المرور لبريدك الإلكتروني ✉️' : 'Password reset link sent to your email ✉️');
       setErrorMsg('');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Error sending reset email');
+    } catch (err: unknown) {
+      setErrorMsg(authError(err).message || 'Error sending reset email');
     }
   };
 

@@ -18,6 +18,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      // Apply the saved dark mode + color theme before first paint (no flash).
+      // React (useTheme) takes over after mount using the same localStorage keys.
+      (function () {
+        try {
+          var root = document.documentElement;
+          var mode = localStorage.getItem('themeMode');
+          if (!mode) mode = localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light';
+          var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) root.classList.add('dark');
+          var palette = localStorage.getItem('themePalette');
+          if (palette && palette !== 'classic') root.setAttribute('data-palette', palette);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="antialiased min-h-screen">
     <div id="root"></div>

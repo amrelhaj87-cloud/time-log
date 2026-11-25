@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { db, doc, setDoc } from '../services/firebase';
-import type { ThemeMode } from '../types';
+import type { ThemeMode, ThemePalette } from '../types';
+import { DEFAULT_THEME_PALETTE, THEME_PALETTES, isThemePalette } from '../constants/themes';
 
 /**
  * App theme mode (light / dark / system), the effective dark state, the system
@@ -77,12 +78,48 @@ export function useTheme(currentUser: { uid: string } | null) {
     }
   }, [isDarkEffective]);
 
+  // Color theme (palette) — independent of light/dark mode.
+  const [themePalette, setThemePaletteState] = useState<ThemePalette>(() => {
+    const saved = localStorage.getItem('themePalette');
+    return isThemePalette(saved) ? saved : DEFAULT_THEME_PALETTE;
+  });
+
+  /** Sets the palette from any source (Firestore, backup); ignores unknown values. */
+  const setThemePalette = useCallback((palette: unknown) => {
+    if (!isThemePalette(palette)) return;
+    setThemePaletteState(palette);
+    localStorage.setItem('themePalette', palette);
+  }, []);
+
+  const handleChangeThemePalette = useCallback(
+    (palette: ThemePalette) => {
+      setThemePalette(palette);
+      if (db && currentUser) {
+        const docRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
+        setDoc(docRef, { themePalette: palette, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
+    },
+    [setThemePalette, currentUser]
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (themePalette === DEFAULT_THEME_PALETTE) delete root.dataset.palette;
+    else root.dataset.palette = themePalette;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const def = THEME_PALETTES.find((p) => p.id === themePalette);
+    if (meta && def) meta.setAttribute('content', def.metaColor);
+  }, [themePalette]);
+
   return {
     themeMode,
     setThemeMode,
     systemIsDark,
     isDarkEffective,
     handleCycleThemeMode,
-    handleChangeThemeMode
+    handleChangeThemeMode,
+    themePalette,
+    setThemePalette,
+    handleChangeThemePalette
   };
 }

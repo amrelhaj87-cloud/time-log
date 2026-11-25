@@ -46,8 +46,9 @@ Time Log تطبيق ويب بسيط وأنيق يساعدك على **تتبّع 
 - إجمالي ساعاتك، توازن جوانب حياتك، وأكثر ما كررته
 - يمكن تفعيله أو تعطيله من الإعدادات
 
-### 🌙 مظاهر متعددة
+### 🎨 مظاهر وثيمات
 - فاتح / داكن / تلقائي (يتابع إعدادات جهازك)
+- 6 ثيمات ألوان: كلاسيكي، محيط، غابة، غروب، وردي، ورقي — من الإعدادات
 
 ### ☁️ مزامنة سحابية
 - سجّل الدخول وبياناتك تُحفظ في السحابة
@@ -83,6 +84,49 @@ Time Log تطبيق ويب بسيط وأنيق يساعدك على **تتبّع 
 | العربية 🇦🇪 | English 🇬🇧 |
 |:-----------:|:-----------:|
 | ✅ | ✅ |
+
+---
+
+## 🔒 الخصوصية
+
+بياناتك ملكك: لا إعلانات، لا تتبّع، لا تحليلات. بدون تسجيل دخول تبقى بياناتك على جهازك فقط.
+التفاصيل في [سياسة الخصوصية](https://time-log-rouge.vercel.app/privacy/).
+
+> Time Log مستوحى من أدوات تسجيل الوقت في زمالات الاثنتي عشرة خطوة، لكنه مشروع شخصي مستقل، **غير تابع** لزمالة Underearners Anonymous ولا معتمد منها.
+
+---
+
+## 🛠️ للمطوّرين
+
+**التقنيات:** React 19 · TypeScript · Vite · Tailwind CSS 4 · Firebase (Auth + Firestore) · PWA · Vitest
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm run typecheck  # tsc --noEmit
+npm run lint
+npm test
+npm run build
+```
+
+**تشغيل نسختك الخاصة:** أنشئ مشروع Firebase، فعّل Authentication (Google + Email) وFirestore، ضع إعدادات الويب في `src/services/firebase.ts`، وانشر القواعد:
+
+```bash
+npx firebase-tools deploy --only firestore:rules
+```
+
+### 🛡️ الأمان (Security)
+
+مفتاح Firebase في الكود **ليس سراً**؛ هو مجرد معرّف للمشروع، والحماية الحقيقية في `firestore.rules` (كل مستخدم يرى بياناته فقط). وللحماية الإضافية:
+
+1. **تقييد مفتاح API:** Google Cloud Console → APIs & Services → Credentials → مفتاح المتصفح → *Website restrictions*: أضف `time-log-rouge.vercel.app/*` و`localhost:3000/*` (ونطاقك الخاص لاحقاً).
+2. **App Check:** Firebase Console → App Check → سجّل تطبيق الويب بـ **reCAPTCHA v3**، وانسخ الـ *site key* إلى Vercel كمتغير `VITE_RECAPTCHA_SITE_KEY`، ثم أعد النشر. راقب الطلبات أسبوعاً في تبويب App Check، وبعدها اضغط **Enforce** لـ Firestore وAuthentication.
+
+---
+
+## 📄 الرخصة
+
+[MIT](LICENSE) © 2026 zerocold
 
 ---
 

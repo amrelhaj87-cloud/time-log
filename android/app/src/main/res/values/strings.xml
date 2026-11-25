@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Time Log</string>
-    <string name="title_activity_main">Time Log</string>
-    <string name="package_name">com.timelog.app</string>
-    <string name="custom_url_scheme">com.timelog.app</string>
-    <string name="server_client_id">334822322788-b71eu9kp0psptr5m4nnpt15rp436epa9.apps.googleusercontent.com</string>
-</resources>

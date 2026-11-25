@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, Capacitor, onAuthStateChanged, loadFirebase } from './services/firebase';
+import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, onAuthStateChanged, loadFirebase } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -178,7 +178,10 @@ export default function App() {
     setThemeMode,
     isDarkEffective,
     handleCycleThemeMode,
-    handleChangeThemeMode
+    handleChangeThemeMode,
+    themePalette,
+    setThemePalette,
+    handleChangeThemePalette
   } = useTheme(currentUser);
 
   // 4. Sleep Window State (extracted to useSleepWindow).
@@ -390,6 +393,7 @@ export default function App() {
               setThemeMode(data.themeMode);
               localStorage.setItem('themeMode', data.themeMode);
             }
+            if (data.themePalette) setThemePalette(data.themePalette);
             if (data.isDetailedView !== undefined) {
               setIsDetailedView(data.isDetailedView);
               localStorage.setItem('isDetailedView', String(data.isDetailedView));
@@ -1115,7 +1119,7 @@ export default function App() {
     setTimeout(() => setSaveStatus(''), 4000);
   };
 
-  // Unified Android Back-Button (Capacitor) & Desktop Escape key handling
+  // Keyboard shortcuts + Escape closes the top-most open modal
   useEffect(() => {
     const handleCloseTopModal = (): boolean => {
       if (morningNudgeOpen) {
@@ -1178,32 +1182,8 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    // 2. Capacitor Android Hardware Back Button
-    let backButtonHandle: { remove: () => void } | null = null;
-    if (Capacitor.isNativePlatform()) {
-      import('@capacitor/app').then(({ App: CapApp }) => {
-        CapApp.addListener('backButton', ({ canGoBack }) => {
-          const closed = handleCloseTopModal();
-          if (!closed) {
-            if (canGoBack) {
-              window.history.back();
-            } else {
-              CapApp.minimizeApp();
-            }
-          }
-        }).then((listener) => {
-          backButtonHandle = listener;
-        }).catch((err) => {
-          console.warn('Capacitor backButton listener init warning:', err);
-        });
-      }).catch(() => { });
-    }
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      if (backButtonHandle) {
-        backButtonHandle.remove();
-      }
     };
   }, [ // eslint-disable-line react-hooks/exhaustive-deps -- stable setters + render-closure handlers; re-binding every shortcut listener per render is worse
     authModalOpen,
@@ -1314,7 +1294,8 @@ export default function App() {
         credential = googleCred?.accessToken || null;
       } catch { }
       if (!credential) {
-        credential = (res as any)._tokenResponse?.oauthAccessToken || null;
+        // Older SDK builds only exposed the token on the raw response.
+        credential = (res as unknown as { _tokenResponse?: { oauthAccessToken?: string } })._tokenResponse?.oauthAccessToken || null;
       }
 
       if (credential) {
@@ -1330,9 +1311,9 @@ export default function App() {
         setSaveStatus(lang === 'ar' ? '✅ تم الاتصال بحساب Google' : '✅ Connected to Google account');
         setTimeout(() => setSaveStatus(''), 4000);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Google calendar connect failed:', err);
-      const msg = err?.code === 'auth/popup-blocked'
+      const msg = (err as { code?: string } | null)?.code === 'auth/popup-blocked'
         ? (lang === 'ar' ? '⚠️ المتصفح حجب النافذة، يرجى السماح بالنوافذ المنبثقة' : '⚠️ Popup blocked by browser')
         : (lang === 'ar' ? '⚠️ تعذر ربط الحساب، يرجى المحاولة مرة أخرى' : '⚠️ Failed to connect account');
       setSaveStatus(msg);
@@ -1731,8 +1712,12 @@ export default function App() {
       {/* Footer */}
       <footer className="text-center text-xs text-[var(--ink-soft)] mt-8 mb-4 flex flex-col items-center justify-center gap-1.5 no-print select-none">
         <p className="text-[11px] text-[var(--ink-faint)]">{t.footer}</p>
-        <div className="text-[11px] font-medium text-[var(--ink-soft)]">
-          <span>{lang === 'ar' ? 'جميع الحقوق محفوظة © zerocold 2026' : 'All rights reserved © zerocold 2026'}</span>
+        <div className="text-[11px] font-medium text-[var(--ink-soft)] flex items-center gap-1.5">
+          <span>© 2026 zerocold · {lang === 'ar' ? 'مفتوح المصدر (MIT)' : 'Open source (MIT)'}</span>
+          <span className="text-[var(--line)]">•</span>
+          <a href="/privacy/" target="_blank" rel="noopener" className="underline hover:text-[var(--ink)]">
+            {lang === 'ar' ? 'سياسة الخصوصية' : 'Privacy'}
+          </a>
         </div>
         <div className="flex items-center justify-center pt-0.5">
           <span className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-mono px-2.5 py-0.5 rounded-md text-[10px] font-semibold shadow-2xs">
@@ -1830,6 +1815,8 @@ export default function App() {
         themeMode={themeMode}
         isDarkEffective={isDarkEffective}
         onChangeThemeMode={handleChangeThemeMode}
+        themePalette={themePalette}
+        onChangeThemePalette={handleChangeThemePalette}
         lang={lang}
         onToggleLang={() => {
           const next = lang === 'ar' ? 'en' : 'ar';
@@ -1915,6 +1902,7 @@ export default function App() {
               if (prefs.sleepSettings) setSleepSettings(prefs.sleepSettings);
               if (prefs.weekStartDay) setWeekStartDay(prefs.weekStartDay);
               if (prefs.themeMode) setThemeMode(prefs.themeMode);
+              if (prefs.themePalette) setThemePalette(prefs.themePalette);
               if (prefs.lang) setLang(prefs.lang);
               if (prefs.birthDate) setUserBirthDate(prefs.birthDate);
               if (prefs.ageDisplayOpt) setAgeDisplayOpt(prefs.ageDisplayOpt);
