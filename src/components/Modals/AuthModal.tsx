@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   auth,
   signInWithGoogle,
@@ -44,9 +44,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
-  const [unverifiedUser, setUnverifiedUser] = useState<User | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  /** An email account exists but isn't verified yet → offer "resend link". */
+  const [needsVerification, setNeedsVerification] = useState(false);
+  /** Seconds before "resend" is allowed again (Firebase rate-limits verification emails). */
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = window.setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [resendCooldown]);
 
   const t = STRINGS[lang];
+  const ar = lang === 'ar';
+
+  /**
+   * Sends the verification email in the user's language, with a "continue"
+   * link back to the app. If this domain isn't on Firebase's allow-list for
+   * continue links, retry without one rather than failing.
+   */
+  const sendVerificationTo = async (user: User) => {
+    if (auth) auth.languageCode = lang;
+    try {
+      await sendEmailVerification(user, { url: `${window.location.origin}/` });
+    } catch (err: unknown) {
+      const code = authError(err).code;
+      if (code.includes('continue-uri') || code.includes('unauthorized-domain')) {
+        await sendEmailVerification(user);
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  const verificationSentMsg = (to: string) =>
+    ar
+      ? `أرسلنا رابط التفعيل إلى ${to} ✉️ افتح بريدك واضغط الرابط، ثم سجّل الدخول. لو ما لقيته خلال دقيقتين، شوف مجلد الرسائل غير المرغوب فيها (Spam).`
+      : `We sent an activation link to ${to} ✉️ Open it, then sign in. Not there after two minutes? Check your Spam folder.`;
+
+  const verificationErrorMsg = (err: unknown) => {
+    const code = authError(err).code;
+    if (code.includes('too-many-requests')) {
+      return ar
+        ? 'أُرسلت روابط كثيرة لهذا البريد مؤخراً. انتظر بضع دقائق ثم أعد المحاولة.'
+        : 'Too many emails were sent recently. Wait a few minutes, then retry.';
+    }
+    if (code.includes('network')) {
+      return ar ? 'تعذّر الاتصال بالإنترنت. تأكد من الاتصال ثم أعد الإرسال.' : 'Network error. Check your connection, then resend.';
+    }
+    return ar ? 'تعذّر إرسال رابط التفعيل. اضغط «إعادة إرسال الرابط».' : 'Could not send the activation link. Press “Resend link”.';
+  };
 
   if (!isOpen) return null;
 
@@ -61,7 +109,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setErrorMsg('');
     setSuccessMsg('');
-    setUnverifiedUser(null);
+    setNeedsVerification(false);
     setLoading(true);
     try {
       const cred = await signInWithGoogle();
@@ -122,10 +170,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMsg(lang === 'ar' ? 'يرجى إدخال البريد الإلكتروني وكلمة المرور' : 'Please fill all fields');
       return;
     }
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setErrorMsg(ar ? 'كلمة المرور لازم تكون 6 أحرف على الأقل.' : 'Password must be at least 6 characters.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg(ar ? 'كلمتا المرور غير متطابقتين.' : 'Passwords do not match.');
+        return;
+      }
+    }
 
     setErrorMsg('');
     setSuccessMsg('');
-    setUnverifiedUser(null);
+    setNeedsVerification(false);
     setLoading(true);
 
     try {
@@ -139,31 +197,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           } catch {}
         }
 
+        // Send the activation link right away — but never pretend it was sent.
+        let sendError: unknown = null;
         try {
-          await sendEmailVerification(user);
+          await sendVerificationTo(user);
         } catch (verErr: unknown) {
           console.warn('sendEmailVerification error:', verErr);
+          sendError = verErr;
         }
 
         await signOut(auth);
 
-        setSuccessMsg(
-          lang === 'ar'
-            ? 'تم إرسال إيميل تأكيد إلى بريدك، رجاءً افتحه وأكد بريدك قبل ما تقدر تستخدم التطبيق ✉️'
-            : 'A verification link has been sent to your email. Please verify it before signing in ✉️'
-        );
         setMode('signin');
+        setConfirmPassword('');
+        setNeedsVerification(true);
+        if (sendError) {
+          setErrorMsg(
+            (ar ? 'تم إنشاء حسابك، لكن ' : 'Your account was created, but: ') + verificationErrorMsg(sendError)
+          );
+        } else {
+          setSuccessMsg(verificationSentMsg(email.trim()));
+          setResendCooldown(60);
+        }
       } else {
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
         const user = cred.user;
 
         if (!user.emailVerified) {
-          setUnverifiedUser(user);
+          setNeedsVerification(true);
           await signOut(auth);
           setErrorMsg(
-            lang === 'ar'
-              ? 'لازم تأكد بريدك الإلكتروني أولاً قبل استخدام التطبيق.'
-              : 'You must verify your email address first before accessing the app.'
+            ar
+              ? 'بريدك لسه ما اتفعّل. افتح رابط التفعيل في بريدك (أو في مجلد Spam)، أو اضغط «إعادة إرسال الرابط».'
+              : 'Your email isn’t activated yet. Open the link in your inbox (or Spam), or press “Resend link”.'
           );
           return;
         }
@@ -189,29 +255,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleResendVerification = async () => {
     if (!auth || !email.trim() || !password.trim()) {
-      setErrorMsg(lang === 'ar' ? 'يرجى إدخال البريد وكلمة المرور أولاً لإعادة إرسال التأكيد' : 'Enter email and password first');
+      setErrorMsg(ar ? 'اكتب بريدك وكلمة المرور أولاً لإعادة إرسال الرابط.' : 'Enter your email and password first.');
       return;
     }
+    if (resendCooldown > 0) return;
     setResendingVerification(true);
+    setErrorMsg('');
+    setSuccessMsg('');
     try {
-      let user = unverifiedUser;
-      if (!user) {
-        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-        user = cred.user;
+      const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
+      if (user.emailVerified) {
+        // Already activated in another tab: just finish signing in.
+        setNeedsVerification(false);
+        onSuccess();
+        onClose();
+        return;
       }
-      if (user) {
-        await sendEmailVerification(user);
+      try {
+        await sendVerificationTo(user);
+      } finally {
         await signOut(auth);
-        setSuccessMsg(
-          lang === 'ar'
-            ? 'تمت إعادة إرسال رابط التأكيد لبريدك الإلكتروني بنجاح ✉️'
-            : 'Verification link resent to your email successfully ✉️'
-        );
-        setErrorMsg('');
       }
+      setSuccessMsg(verificationSentMsg(email.trim()));
+      setResendCooldown(60);
     } catch (err: unknown) {
+      const code = authError(err).code;
       setErrorMsg(
-        authError(err).message || (lang === 'ar' ? 'تعذر إعادة إرسال رابط التأكيد' : 'Failed to resend verification email')
+        code.includes('wrong-password') || code.includes('invalid-credential')
+          ? ar ? 'البريد أو كلمة المرور غير صحيحة.' : 'Invalid email or password.'
+          : verificationErrorMsg(err)
       );
     } finally {
       setResendingVerification(false);
@@ -257,21 +329,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
-            {unverifiedUser && (
-              <button
-                type="button"
-                disabled={resendingVerification}
-                onClick={handleResendVerification}
-                className="self-start flex items-center gap-1.5 px-3 py-1 bg-[var(--rose)] text-white text-[11px] font-bold rounded-lg hover:opacity-90 transition-all cursor-pointer shadow-2xs"
-              >
-                <RefreshCw className={`w-3 h-3 ${resendingVerification ? 'animate-spin' : ''}`} />
-                <span>
-                  {resendingVerification
-                    ? (lang === 'ar' ? 'جارٍ الإرسال...' : 'Resending...')
-                    : (lang === 'ar' ? 'إعادة إرسال إيميل التأكيد (Resend)' : 'Resend verification email')}
-                </span>
-              </button>
-            )}
           </div>
         )}
 
@@ -283,6 +340,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
+        {/* Resend activation link (email accounts that aren't verified yet) */}
+        {needsVerification && activeTab === 'email' && (
+          <button
+            type="button"
+            disabled={resendingVerification || resendCooldown > 0}
+            onClick={handleResendVerification}
+            className="self-start flex items-center gap-1.5 px-3 py-1.5 border border-[var(--line)] bg-[var(--bg)] text-[var(--ink)] text-[11px] font-bold rounded-lg hover:border-[var(--teal)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3 h-3 ${resendingVerification ? 'animate-spin' : ''}`} />
+            <span>
+              {resendingVerification
+                ? ar ? 'جارٍ الإرسال…' : 'Sending…'
+                : resendCooldown > 0
+                  ? ar ? `إعادة إرسال الرابط (${resendCooldown})` : `Resend link (${resendCooldown})`
+                  : ar ? 'إعادة إرسال الرابط' : 'Resend link'}
+            </span>
+          </button>
+        )}
+
         {/* Auth Tabs */}
         <div className="grid grid-cols-2 gap-1 border-b border-[var(--line)] pb-1">
           <button
@@ -291,7 +367,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setActiveTab('google');
               setErrorMsg('');
               setSuccessMsg('');
-              setUnverifiedUser(null);
+              setNeedsVerification(false);
             }}
             className={`py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'google'
@@ -307,7 +383,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setActiveTab('email');
               setErrorMsg('');
               setSuccessMsg('');
-              setUnverifiedUser(null);
+              setNeedsVerification(false);
             }}
             className={`py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'email'
@@ -381,6 +457,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
@@ -398,6 +475,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="password"
                   required
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  minLength={mode === 'signup' ? 6 : undefined}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -405,6 +484,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 />
               </div>
             </div>
+
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-[10px] font-bold text-[var(--teal-dark)] mb-0.5">
+                  {ar ? 'تأكيد كلمة المرور' : 'Confirm password'}
+                </label>
+                <div className="relative flex items-center">
+                  <Lock className="w-4 h-4 absolute start-2.5 text-[var(--ink-faint)]" />
+                  <input
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    aria-invalid={confirmPassword.length > 0 && confirmPassword !== password}
+                    className={`w-full ps-8 pe-3 py-1.5 rounded-xl border bg-[var(--bg)] text-xs text-[var(--ink)] outline-hidden focus:border-[var(--teal)] ${
+                      confirmPassword.length > 0 && confirmPassword !== password ? 'border-[var(--rose)]' : 'border-[var(--line)]'
+                    }`}
+                  />
+                </div>
+                {confirmPassword.length > 0 && confirmPassword !== password && (
+                  <p className="text-[10px] font-semibold text-[var(--rose)] mt-0.5">
+                    {ar ? 'كلمتا المرور غير متطابقتين' : 'Passwords don’t match'}
+                  </p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"
@@ -419,9 +526,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={() => {
                   setMode(mode === 'signin' ? 'signup' : 'signin');
+                  setConfirmPassword('');
                   setErrorMsg('');
                   setSuccessMsg('');
-                  setUnverifiedUser(null);
+                  setNeedsVerification(false);
                 }}
                 className="text-[var(--teal-dark)] hover:underline cursor-pointer"
               >

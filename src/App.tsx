@@ -375,7 +375,14 @@ export default function App() {
 
     loadFirebase().then(() => {
       if (cancelled || !onAuthStateChanged) return;
-      unsub = onAuthStateChanged(auth, async (u) => {
+      unsub = onAuthStateChanged(auth, async (authUser) => {
+      // An email/password account only counts as signed in once its email is
+      // activated. The sign-up flow signs it straight out again; until then the
+      // app must not load or sync anything for it.
+      const u =
+        authUser && !authUser.emailVerified && authUser.providerData.every((p) => p.providerId === 'password')
+          ? null
+          : authUser;
       setCurrentUser(u);
       if (u) localStorage.setItem('timelog_last_uid', u.uid);
       let targetWs = weekStartRef.current;
