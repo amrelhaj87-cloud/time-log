@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Typecheck, Test & Build
+    name: Lint, Typecheck, Test, Rules & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,6 +31,15 @@ jobs:
 
       - name: Run unit tests
         run: npm run test
+
+      - name: Setup Java (Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Firestore security-rules tests
+        run: npm run test:rules
 
       - name: Production build
         run: npm run build

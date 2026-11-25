@@ -2,21 +2,73 @@ rules_version = '2';
 
 // Time Log — Firestore Security Rules
 // ─────────────────────────────────────────────────────────────────────────────
-// كل مستخدم يصل إلى بياناته فقط (users/{uid}/... والمسار المؤرشف).
-// أي مسار غير مطابق يُرفض تلقائياً (deny-by-default في Firestore).
-// لا توجد أي قراءة/كتابة عامة أو غير مصادَقة.
+// • كل مستخدم يصل إلى بياناته فقط، ولا توجد أي قراءة/كتابة عامة.
+// • الكتابة فقط لمن فعّل بريده (حسابات Google مفعّلة تلقائياً) — فالحسابات
+//   الوهمية التي يصنعها بوت بلا تفعيل لا تستطيع تخزين أي شيء.
+// • الكتابة فقط في المسارات التي يستخدمها التطبيق، وبأشكال وأحجام محددة.
+// • الحذف مسموح لصاحب البيانات دائماً (زر «احذف حسابي وبياناتي»).
+// • أي مسار غير مذكور هنا مرفوض تلقائياً (deny-by-default).
+//
+// Each user reaches only their own data; writes need a verified email, a known
+// path, and a bounded shape/size; owners can always delete; everything else is
+// denied by default.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // تفضيلات المستخدم وإعداداته: users/{uid}/settings/preferences
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
 
-    // أسابيع السجل + صندوق المهام + أي مستندات مستقبلية تحت مسار التطبيق
-    // artifacts/time-log-app/users/{uid}/{weeks|inbox|...}/...
-    match /artifacts/time-log-app/users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // Google sign-in tokens carry email_verified == true; email/password
+    // accounts get it after clicking the activation link.
+    function isVerifiedOwner(uid) {
+      return isOwner(uid) && request.auth.token.email_verified == true;
+    }
+
+    // Keys this write adds or changes (works for create and for merge updates,
+    // so older documents with extra legacy fields keep working).
+    function changedKeys() {
+      return resource == null
+        ? request.resource.data.keys()
+        : request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function isTimestampString(v) {
+      return v is string && v.size() <= 40;
+    }
+
+    // ── Preferences: users/{uid}/settings/preferences ────────────────────────
+    match /users/{uid}/settings/{docId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isVerifiedOwner(uid)
+        && docId == 'preferences'
+        && request.resource.data.keys().size() <= 60
+        && (!('updatedAt' in request.resource.data) || isTimestampString(request.resource.data.updatedAt))
+        && (!('birthDate' in request.resource.data) || (request.resource.data.birthDate is string && request.resource.data.birthDate.size() <= 20));
+    }
+
+    // ── App data: artifacts/time-log-app/users/{uid}/… ───────────────────────
+    // Weeks: one document per week, id = the week's start date (YYYY-MM-DD),
+    // holding the week as a JSON string.
+    match /artifacts/time-log-app/users/{uid}/weeks/{weekId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isVerifiedOwner(uid)
+        && weekId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && changedKeys().hasOnly(['json', 'updatedAt'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() <= 400000
+        && isTimestampString(request.resource.data.updatedAt);
+    }
+
+    // Task inbox: a single document holding the list.
+    match /artifacts/time-log-app/users/{uid}/inbox/{docId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isVerifiedOwner(uid)
+        && docId == 'todos'
+        && changedKeys().hasOnly(['items', 'updatedAt'])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 2000
+        && isTimestampString(request.resource.data.updatedAt);
     }
   }
 }

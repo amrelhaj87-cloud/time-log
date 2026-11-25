@@ -8,6 +8,7 @@
     "build": "vite build",
     "postbuild": "node scripts/write-version.mjs",
     "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-timelog \"vitest run --config vitest.rules.config.ts\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",
@@ -35,6 +37,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "firebase-tools": "^15.37.0",
     "globals": "^17.14.0",
     "prettier": "^3.10.1",
     "tailwindcss": "^4.1.14",
