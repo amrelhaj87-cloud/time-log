@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { WeekStartDay, ThemeMode, AgeDisplayOpt } from '../types';
-import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN, APP_VERSION } from '../constants/config';
+import { STRINGS, DAY_NAMES, MONTH_NAMES, DAY_ABBR_EN } from '../constants/config';
 import { focusCurrentHourInput } from '../utils/dateUtils';
 import {
   Calendar,
@@ -209,29 +209,19 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 w-full md:w-auto shrink-0">
         {/* Brand */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 bg-indigo-600 dark:bg-indigo-500 rounded-xl flex items-center justify-center shadow-xs select-none shrink-0 ring-1 ring-indigo-700/20 dark:ring-indigo-400/30">
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5 text-white drop-shadow-xs"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {/* Prominent, bold white clock circle */}
-              <circle cx="12" cy="12" r="8.5" stroke="white" strokeWidth="2.5" />
-              {/* Bold white clock hands */}
-              <polyline points="12 7.5 12 12 15.5 14" stroke="white" strokeWidth="2.5" />
-            </svg>
-          </div>
+          <img
+            src="/icon.svg"
+            alt=""
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-[10px] shadow-xs select-none shrink-0"
+            draggable={false}
+          />
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5">
               <h1 className="font-bold text-base md:text-lg text-[var(--ink)] tracking-tight leading-tight whitespace-nowrap">
                 {t.brand}
               </h1>
-              <span className="font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
-                {APP_VERSION}
-              </span>
             </div>
             <span className="text-[10px] font-semibold text-[var(--ink-soft)] tracking-wider hidden md:inline mt-0.5 whitespace-nowrap">
               {lang === 'ar' ? 'نظام تسجيل الوقت الذكي' : 'Productivity Tracker'}

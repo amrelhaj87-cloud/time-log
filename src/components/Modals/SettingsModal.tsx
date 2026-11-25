@@ -957,7 +957,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         ? autoCloudSync
                           ? (lang === 'ar' ? 'مفعلة ✓ (مزامنة كل الأسابيع تلقائياً)' : 'Active ✓ (Auto-syncs all weeks)')
                           : (lang === 'ar' ? 'يدوية (يمكنك المزامنة بضغطة زر)' : 'Manual (Sync on demand)')
-                        : (lang === 'ar' ? 'يتطلب تسجيل الدخول بحساب جوجل' : 'Requires Google Login')}
+                        : (lang === 'ar' ? 'يتطلب تسجيل الدخول' : 'Requires sign-in')}
                     </span>
                   </div>
                 </div>
@@ -993,6 +993,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>{syncResultMsg}</span>
                 </div>
               )}
+              <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[var(--ink-soft)] border-t border-dashed border-[var(--line)] pt-2">
+                <span aria-hidden="true">🔒</span>
+                <span>
+                  {lang === 'ar'
+                    ? 'بياناتك لك وحدك: محفوظة باسم حسابك ولا يقدر أحد غيرك يقرأها. لا إعلانات، لا تتبّع، ولا نبيع شيئاً. '
+                    : 'Your data is yours alone: stored under your account and readable by no one else. No ads, no tracking, nothing sold. '}
+                  <a href="/privacy/" target="_blank" rel="noopener" className="underline hover:text-[var(--ink)] whitespace-nowrap">
+                    {lang === 'ar' ? 'سياسة الخصوصية' : 'Privacy policy'}
+                  </a>
+                </span>
+              </p>
             </div>
 
             {/* Google Calendar Sync Card (Toggle + Connect/Disconnect Button + Account Email) */}
