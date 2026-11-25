@@ -9,7 +9,7 @@ import type { FirebaseApp } from 'firebase/app';
  * their own script then gets rejected.
  *
  * It is off until `VITE_RECAPTCHA_SITE_KEY` is set (Vercel → Settings →
- * Environment Variables). Setup steps are in README → "Security".
+ * Environment Variables). Setup steps: RECOMMENDATIONS.md (#38).
  */
 export async function initAppCheck(app: FirebaseApp): Promise<void> {
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;

@@ -5,14 +5,14 @@
 
 @layer base {
   :root {
-    --bg: #F8FAFC;
-    --card: #FFFFFF;
-    --card-subtle: #F1F5F9;
-    --ink: #0F172A;
-    --ink-soft: #475569;
-    --ink-faint: #94A3B8;
-    --line: #E2E8F0;
-    --line-subtle: #F1F5F9;
+    --bg: #F1F3F7;
+    --card: #FCFCFD;
+    --card-subtle: #ECEFF4;
+    --ink: #172033;
+    --ink-soft: #4B5568;
+    --ink-faint: #949DB0;
+    --line: #DFE3EB;
+    --line-subtle: #EAEDF2;
     --teal: #4F46E5;
     --teal-dark: #1E293B;
     --teal-tint: #EEF2FF;
@@ -26,26 +26,26 @@
     --rose-tint: #FFF1F2;
     --ai-purple: #4F46E5;
     --ai-tint: #EEF2FF;
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(23, 32, 51, 0.06), 0 1px 2px -1px rgba(23, 32, 51, 0.05);
     --radius: 12px;
     --sc-color: #7C3AED;
     --sl-color: #475569;
-    --sleep-block-bg: #F8FAFC;
-    --sleep-block-border: #CBD5E1;
+    --sleep-block-bg: #F1F3F7;
+    --sleep-block-border: #CDD3DE;
   }
 
   .dark {
-    --bg: #090A0F;
-    --card: #12151E;
-    --card-subtle: #0C0E15;
-    --ink: #F9FAFB;
-    --ink-soft: #94A3B8;
-    --ink-faint: #64748B;
-    --line: #222634;
-    --line-subtle: #171A24;
+    --bg: #12151C;
+    --card: #1A1E27;
+    --card-subtle: #161920;
+    --ink: #E8EAEF;
+    --ink-soft: #9EA6B5;
+    --ink-faint: #6A7285;
+    --line: #2A2F3B;
+    --line-subtle: #20242D;
     --teal: #6366F1;
     --teal-dark: #A5B4FC;
-    --teal-tint: #181938;
+    --teal-tint: #1E2142;
     --amber: #F59E0B;
     --amber-tint: #382006;
     --blue: #38BDF8;
@@ -55,12 +55,12 @@
     --rose: #FB7185;
     --rose-tint: #3B0A17;
     --ai-purple: #818CF8;
-    --ai-tint: #1C1D42;
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --ai-tint: #22244A;
+    --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
     --sc-color: #A78BFA;
     --sl-color: #94A3B8;
-    --sleep-block-bg: #0E1018;
-    --sleep-block-border: #222634;
+    --sleep-block-bg: #161920;
+    --sleep-block-border: #2A2F3B;
   }
 
   html, body, input, button, textarea, select {
@@ -76,6 +76,16 @@
 
   .font-brand {
     font-family: 'Cairo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Pinch-zoom is allowed (accessibility). iOS Safari auto-zooms into any focused
+   field under 16px, so on iOS only, text fields get 16px. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='range']):not([type='checkbox']):not([type='radio']),
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }
 

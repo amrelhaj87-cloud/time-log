@@ -739,7 +739,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                   themeMode === 'system'
                     ? (lang === 'ar' ? `المظهر: الجهاز (${isDarkEffective ? 'ليلي' : 'نهاري'})` : `Theme: System (${isDarkEffective ? 'Dark' : 'Light'})`)
                     : themeMode === 'dark'
-                    ? (lang === 'ar' ? 'المظهر: ليلي (أسود)' : 'Theme: Dark')
+                    ? (lang === 'ar' ? 'المظهر: ليلي' : 'Theme: Dark')
                     : (lang === 'ar' ? 'المظهر: نهاري' : 'Theme: Light')
                 }
               >

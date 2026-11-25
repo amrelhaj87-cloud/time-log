@@ -291,10 +291,10 @@ export const STRINGS = {
     pomoCompleteTitle: 'أحسنت! اكتملت الجلسة بنجاح 👏',
     pomoCompletedMsg: 'هل ترغب في تسجيل هذا النشاط في جدول ساعات اليوم؟',
     themeModeLabel: 'مظهر التطبيق',
-    themeModeSub: 'التبديل بين المظهر النهاري، الليلي الأسود، أو التزامن التلقائي مع وضع جهازك',
+    themeModeSub: 'التبديل بين المظهر النهاري، الليلي، أو التزامن التلقائي مع وضع جهازك',
     optThemeSystem: 'الجهاز (تلقائي)',
     optThemeLight: 'نهاري',
-    optThemeDark: 'ليلي (أسود)'
+    optThemeDark: 'ليلي'
   },
   en: {
     brand: 'Time Log',
@@ -454,6 +454,6 @@ export const STRINGS = {
     themeModeSub: 'Switch between light, deep black dark, or auto-sync with your device',
     optThemeSystem: 'System (Auto)',
     optThemeLight: 'Light',
-    optThemeDark: 'Dark (Deep Black)'
+    optThemeDark: 'Dark'
   }
 };

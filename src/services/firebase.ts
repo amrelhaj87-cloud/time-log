@@ -33,7 +33,7 @@ export let onSnapshot: typeof FirestoreSdk.onSnapshot = unbound;
 /**
  * Public web config. These values are not secrets: they identify the project,
  * and access is enforced by firestore.rules (+ App Check and API-key
- * restrictions in the Google Cloud console). See README → "Security".
+ * restrictions in the Google Cloud console). See RECOMMENDATIONS.md (#38).
  */
 const firebaseConfig = {
   apiKey: 'AIzaSyCHGBQ-RCIzDRBQqlaEBaH7bQQrredUzYk',

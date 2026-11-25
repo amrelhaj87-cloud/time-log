@@ -228,8 +228,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {themeMode === 'system'
                         ? (lang === 'ar' ? `تلقائي حسب الجهاز (${isDarkEffective ? 'ليلي' : 'نهاري'})` : `System auto (${isDarkEffective ? 'Dark' : 'Light'})`)
                         : themeMode === 'dark'
-                        ? (lang === 'ar' ? 'ليلي أسود عميق' : 'Deep Black Dark')
-                        : (lang === 'ar' ? 'نهاري ناصع' : 'Light Mode')}
+                        ? (lang === 'ar' ? 'ليلي هادئ' : 'Soft dark')
+                        : (lang === 'ar' ? 'نهاري مريح' : 'Soft light')}
                     </span>
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       ? 'bg-indigo-600 text-white shadow-2xs'
                       : 'text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--bg)]'
                   }`}
-                  title={lang === 'ar' ? 'الوضع الليلي الأسود' : 'Deep Dark Mode'}
+                  title={lang === 'ar' ? 'الوضع الليلي' : 'Dark mode'}
                 >
                   <Moon className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{lang === 'ar' ? 'ليلي' : 'Dark'}</span>

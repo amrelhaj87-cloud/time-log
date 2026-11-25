@@ -115,13 +115,6 @@ npm run build
 npx firebase-tools deploy --only firestore:rules
 ```
 
-### 🛡️ الأمان (Security)
-
-مفتاح Firebase في الكود **ليس سراً**؛ هو مجرد معرّف للمشروع، والحماية الحقيقية في `firestore.rules` (كل مستخدم يرى بياناته فقط). وللحماية الإضافية:
-
-1. **تقييد مفتاح API:** Google Cloud Console → APIs & Services → Credentials → مفتاح المتصفح → *Website restrictions*: أضف `time-log-rouge.vercel.app/*` و`localhost:3000/*` (ونطاقك الخاص لاحقاً).
-2. **App Check:** Firebase Console → App Check → سجّل تطبيق الويب بـ **reCAPTCHA v3**، وانسخ الـ *site key* إلى Vercel كمتغير `VITE_RECAPTCHA_SITE_KEY`، ثم أعد النشر. راقب الطلبات أسبوعاً في تبويب App Check، وبعدها اضغط **Enforce** لـ Firestore وAuthentication.
-
 ---
 
 ## 📄 الرخصة
