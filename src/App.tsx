@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import { auth, db, doc, setDoc, getDoc, onSnapshot, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, onAuthStateChanged, loadFirebase } from './services/firebase';
+import { auth, db, doc, setDoc, getDoc, signOut, signInWithPopup, googleProvider, GoogleAuthProvider, onAuthStateChanged, loadFirebase } from './services/firebase';
 import {
   TagCode,
   GoalItem,
@@ -10,8 +10,7 @@ import {
   WeekStartDay
 } from './types';
 import {
-  STRINGS,
-  APP_VERSION
+  STRINGS
 } from './constants/config';
 import {
   startOfWeekFor,
@@ -19,12 +18,8 @@ import {
   isoDate,
   addDays,
   emptyDay,
-  getCurrentHourKey,
-  normalizeWeekData,
-  focusCurrentHourInput,
-  PomodoroSplit
+  focusCurrentHourInput
 } from './utils/dateUtils';
-import { isChunkLoadError, recoverFromStaleChunk } from './utils/chunkRecovery';
 import { calculateDailyStreak } from './utils/streakUtils';
 import { findDayDataAcrossWeeks, hasLoggedHours } from './utils/dayLookup';
 import {
@@ -54,67 +49,39 @@ import { useTheme } from './hooks/useTheme';
 import { useWeekPersistence } from './hooks/useWeekPersistence';
 import { usePreferences } from './hooks/usePreferences';
 
-// Modals — lazy-loaded on demand so their code stays out of the initial bundle.
-// The gate renders a modal only when its `isOpen` prop is true, which means the
-// dynamic import (and its chunk download) only happens the first time it is opened.
 // FocusPomodoroView stays eagerly imported because it must remain mounted so the
 // background timer keeps running even while its window is minimized.
 import { FocusPomodoroView } from './components/FocusPomodoroView';
+import {
+  AuthModal,
+  DayDistModal,
+  ChartsModal,
+  AiSummaryModal,
+  ExportModal,
+  SleepOnboardModal,
+  AgeSettingsModal,
+  PwaModal,
+  SettingsModal,
+  GuideModal,
+  TodoInboxDrawer,
+  MorningNudgeModal,
+  EveningWrapUpModal,
+  GlobalSearchModal
+} from './components/lazyModals';
+import { computeDayStats, collectAllDays } from './utils/dayStats';
+import { getBirthdayInfo, isBirthdayToday } from './utils/birthday';
+import { rolloverIncomplete } from './utils/dayEdits';
+import { usePomodoroLogging } from './hooks/usePomodoroLogging';
+import { useTodoInbox } from './hooks/useTodoInbox';
+import { applyCloudPreferences } from './utils/cloudPreferences';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { HoursSectionHeader } from './components/HoursSectionHeader';
+import { ToolsBar } from './components/ToolsBar';
+import { AppFooter } from './components/AppFooter';
 
-const makeLazyModal = (
-  loader: () => Promise<any>,
-  exportName: string
-) => {
-  const LazyModal = React.lazy(async () => {
-    try {
-      const m = await loader();
-      return { default: m[exportName] as React.ComponentType<any> };
-    } catch (err) {
-      // A chunk from an older deployment 404s after a release: reload onto the
-      // fresh build instead of letting the error reach the error boundary.
-      if (isChunkLoadError(err) && (await recoverFromStaleChunk())) {
-        return new Promise<never>(() => {});
-      }
-      throw err;
-    }
-  });
-  return function LazyModalGate(props: { isOpen?: boolean } & Record<string, any>) {
-    if (!props.isOpen) return null;
-    return (
-      <React.Suspense fallback={null}>
-        <LazyModal {...props} />
-      </React.Suspense>
-    );
-  };
-};
-
-const AuthModal = makeLazyModal(() => import('./components/Modals/AuthModal'), 'AuthModal');
-const DayDistModal = makeLazyModal(() => import('./components/Modals/DayDistModal'), 'DayDistModal');
-const ChartsModal = makeLazyModal(() => import('./components/Modals/ChartsModal'), 'ChartsModal');
-const AiSummaryModal = makeLazyModal(() => import('./components/Modals/AiSummaryModal'), 'AiSummaryModal');
-const ExportModal = makeLazyModal(() => import('./components/Modals/ExportModal'), 'ExportModal');
-const SleepOnboardModal = makeLazyModal(() => import('./components/Modals/SleepOnboardModal'), 'SleepOnboardModal');
-const AgeSettingsModal = makeLazyModal(() => import('./components/Modals/AgeSettingsModal'), 'AgeSettingsModal');
-const PwaModal = makeLazyModal(() => import('./components/Modals/PwaModal'), 'PwaModal');
-const SettingsModal = makeLazyModal(() => import('./components/Modals/SettingsModal'), 'SettingsModal');
-const GuideModal = makeLazyModal(() => import('./components/Modals/GuideModal'), 'GuideModal');
-const TodoInboxDrawer = makeLazyModal(() => import('./components/Modals/TodoInboxDrawer'), 'TodoInboxDrawer');
-const MorningNudgeModal = makeLazyModal(() => import('./components/Modals/MorningNudgeModal'), 'MorningNudgeModal');
-const EveningWrapUpModal = makeLazyModal(() => import('./components/Modals/EveningWrapUpModal'), 'EveningWrapUpModal');
-const GlobalSearchModal = makeLazyModal(() => import('./components/Modals/GlobalSearchModal'), 'GlobalSearchModal');
-
-import { Sparkles, BarChart3, Download, Flame, Cake, Target } from 'lucide-react';
 
 export default function App() {
-  // 0. Brain Dump & Todo Inbox State
-  const [todoInbox, setTodoInbox] = useState<TodoItem[]>(() => {
-    try {
-      const local = localStorage.getItem('time_log_todo_inbox');
-      return local ? JSON.parse(local) : [];
-    } catch {
-      return [];
-    }
-  });
+  // 0. Brain Dump drawer (the inbox itself lives in useTodoInbox)
   const [todoDrawerOpen, setTodoDrawerOpen] = useState(false);
   // Stable callback so usePreferences can close the drawer without re-subscribing
   const closeTodoDrawer = useCallback(() => setTodoDrawerOpen(false), []);
@@ -126,32 +93,6 @@ export default function App() {
     return startOfWeekFor(new Date(), initialDay);
   });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  // Real-time synchronization of Brain Dump / Todo Inbox with Firestore
-  useEffect(() => {
-    if (!db || !currentUser) return;
-    try {
-      const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
-      const unsubscribe = onSnapshot(
-        docRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            if (data && Array.isArray(data.items)) {
-              setTodoInbox(data.items);
-              localStorage.setItem('time_log_todo_inbox', JSON.stringify(data.items));
-            }
-          }
-        },
-        (err) => {
-          console.warn('Error syncing todo inbox from Firestore:', err);
-        }
-      );
-      return () => unsubscribe();
-    } catch (err) {
-      console.warn('Failed to attach todo inbox listener:', err);
-    }
-  }, [currentUser]);
 
   // 2. Preferences State
   const [lang, setLang] = useState<'ar' | 'en'>(() => {
@@ -311,51 +252,14 @@ export default function App() {
   const isSleepExceptionToday = !!sleepExceptionDays[dateStr];
   const isToday = dateStr === isoDate(new Date());
 
-  // Calculate Tag Counts & Logged items for active hours
-  const tagCounts: Record<TagCode, number> = { E: 0, V: 0, R: 0, S: 0, SC: 0, SL: 0, '': 0 };
-  let activeLoggedCount = 0;
-  let unassignedCount = 0;
-  let emptyHoursCount = 0;
+  // Tag counts & logged/empty totals for the selected day's active hours
+  const { tagCounts, activeLoggedCount, unassignedCount, emptyHoursCount } = computeDayStats(
+    currentDayData,
+    activeHoursKeys
+  );
 
-  activeHoursKeys.forEach((key) => {
-    const entry = currentDayData.hours[key];
-    if (entry && entry.text && entry.text.trim() !== '') {
-      activeLoggedCount++;
-      if (entry.tag && tagCounts[entry.tag] !== undefined) {
-        tagCounts[entry.tag]++;
-      } else {
-        unassignedCount++;
-      }
-    } else {
-      emptyHoursCount++;
-    }
-  });
-
-  // Calculate Daily Streak from weekData and cached localStorage days
-  const allDaysHours: Record<string, typeof currentDayData.hours> = {};
-  const allDaysGolden: Record<string, typeof currentDayData.goldenGoal> = {};
-  Object.keys(weekData.days).forEach((dk) => {
-    allDaysHours[dk] = weekData.days[dk].hours;
-    allDaysGolden[dk] = weekData.days[dk].goldenGoal;
-  });
-  // Also scan any other cached local weeks
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('time_log_week_')) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && parsed.days) {
-            Object.keys(parsed.days).forEach((dk) => {
-              allDaysHours[dk] = parsed.days[dk].hours;
-              allDaysGolden[dk] = parsed.days[dk].goldenGoal;
-            });
-          }
-        }
-      }
-    }
-  } catch { }
+  // Daily streak across the loaded week and every cached local week
+  const { allDaysHours, allDaysGolden } = collectAllDays(weekData);
   const { streak: dailyStreak, hasToday: streakHasToday } = calculateDailyStreak(allDaysHours, allDaysGolden);
 
   // Auth State Listener (runs once on mount; uses refs for active date/weekStart to avoid infinite re-subscribe loop)
@@ -393,62 +297,29 @@ export default function App() {
           const docRef = doc(db!, 'users', u.uid, 'settings', 'preferences');
           const snap = await getDoc(docRef);
           if (snap.exists()) {
-            const data = snap.data();
-            if (data.sleepWindow) setSleepSettings(data.sleepWindow);
-            if (data.birthDate) setUserBirthDate(data.birthDate);
-            if (data.ageDisplayOpt) setAgeDisplayOpt(data.ageDisplayOpt);
-            if (data.themeMode) {
-              setThemeMode(data.themeMode);
-              localStorage.setItem('themeMode', data.themeMode);
-            }
-            if (data.themePalette) setThemePalette(data.themePalette);
-            if (data.isDetailedView !== undefined) {
-              setIsDetailedView(data.isDetailedView);
-              localStorage.setItem('isDetailedView', String(data.isDetailedView));
-            }
-            if (data.devToolsEnabled !== undefined) setDevToolsEnabled(data.devToolsEnabled);
-            if (data.showAgeBadge !== undefined) setShowAgeBadge(data.showAgeBadge);
-            if (data.showStreakBadge !== undefined) setShowStreakBadge(data.showStreakBadge);
-            if (data.showFocusModeButton !== undefined) setShowFocusModeButton(data.showFocusModeButton);
-            if (data.showGoldenGoal !== undefined) {
-              setShowGoldenGoal(data.showGoldenGoal);
-              localStorage.setItem('showGoldenGoal', String(data.showGoldenGoal));
-            } else if (data.showPrioritiesSection !== undefined) {
-              setShowGoldenGoal(data.showPrioritiesSection);
-              localStorage.setItem('showGoldenGoal', String(data.showPrioritiesSection));
-            }
-            if (data.showPriorityMatrix !== undefined) {
-              setShowPriorityMatrix(data.showPriorityMatrix);
-              localStorage.setItem('showPriorityMatrix', String(data.showPriorityMatrix));
-            } else if (data.showPrioritiesSection !== undefined) {
-              setShowPriorityMatrix(data.showPrioritiesSection);
-              localStorage.setItem('showPriorityMatrix', String(data.showPrioritiesSection));
-            }
-            if (data.showTodoInbox !== undefined) {
-              setShowTodoInbox(data.showTodoInbox);
-              localStorage.setItem('showTodoInbox', String(data.showTodoInbox));
-            }
-            if (data.morningNudgeEnabled !== undefined) {
-              setMorningNudgeEnabled(data.morningNudgeEnabled);
-              localStorage.setItem('morningNudgeEnabled', String(data.morningNudgeEnabled));
-            }
-            if (data.eveningWrapUpEnabled !== undefined) {
-              setEveningWrapUpEnabled(data.eveningWrapUpEnabled);
-              localStorage.setItem('eveningWrapUpEnabled', String(data.eveningWrapUpEnabled));
-            }
-            if (data.tagTargets) {
-              setTagTargets(data.tagTargets);
-              localStorage.setItem('tagTargets', JSON.stringify(data.tagTargets));
-            }
-            if (data.calSyncEnabled !== undefined) setCalSyncEnabled(data.calSyncEnabled);
-            if (data.autoCloudSync !== undefined) {
-              setAutoCloudSync(data.autoCloudSync);
-              localStorage.setItem('autoCloudSync', String(data.autoCloudSync));
-            }
-            if (data.weekStartDay) {
-              setWeekStartDay(data.weekStartDay);
-              localStorage.setItem('weekStartDay', data.weekStartDay);
-              const computedWs = startOfWeekFor(currentDateRef.current, data.weekStartDay);
+            const storedWeekStartDay = applyCloudPreferences(snap.data(), {
+              setSleepSettings,
+              setUserBirthDate,
+              setAgeDisplayOpt,
+              setThemeMode,
+              setThemePalette,
+              setIsDetailedView,
+              setDevToolsEnabled,
+              setShowAgeBadge,
+              setShowStreakBadge,
+              setShowFocusModeButton,
+              setShowGoldenGoal,
+              setShowPriorityMatrix,
+              setShowTodoInbox,
+              setMorningNudgeEnabled,
+              setEveningWrapUpEnabled,
+              setTagTargets,
+              setCalSyncEnabled,
+              setAutoCloudSync,
+              setWeekStartDay
+            });
+            if (storedWeekStartDay) {
+              const computedWs = startOfWeekFor(currentDateRef.current, storedWeekStartDay);
               targetWs = computedWs;
               if (isoDate(computedWs) !== isoDate(weekStartRef.current)) {
                 setWeekStart(computedWs);
@@ -645,71 +516,13 @@ export default function App() {
     setTimeout(() => setSaveStatus(''), 3500);
   };
 
-  // Brain Dump & Todo Inbox Handlers
-  const saveTodoInbox = useCallback(
-    (items: TodoItem[]) => {
-      setTodoInbox(items);
-      localStorage.setItem('time_log_todo_inbox', JSON.stringify(items));
-      if (db && currentUser) {
-        try {
-          const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
-          setDoc(docRef, { items, updatedAt: new Date().toISOString() });
-        } catch (err) {
-          console.warn('Failed to sync todo inbox to Firestore:', err);
-        }
-      }
-    },
-    [currentUser]
-  );
-
-  const handleAddTodo = (text: string, tag: TagCode) => {
-    const newItem: TodoItem = {
-      id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      tag,
-      done: false,
-      createdAt: Date.now()
-    };
-    const updated = [newItem, ...todoInbox];
-    saveTodoInbox(updated);
-    setSaveStatus(lang === 'ar' ? '✨ تمت إضافة الفكرة للصندوق' : '✨ Added to Brain Dump Inbox');
-    setTimeout(() => setSaveStatus(''), 2500);
-  };
-
-  const handleToggleTodo = (id: string) => {
-    const updated = todoInbox.map((item) => {
-      if (item.id === id) {
-        const nextDone = !item.done;
-        return {
-          ...item,
-          done: nextDone,
-          promotedTo: nextDone ? item.promotedTo : undefined,
-          promotedQuad: nextDone ? item.promotedQuad : undefined
-        };
-      }
-      return item;
-    });
-    saveTodoInbox(updated);
-  };
-
-  const handleDeleteTodo = (id: string) => {
-    const updated = todoInbox.filter((item) => item.id !== id);
-    saveTodoInbox(updated);
-  };
+  // Brain Dump & Todo Inbox (useTodoInbox)
+  const { todoInbox, saveTodoInbox, handleAddTodo, handleToggleTodo, handleDeleteTodo, markTodoPromoted } =
+    useTodoInbox({ currentUser, lang, setSaveStatus });
 
   const handlePromoteTodoToGolden = (todo: TodoItem) => {
     handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode }, true);
-    const updated = todoInbox.map((item) =>
-      item.id === todo.id
-        ? {
-          ...item,
-          done: true,
-          promotedTo: 'golden' as const,
-          promotedAt: Date.now()
-        }
-        : item
-    );
-    saveTodoInbox(updated);
+    markTodoPromoted(todo.id, 'golden');
     setSaveStatus(lang === 'ar' ? '⭐ تم التعيين كهدف ذهبي لليوم!' : '⭐ Promoted to Golden Goal for today!');
     setTimeout(() => setSaveStatus(''), 3000);
   };
@@ -724,18 +537,7 @@ export default function App() {
     );
     if (isAlreadyInQuad) {
       // Mark as promoted in inbox if not marked yet
-      const updated = todoInbox.map((item) =>
-        item.id === todo.id
-          ? {
-            ...item,
-            done: true,
-            promotedTo: 'quad' as const,
-            promotedQuad: quadKey,
-            promotedAt: Date.now()
-          }
-          : item
-      );
-      saveTodoInbox(updated);
+      markTodoPromoted(todo.id, 'quad', quadKey);
       setSaveStatus(
         lang === 'ar'
           ? `⚠️ المهمة موجودة بالفعل في مربع (${quadKey.toUpperCase()})`
@@ -747,19 +549,7 @@ export default function App() {
 
     const updatedList = [...cleanList, { text: todo.text, done: false, tag: (todo.tag || '') as TagCode }];
     handleChangePriorities(quadKey, updatedList, true);
-
-    const updated = todoInbox.map((item) =>
-      item.id === todo.id
-        ? {
-          ...item,
-          done: true,
-          promotedTo: 'quad' as const,
-          promotedQuad: quadKey,
-          promotedAt: Date.now()
-        }
-        : item
-    );
-    saveTodoInbox(updated);
+    markTodoPromoted(todo.id, 'quad', quadKey);
     setSaveStatus(
       lang === 'ar'
         ? `🎯 تم النقل إلى مصفوفة الأولويات (${quadKey.toUpperCase()}) بنجاح!`
@@ -855,68 +645,11 @@ export default function App() {
   const handleRollover = async () => {
     const tomorrowDate = addDays(currentDate, 1);
     const tomorrowStr = isoDate(tomorrowDate);
-    const updatedDays = { ...weekData.days };
-    const tomorrowDay = updatedDays[tomorrowStr] || emptyDay();
-
-    let movedCount = 0;
-
-    // 1. Roll over incomplete Golden Goal
-    if (
-      currentDayData.goldenGoal &&
-      currentDayData.goldenGoal.text &&
-      currentDayData.goldenGoal.text.trim() !== '' &&
-      !currentDayData.goldenGoal.done
-    ) {
-      const cleanGolden = currentDayData.goldenGoal.text.trim();
-      if (!tomorrowDay.goldenGoal.text || tomorrowDay.goldenGoal.text.trim() === '') {
-        tomorrowDay.goldenGoal = {
-          text: cleanGolden,
-          done: false,
-          tag: currentDayData.goldenGoal.tag || ''
-        };
-        movedCount++;
-      } else if (tomorrowDay.goldenGoal.text.trim() !== cleanGolden) {
-        // If tomorrow's golden goal is already occupied, ensure it's transferred to Q1
-        const tomorrowQ1 = tomorrowDay.priorities.q1 || [];
-        const existsInQ1 = tomorrowQ1.some((t) => t.text.trim() === cleanGolden);
-        if (!existsInQ1) {
-          const emptyIdx = tomorrowQ1.findIndex((t) => (!t.text || t.text.trim() === '') && !t.done);
-          if (emptyIdx !== -1) {
-            tomorrowQ1[emptyIdx] = { text: cleanGolden, done: false, tag: currentDayData.goldenGoal.tag || '' };
-          } else {
-            tomorrowQ1.push({ text: cleanGolden, done: false, tag: currentDayData.goldenGoal.tag || '' });
-          }
-          tomorrowDay.priorities.q1 = tomorrowQ1;
-          movedCount++;
-        }
-      }
-    }
-
-    // 2. Roll over incomplete items from the 4 priority quadrants (Q1, Q2, Q3, Q4)
-    (['q1', 'q2', 'q3', 'q4'] as const).forEach((q) => {
-      const todayList = currentDayData.priorities[q] || [];
-      const tomorrowList = [...(tomorrowDay.priorities[q] || [])];
-
-      todayList.forEach((item) => {
-        if (item.text && item.text.trim() !== '' && !item.done) {
-          const cleanText = item.text.trim();
-          const exists = tomorrowList.some((t) => t.text.trim() === cleanText);
-          if (!exists) {
-            const emptyIdx = tomorrowList.findIndex((t) => (!t.text || t.text.trim() === '') && !t.done);
-            if (emptyIdx !== -1) {
-              tomorrowList[emptyIdx] = { text: cleanText, done: false, tag: item.tag || '' };
-            } else {
-              tomorrowList.push({ text: cleanText, done: false, tag: item.tag || '' });
-            }
-            movedCount++;
-          }
-        }
-      });
-      tomorrowDay.priorities[q] = tomorrowList.length > 0 ? tomorrowList : [{ text: '', done: false, tag: '' }];
-    });
-
-    updatedDays[tomorrowStr] = tomorrowDay;
-    const newWeek = { ...weekData, days: updatedDays };
+    const { tomorrow: tomorrowDay, movedCount } = rolloverIncomplete(
+      currentDayData,
+      weekData.days[tomorrowStr] || emptyDay()
+    );
+    const newWeek = { ...weekData, days: { ...weekData.days, [tomorrowStr]: tomorrowDay } };
     setWeekData(newWeek);
     saveWeekData(newWeek, weekStart, currentUser, true);
 
@@ -968,321 +701,67 @@ export default function App() {
     localStorage.setItem('focusModeActive', next ? 'true' : 'false');
   };
 
-  const handleLogPomodoroToCurrentHour = (
-    text: string,
-    minutes: number,
-    tag: TagCode,
-    updateTagOnly = false
-  ) => {
-    const now = new Date();
-    const todayStr = isoDate(now);
-    const currentKey = getCurrentHourKey();
-    const prefix = `[🎯 ${minutes}m] `;
+  // Logging finished Pomodoro sessions into today's hours (usePomodoroLogging)
+  const { handleLogPomodoroToCurrentHour, handleLogPomodoroSplits } = usePomodoroLogging({
+    setWeekData,
+    saveWeekData,
+    weekStart,
+    weekStartDay,
+    currentUser,
+    lang,
+    setSaveStatus
+  });
 
-    // Always log to TODAY's date (now), regardless of which day the user is currently browsing!
-    setWeekData((prevWeek) => {
-      const todayDay = prevWeek.days[todayStr];
-      if (todayDay) {
-        const existing = todayDay.hours[currentKey] || { text: '', tag: '' };
-        const updatedText = updateTagOnly
-          ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
-          : existing.text.trim()
-            ? `${existing.text} • ${prefix}${text}`
-            : `${prefix}${text}`;
-        const updatedDay: DayData = {
-          ...todayDay,
-          hours: {
-            ...todayDay.hours,
-            [currentKey]: { text: updatedText, tag: tag || (existing.tag as TagCode) || 'E' }
-          }
-        };
-        const newWeek: WeekData = {
-          ...prevWeek,
-          days: {
-            ...prevWeek.days,
-            [todayStr]: updatedDay
-          }
-        };
-        saveWeekData(newWeek, weekStart, currentUser, true);
-        return newWeek;
-      } else {
-        // If the user navigated to an entirely different week, save to today's week in background
-        const todayWs = startOfWeekFor(now, weekStartDay);
-        const todayMonKey = isoDate(mondayOf(todayWs));
-        const userPrefix = currentUser ? currentUser.uid : 'guest';
-        const targetLocalKey = `time_log_week_${userPrefix}_${todayMonKey}`;
-        let targetWeek: WeekData = { days: {} };
-        const raw = localStorage.getItem(targetLocalKey);
-        if (raw) {
-          try { targetWeek = JSON.parse(raw); } catch { }
-        }
-        targetWeek = normalizeWeekData(targetWeek, todayWs);
-        const existingDay = targetWeek.days[todayStr] || emptyDay();
-        const existing = existingDay.hours[currentKey] || { text: '', tag: '' };
-        const updatedText = updateTagOnly
-          ? (existing.text.trim() ? existing.text : `${prefix}${text}`)
-          : existing.text.trim()
-            ? `${existing.text} • ${prefix}${text}`
-            : `${prefix}${text}`;
-        targetWeek.days[todayStr] = {
-          ...existingDay,
-          hours: {
-            ...existingDay.hours,
-            [currentKey]: { text: updatedText, tag: tag || (existing.tag as TagCode) || 'E' }
-          }
-        };
-        saveWeekData(targetWeek, todayWs, currentUser, true);
-        return prevWeek;
-      }
-    });
-
-    setSaveStatus(
-      lang === 'ar'
-        ? `✅ تم تسجيل ${minutes} دقيقة تركيز في تاريخ اليوم (${currentKey})`
-        : `✅ Logged ${minutes}m focus session to today (${currentKey})`
-    );
-    setTimeout(() => setSaveStatus(''), 3000);
-  };
-
-  // Fix 3: تسجيل جلسة البومودورو الموزعة ذكياً بين الساعات (بلوكات ١٥ دقيقة)
-  const handleLogPomodoroSplits = (
-    text: string,
-    splits: PomodoroSplit[],
-    tag: TagCode
-  ) => {
-    if (!splits || splits.length === 0) return;
-    const now = new Date();
-    const todayStr = isoDate(now);
-
-    setWeekData((prevWeek) => {
-      const todayDay = prevWeek.days[todayStr];
-      if (todayDay) {
-        const updatedHours = { ...todayDay.hours };
-        for (const split of splits) {
-          const prefix = `[🎯 ${split.minutes}m] `;
-          const existing = updatedHours[split.hourKey] || { text: '', tag: '' };
-          const updatedText = existing.text.trim()
-            ? `${existing.text} • ${prefix}${text}`
-            : `${prefix}${text}`;
-          updatedHours[split.hourKey] = {
-            text: updatedText,
-            tag: tag || (existing.tag as TagCode) || 'E'
-          };
-        }
-        const updatedDay: DayData = {
-          ...todayDay,
-          hours: updatedHours
-        };
-        const newWeek: WeekData = {
-          ...prevWeek,
-          days: {
-            ...prevWeek.days,
-            [todayStr]: updatedDay
-          }
-        };
-        saveWeekData(newWeek, weekStart, currentUser, true);
-        return newWeek;
-      } else {
-        const todayWs = startOfWeekFor(now, weekStartDay);
-        const todayMonKey = isoDate(mondayOf(todayWs));
-        const userPrefix = currentUser ? currentUser.uid : 'guest';
-        const targetLocalKey = `time_log_week_${userPrefix}_${todayMonKey}`;
-        let targetWeek: WeekData = { days: {} };
-        const raw = localStorage.getItem(targetLocalKey);
-        if (raw) {
-          try { targetWeek = JSON.parse(raw); } catch { }
-        }
-        targetWeek = normalizeWeekData(targetWeek, todayWs);
-        const existingDay = targetWeek.days[todayStr] || emptyDay();
-        const updatedHours = { ...existingDay.hours };
-        for (const split of splits) {
-          const prefix = `[🎯 ${split.minutes}m] `;
-          const existing = updatedHours[split.hourKey] || { text: '', tag: '' };
-          const updatedText = existing.text.trim()
-            ? `${existing.text} • ${prefix}${text}`
-            : `${prefix}${text}`;
-          updatedHours[split.hourKey] = {
-            text: updatedText,
-            tag: tag || (existing.tag as TagCode) || 'E'
-          };
-        }
-        targetWeek.days[todayStr] = {
-          ...existingDay,
-          hours: updatedHours
-        };
-        saveWeekData(targetWeek, todayWs, currentUser, true);
-        return prevWeek;
-      }
-    });
-
-    const summaryStr = splits
-      .map((s) => (lang === 'ar' ? `${s.minutes}د في (${s.hourKey})` : `${s.minutes}m @ ${s.hourKey}`))
-      .join(lang === 'ar' ? ' و ' : ' + ');
-
-    setSaveStatus(
-      lang === 'ar'
-        ? `✅ تم تسجيل جلسة تركيز: ${summaryStr}`
-        : `✅ Logged focus session: ${summaryStr}`
-    );
-    setTimeout(() => setSaveStatus(''), 4000);
-  };
-
-  // Keyboard shortcuts + Escape closes the top-most open modal
-  useEffect(() => {
-    const handleCloseTopModal = (): boolean => {
-      if (morningNudgeOpen) {
-        setMorningNudgeOpen(false);
-        const todayStr = isoDate(new Date());
-        localStorage.setItem(`morning_nudge_seen_${todayStr}`, 'true');
-        delegateStartupFocus();
-        return true;
-      }
-      if (globalSearchOpen) { setGlobalSearchOpen(false); return true; }
-      if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
-      if (authModalOpen) { setAuthModalOpen(false); return true; }
-      if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
-      if (guideModalOpen) { setGuideModalOpen(false); return true; }
-      if (chartsModalOpen) { setChartsModalOpen(false); return true; }
-      if (dayDistModalOpen) { setDayDistModalOpen(false); return true; }
-      if (aiSummaryModalOpen) { setAiSummaryModalOpen(false); return true; }
-      if (exportModalOpen) { setExportModalOpen(false); return true; }
-      if (pwaModalOpen) { setPwaModalOpen(false); return true; }
-      if (ageModalOpen) { setAgeModalOpen(false); return true; }
-      if (sleepOnboardModalOpen) { setSleepOnboardModalOpen(false); return true; }
-      if (focusModeActive) { handleToggleFocusMode(false); return true; }
-      return false;
-    };
-
-    // 1. Desktop Keyboard Shortcuts
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape to close active top modal
-      if (e.key === 'Escape') {
-        const closed = handleCloseTopModal();
-        if (closed) {
-          e.preventDefault();
-        }
-        return;
-      }
-
-      // Alt + P (or Alt + ح in Arabic layout): Toggle Focus Pomodoro View
-      if (e.altKey && (e.key === 'p' || e.key === 'P' || e.key === 'ح')) {
-        e.preventDefault();
-        handleToggleFocusMode();
-        return;
-      }
-
-      // Alt + T (or Alt + ف in Arabic layout): Toggle Todo Inbox Drawer (when enabled in settings)
-      if (showTodoInbox && e.altKey && (e.key === 't' || e.key === 'T' || e.key === 'ف')) {
-        e.preventDefault();
-        setTodoDrawerOpen((prev) => !prev);
-        return;
-      }
-
-      // Alt + F (or Alt + ب in Arabic layout) or Ctrl + K / Cmd + K: Open Global Search
-      if (
-        (e.altKey && (e.key === 'f' || e.key === 'F' || e.key === 'ب')) ||
-        ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K'))
-      ) {
-        e.preventDefault();
-        setGlobalSearchOpen((prev) => !prev);
-        return;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps -- stable setters + render-closure handlers; re-binding every shortcut listener per render is worse
-    authModalOpen,
-    settingsModalOpen,
-    dayDistModalOpen,
-    chartsModalOpen,
-    aiSummaryModalOpen,
-    exportModalOpen,
-    sleepOnboardModalOpen,
-    ageModalOpen,
-    pwaModalOpen,
-    guideModalOpen,
-    focusModeActive,
-    todoDrawerOpen,
-    showTodoInbox,
-    globalSearchOpen
-  ]);
-
-  // Birthday reminder banner check (1 month, 1 week, same day)
-  let bdayBannerText = '';
-  let ageDisplayValue = '';
-  let ageUnit = '';
-  if (showAgeBadge && userBirthDate && ageDisplayOpt !== 'none') {
-    const birth = new Date(userBirthDate + 'T00:00:00');
-    if (!isNaN(birth.getTime())) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      // Age calculation if enabled
-      if (ageDisplayOpt === 'days' || ageDisplayOpt === 'years') {
-        const now = new Date();
-        const diffMs = now.getTime() - birth.getTime();
-        if (diffMs > 0) {
-          if (ageDisplayOpt === 'days') {
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            ageDisplayValue = days.toLocaleString('en-US');
-            ageUnit = lang === 'ar' ? 'يوم' : 'd';
-          } else {
-            const years = (diffMs / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
-            ageDisplayValue = years;
-            ageUnit = lang === 'ar' ? 'سنة' : 'y';
-          }
-        }
-      }
-
-      const nextBday = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
-      if (nextBday < today) nextBday.setFullYear(today.getFullYear() + 1);
-      const diffTime = nextBday.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 0) {
-        bdayBannerText =
-          lang === 'ar'
-            ? '🥳🎉 اليوم هو عيد ميلادك! كل عام وأنت بألف خير وإنجاز وتوفيق دائم وسعادة! 🎂✨'
-            : '🥳🎉 Happy Birthday Today! Wishing you a fantastic year filled with success and joy! 🎂✨';
-      } else if (diffDays <= 7) {
-        bdayBannerText =
-          lang === 'ar'
-            ? diffDays === 1
-              ? '🎂 تنبيه عيد الميلاد: متبقي يوم واحد فقط على عيد ميلادك! 🎉'
-              : diffDays === 2
-                ? '🎂 تنبيه عيد الميلاد: متبقي يومان فقط على عيد ميلادك! 🎉'
-                : `🎂 تنبيه عيد الميلاد: متبقي على عيد ميلادك ${diffDays} أيام فقط! 🎉`
-            : `🎂 Birthday Countdown: Only ${diffDays} day${diffDays === 1 ? '' : 's'} left until your birthday! 🎉`;
-      } else if (diffDays <= 30) {
-        bdayBannerText =
-          lang === 'ar'
-            ? `🎈 تذكير مبكر: متبقي قرابة شهر على عيد ميلادك (${diffDays} يوماً)! ✨`
-            : `🎈 Early Reminder: Around 1 month until your birthday (${diffDays} days left)! ✨`;
-      }
+  // Keyboard shortcuts (useKeyboardShortcuts); Esc closes the top-most open window
+  const handleCloseTopModal = (): boolean => {
+    if (morningNudgeOpen) {
+      setMorningNudgeOpen(false);
+      const todayStr = isoDate(new Date());
+      localStorage.setItem(`morning_nudge_seen_${todayStr}`, 'true');
+      delegateStartupFocus();
+      return true;
     }
-  }
+    if (globalSearchOpen) { setGlobalSearchOpen(false); return true; }
+    if (todoDrawerOpen) { setTodoDrawerOpen(false); return true; }
+    if (authModalOpen) { setAuthModalOpen(false); return true; }
+    if (settingsModalOpen) { setSettingsModalOpen(false); return true; }
+    if (guideModalOpen) { setGuideModalOpen(false); return true; }
+    if (chartsModalOpen) { setChartsModalOpen(false); return true; }
+    if (dayDistModalOpen) { setDayDistModalOpen(false); return true; }
+    if (aiSummaryModalOpen) { setAiSummaryModalOpen(false); return true; }
+    if (exportModalOpen) { setExportModalOpen(false); return true; }
+    if (pwaModalOpen) { setPwaModalOpen(false); return true; }
+    if (ageModalOpen) { setAgeModalOpen(false); return true; }
+    if (sleepOnboardModalOpen) { setSleepOnboardModalOpen(false); return true; }
+    if (focusModeActive) { handleToggleFocusMode(false); return true; }
+    return false;
+  };
 
-  // Birthday celebration confetti on the day
+  useKeyboardShortcuts({
+    closeTopModal: handleCloseTopModal,
+    toggleFocusMode: () => handleToggleFocusMode(),
+    toggleTodoDrawer: showTodoInbox ? () => setTodoDrawerOpen((prev) => !prev) : null,
+    toggleSearch: () => setGlobalSearchOpen((prev) => !prev)
+  });
+
+  // Age badge + birthday reminder banner (1 month, 1 week, same day)
+  const { bdayBannerText, ageDisplayValue, ageUnit } = getBirthdayInfo({
+    showAgeBadge,
+    birthDate: userBirthDate,
+    ageDisplayOpt,
+    lang
+  });
+
+  // Birthday celebration confetti, once per day
   useEffect(() => {
-    if (!userBirthDate) return;
-    const birth = new Date(userBirthDate + 'T00:00:00');
-    if (isNaN(birth.getTime())) return;
-    const today = new Date();
-    if (today.getMonth() === birth.getMonth() && today.getDate() === birth.getDate()) {
-      const alreadyTriggeredKey = `bday_confetti_${isoDate(today)}`;
-      if (!sessionStorage.getItem(alreadyTriggeredKey)) {
-        sessionStorage.setItem(alreadyTriggeredKey, 'true');
-        try {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 }
-          });
-        } catch { }
-      }
+    if (!isBirthdayToday(userBirthDate)) return;
+    const alreadyTriggeredKey = `bday_confetti_${isoDate(new Date())}`;
+    if (sessionStorage.getItem(alreadyTriggeredKey)) return;
+    sessionStorage.setItem(alreadyTriggeredKey, 'true');
+    try {
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    } catch {
+      /* confetti is decorative */
     }
   }, [userBirthDate]);
 
@@ -1392,7 +871,6 @@ export default function App() {
     setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  const t = STRINGS[lang];
 
   return (
     <div className="max-w-4xl mx-auto px-3 py-3 md:py-6 pb-20 select-text">
@@ -1471,207 +949,33 @@ export default function App() {
 
       {/* Advanced Tools Toolbar (when enabled) */}
       {devToolsEnabled && (
-        <div className="grid grid-cols-3 gap-2 mb-3.5 animate-in fade-in">
-          <button
-            type="button"
-            onClick={() => setAiSummaryModalOpen(true)}
-            className="bg-[var(--card)] hover:bg-[var(--bg)] border border-[var(--line)] hover:border-indigo-400 dark:hover:border-indigo-500 text-[var(--ink)] py-2 px-1.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 sm:gap-2 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-            title={t.aiModalTitle}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="whitespace-nowrap text-[11px] sm:text-xs font-bold">{lang === 'ar' ? 'ملخص ذكي' : 'AI Summary'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setChartsModalOpen(true)}
-            className="bg-[var(--card)] hover:bg-[var(--bg)] border border-[var(--line)] hover:border-indigo-400 dark:hover:border-indigo-500 text-[var(--ink)] py-2 px-1.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 sm:gap-2 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-            title={t.chartsModalTitle}
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="whitespace-nowrap text-[11px] sm:text-xs font-bold">{lang === 'ar' ? 'الإحصائيات' : 'Charts'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setExportModalOpen(true)}
-            className="bg-[var(--card)] hover:bg-[var(--bg)] border border-[var(--line)] hover:border-indigo-400 dark:hover:border-indigo-500 text-[var(--ink)] py-2 px-1.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 sm:gap-2 shadow-xs transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-            title={t.exportModalTitle}
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="whitespace-nowrap text-[11px] sm:text-xs font-bold">{lang === 'ar' ? 'تصدير' : 'Export'}</span>
-          </button>
-        </div>
+        <ToolsBar
+          lang={lang}
+          onOpenSummary={() => setAiSummaryModalOpen(true)}
+          onOpenCharts={() => setChartsModalOpen(true)}
+          onOpenExport={() => setExportModalOpen(true)}
+        />
       )}
 
       {/* Main Sections Grid */}
       <div className="flex flex-col gap-3.5">
         {/* Hours Logging Card */}
         <section className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-3.5 md:p-4 shadow-xs">
-          {/* Hours Section Header - Responsive Layout for Mobile vs Desktop/iPad */}
-          <div className="flex flex-col gap-2 pb-2.5 mb-3 border-b border-[var(--line)]">
-            {/* ROW 1: Hours Title + Streak 🔥 + [Desktop: Focus Mode 🎯] + [Desktop: Birthday 🎂] + 0 of 24 Logged Count */}
-            <div className="flex items-center justify-between gap-2 w-full">
-              {/* Right Side: Title + Streak Badge + Desktop Focus Mode Button */}
-              <div className="flex items-center gap-2 shrink-0">
-                <h2 className="font-bold text-sm sm:text-base text-[var(--ink)] flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0"></span>
-                  <span>{t.hoursTitle}</span>
-                </h2>
-
-                {/* Streak Badge positioned right between Title and Focus/Logged */}
-                {showStreakBadge && (
-                  <div
-                    className={`px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs border transition-all ${dailyStreak > 0
-                        ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800/80 text-orange-600 dark:text-orange-400'
-                        : 'bg-[var(--bg)] border-[var(--line)] text-[var(--ink-faint)]'
-                      }`}
-                    title={dailyStreak > 0 ? t.streakTooltip(dailyStreak) : (lang === 'ar' ? 'سجّل ساعاتك يومياً للحفاظ على شعلة الاستمرارية 🔥' : 'Log hours daily to build your streak 🔥')}
-                  >
-                    <Flame className={`w-3.5 h-3.5 ${dailyStreak > 0 ? 'text-orange-500 fill-orange-500 animate-pulse' : 'text-slate-400'}`} />
-                    <span className="font-mono">{dailyStreak}</span>
-                    <span className="text-[10px] font-normal">{lang === 'ar' ? 'يوم' : 'd'}</span>
-                  </div>
-                )}
-
-                {/* Unified Focus / Pomodoro Timer Button on Desktop/iPad */}
-                {isToday && showFocusModeButton && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundManager.playClick();
-                      handleToggleFocusMode();
-                    }}
-                    title={
-                      lang === 'ar'
-                        ? pomoBgState.isRunning
-                          ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
-                          : focusModeActive
-                            ? 'إيقاف وضع التركيز'
-                            : 'فتح مؤقت التركيز (بومودورو)'
-                        : pomoBgState.isRunning
-                          ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
-                          : focusModeActive
-                            ? 'Exit Focus Mode'
-                            : 'Open Focus Timer (Pomodoro)'
-                    }
-                    className={`hidden md:inline-flex px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${focusModeActive || pomoBgState.isRunning
-                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
-                        : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
-                      }`}
-                  >
-                    <Target
-                      className={`w-3.5 h-3.5 ${focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
-                        }`}
-                    />
-                    <span>{t.focusModeBtnText}</span>
-                    {pomoBgState.isRunning && (
-                      <span className="inline-flex items-center gap-1 bg-white/20 px-1.5 py-0.5 rounded-md font-mono text-[11px] font-black tracking-tight text-white">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
-                        <span>{pomoBgState.timeFormatted}</span>
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {/* Left Side: Desktop Birthday / Age Display (on md+) + 0 of 24 Logged Count Badge */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {ageDisplayValue && (
-                  <button
-                    type="button"
-                    onClick={() => setSettingsModalOpen(true)}
-                    className="hidden md:inline-flex bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200/90 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 px-2.5 py-0.5 rounded-lg text-xs font-semibold items-center gap-1.5 shadow-2xs cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 select-none shrink-0 transition-all"
-                    title={lang === 'ar' ? `العمر: ${ageDisplayValue} ${ageUnit} (انقر للإعدادات)` : `Age: ${ageDisplayValue} ${ageUnit} (Click for settings)`}
-                  >
-                    <Cake className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    <span className="font-bold font-mono text-[var(--ink)]">{ageDisplayValue}</span>
-                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">{ageUnit}</span>
-                  </button>
-                )}
-
-                <span className="text-[11px] sm:text-xs font-semibold text-[var(--ink-soft)] bg-[var(--bg)] border border-[var(--line)] px-2.5 py-0.5 rounded-lg shrink-0">
-                  {lang === 'ar' ? `${activeLoggedCount} من ${activeHoursKeys.length} مسجلة` : `${activeLoggedCount}/${activeHoursKeys.length} logged`}
-                </span>
-              </div>
-            </div>
-
-            {/* ROW 2: Mobile-Only Row (Hidden on Desktop/iPad where controls are integrated into Row 1) */}
-            {((isToday && showFocusModeButton) || ageDisplayValue) && (
-              <div className="flex md:hidden items-center justify-between gap-2 pt-1 border-t border-dashed border-[var(--line)]">
-                {/* Unified Focus Mode Button on mobile */}
-                {isToday && showFocusModeButton && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundManager.playClick();
-                      handleToggleFocusMode();
-                    }}
-                    title={
-                      lang === 'ar'
-                        ? pomoBgState.isRunning
-                          ? `مؤقت التركيز يعمل في الخلفية (${pomoBgState.timeFormatted}) — انقر للفتح`
-                          : focusModeActive
-                            ? 'إيقاف وضع التركيز'
-                            : 'فتح مؤقت التركيز (بومودورو)'
-                        : pomoBgState.isRunning
-                          ? `Focus Timer running (${pomoBgState.timeFormatted}) — Click to open`
-                          : focusModeActive
-                            ? 'Exit Focus Mode'
-                            : 'Open Focus Timer (Pomodoro)'
-                    }
-                    className={`flex-1 justify-center px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${focusModeActive || pomoBgState.isRunning
-                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-indigo-500/20 shadow-md ring-2 ring-indigo-400/40'
-                        : 'bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/70 border-indigo-200 dark:border-indigo-800/70 text-indigo-700 dark:text-indigo-300'
-                      }`}
-                  >
-                    <Target
-                      className={`w-3.5 h-3.5 ${focusModeActive || pomoBgState.isRunning ? 'text-white animate-pulse' : 'text-indigo-600 dark:text-indigo-400'
-                        }`}
-                    />
-                    <span>{t.focusModeBtnText}</span>
-                    {pomoBgState.isRunning && (
-                      <span className="inline-flex items-center gap-1 bg-white/20 px-1.5 py-0.5 rounded-md font-mono text-[11px] font-black tracking-tight text-white">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
-                        <span>{pomoBgState.timeFormatted}</span>
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {/* Birthday / Age Display after Focus Mode on mobile */}
-                {ageDisplayValue && (
-                  <button
-                    type="button"
-                    onClick={() => setSettingsModalOpen(true)}
-                    className="bg-rose-50/90 hover:bg-rose-100/90 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200/90 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 select-none shrink-0 transition-all"
-                    title={lang === 'ar' ? `العمر: ${ageDisplayValue} ${ageUnit} (انقر للإعدادات)` : `Age: ${ageDisplayValue} ${ageUnit} (Click for settings)`}
-                  >
-                    <Cake className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    <span className="font-bold font-mono text-[var(--ink)]">{ageDisplayValue}</span>
-                    <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">{ageUnit}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Focus Mode Banner (when active and today) */}
-          {focusModeActive && isToday && (
-            <div className="mb-3 bg-indigo-50/95 dark:bg-indigo-950/70 border border-indigo-200/90 dark:border-indigo-800/80 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-xs animate-in fade-in slide-in-from-top-1">
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-950 dark:text-indigo-200 min-w-0">
-                <Target className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 animate-pulse" />
-                <span className="truncate">{t.focusModeActiveBanner}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleToggleFocusMode(false)}
-                className="bg-white dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 dark:hover:text-rose-300 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer shadow-2xs"
-              >
-                {t.focusModeExitBtn}
-              </button>
-            </div>
-          )}
+          <HoursSectionHeader
+            lang={lang}
+            showStreakBadge={showStreakBadge}
+            dailyStreak={dailyStreak}
+            showFocusButton={isToday && showFocusModeButton}
+            focusModeActive={focusModeActive}
+            pomoBgState={pomoBgState}
+            onToggleFocusMode={handleToggleFocusMode}
+            ageDisplayValue={ageDisplayValue}
+            ageUnit={ageUnit}
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            loggedCount={activeLoggedCount}
+            totalActiveHours={activeHoursKeys.length}
+            showFocusBanner={focusModeActive && isToday}
+          />
 
           {/* 24 Hours List & Periods */}
           <HoursList
@@ -1717,22 +1021,7 @@ export default function App() {
         <TagLegend lang={lang} hideSleepTag={sleepSettings.enabled} />
       </div>
 
-      {/* Footer */}
-      <footer className="text-center text-xs text-[var(--ink-soft)] mt-8 mb-4 flex flex-col items-center justify-center gap-1.5 no-print select-none">
-        <p className="text-[11px] text-[var(--ink-faint)]">{t.footer}</p>
-        <div className="text-[11px] font-medium text-[var(--ink-soft)] flex items-center gap-1.5">
-          <span>© 2026 zerocold · {lang === 'ar' ? 'مفتوح المصدر (MIT)' : 'Open source (MIT)'}</span>
-          <span className="text-[var(--line)]">•</span>
-          <a href="/privacy/" target="_blank" rel="noopener" className="underline hover:text-[var(--ink)]">
-            {lang === 'ar' ? 'سياسة الخصوصية' : 'Privacy'}
-          </a>
-        </div>
-        <div className="flex items-center justify-center pt-0.5">
-          <span className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-mono px-2.5 py-0.5 rounded-md text-[10px] font-semibold shadow-2xs">
-            {lang === 'ar' ? `الإصدار ${APP_VERSION}` : `Version ${APP_VERSION}`}
-          </span>
-        </div>
-      </footer>
+      <AppFooter lang={lang} />
 
       {/* All Modals */}
       <SettingsModal
@@ -1898,13 +1187,7 @@ export default function App() {
                 setDoc(docRef, { json: JSON.stringify(weekDataRestored), updatedAt: new Date().toISOString() }).catch(() => { });
               }
             },
-            onInboxRestored: (items) => {
-              setTodoInbox(items);
-              if (db && currentUser) {
-                const docRef = doc(db, 'artifacts', 'time-log-app', 'users', currentUser.uid, 'inbox', 'todos');
-                setDoc(docRef, { items, updatedAt: new Date().toISOString() }).catch(() => { });
-              }
-            },
+            onInboxRestored: (items) => saveTodoInbox(items),
             onPrefsRestored: (prefs) => {
               // Apply all restored preferences to React state
               if (prefs.tagTargets) setTagTargets(prefs.tagTargets);
