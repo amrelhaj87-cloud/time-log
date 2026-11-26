@@ -51,7 +51,7 @@ import { usePreferences } from './hooks/usePreferences';
 
 // FocusPomodoroView stays eagerly imported because it must remain mounted so the
 // background timer keeps running even while its window is minimized.
-import { FocusPomodoroView } from './components/FocusPomodoroView';
+import { FocusPomodoroView, type PomodoroLinkedTask } from './components/FocusPomodoroView';
 import {
   AuthModal,
   DayDistModal,
@@ -72,6 +72,16 @@ import { computeDayStats, collectAllDays } from './utils/dayStats';
 import { getBirthdayInfo, isBirthdayToday } from './utils/birthday';
 import { rolloverIncomplete } from './utils/dayEdits';
 import { usePomodoroLogging } from './hooks/usePomodoroLogging';
+import {
+  creditGoalInDay,
+  findLinkedGoal,
+  readTaskTime,
+  sessionUpdate,
+  withEstimate,
+  type FocusLink,
+  type QuadKey,
+  type TaskTime
+} from './utils/focusTasks';
 import { useTodoInbox } from './hooks/useTodoInbox';
 import { applyCloudPreferences } from './utils/cloudPreferences';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -517,12 +527,27 @@ export default function App() {
   };
 
   // Brain Dump & Todo Inbox (useTodoInbox)
-  const { todoInbox, saveTodoInbox, handleAddTodo, handleToggleTodo, handleDeleteTodo, markTodoPromoted } =
-    useTodoInbox({ currentUser, lang, setSaveStatus });
+  const {
+    todoInbox,
+    saveTodoInbox,
+    handleAddTodo,
+    handleToggleTodo,
+    handleDeleteTodo,
+    markTodoPromoted,
+    setTodoEstimate,
+    creditTodoSession
+  } = useTodoInbox({ currentUser, lang, setSaveStatus });
+
+  // #48: the task the Pomodoro is working on (inbox idea / golden goal / priority item)
+  const [focusLink, setFocusLink] = useState<FocusLink | null>(null);
+  const [focusLinkNonce, setFocusLinkNonce] = useState(0);
 
   const handlePromoteTodoToGolden = (todo: TodoItem) => {
-    handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode }, true);
+    handleChangeGoldenGoal({ text: todo.text, done: false, tag: (todo.tag || '') as TagCode, ...readTaskTime(todo) }, true);
     markTodoPromoted(todo.id, 'golden');
+    if (focusLink?.kind === 'todo' && focusLink.id === todo.id) {
+      setFocusLink({ kind: 'golden', date: dateStr, text: todo.text, tag: focusLink.tag });
+    }
     setSaveStatus(lang === 'ar' ? '⭐ تم التعيين كهدف ذهبي لليوم!' : '⭐ Promoted to Golden Goal for today!');
     setTimeout(() => setSaveStatus(''), 3000);
   };
@@ -547,9 +572,15 @@ export default function App() {
       return;
     }
 
-    const updatedList = [...cleanList, { text: todo.text, done: false, tag: (todo.tag || '') as TagCode }];
+    const updatedList = [
+      ...cleanList,
+      { text: todo.text, done: false, tag: (todo.tag || '') as TagCode, ...readTaskTime(todo) }
+    ];
     handleChangePriorities(quadKey, updatedList, true);
     markTodoPromoted(todo.id, 'quad', quadKey);
+    if (focusLink?.kind === 'todo' && focusLink.id === todo.id) {
+      setFocusLink({ kind: 'quad', date: dateStr, quad: quadKey, idx: updatedList.length - 1, text: todo.text, tag: focusLink.tag });
+    }
     setSaveStatus(
       lang === 'ar'
         ? `🎯 تم النقل إلى مصفوفة الأولويات (${quadKey.toUpperCase()}) بنجاح!`
@@ -622,7 +653,7 @@ export default function App() {
       const filtered = currentQuadList.filter((_, idx) => idx !== itemIdx);
       const updatedDay: DayData = {
         ...prevDay,
-        goldenGoal: { text: item.text, done: item.done || false, tag: item.tag || '' },
+        goldenGoal: { text: item.text, done: item.done || false, tag: item.tag || '', ...readTaskTime(item) },
         priorities: {
           ...prevDay.priorities,
           [quadKey]: filtered.length === 0 ? [{ text: '', done: false, tag: '' }] : filtered
@@ -702,7 +733,7 @@ export default function App() {
   };
 
   // Logging finished Pomodoro sessions into today's hours (usePomodoroLogging)
-  const { handleLogPomodoroToCurrentHour, handleLogPomodoroSplits } = usePomodoroLogging({
+  const { handleLogPomodoroToCurrentHour, handleLogPomodoroSplits, updateDayOn } = usePomodoroLogging({
     setWeekData,
     saveWeekData,
     weekStart,
@@ -711,6 +742,84 @@ export default function App() {
     lang,
     setSaveStatus
   });
+
+  // #48: start a Pomodoro on a task (pressing the tomato)
+  const handleStartFocus = (link: FocusLink) => {
+    setFocusLink(link);
+    setFocusLinkNonce((n) => n + 1);
+    setTodoDrawerOpen(false);
+    handleToggleFocusMode(true);
+  };
+
+  const handleStartFocusOnGoal = (target: { kind: 'golden' } | { kind: 'quad'; quad: QuadKey; idx: number }) => {
+    if (target.kind === 'golden') {
+      const g = currentDayData.goldenGoal;
+      handleStartFocus({ kind: 'golden', date: dateStr, text: g.text, tag: g.tag });
+    } else {
+      const g = currentDayData.priorities[target.quad]?.[target.idx];
+      if (!g) return;
+      handleStartFocus({ kind: 'quad', date: dateStr, quad: target.quad, idx: target.idx, text: g.text, tag: g.tag });
+    }
+  };
+
+  /** Time fields of the linked task, read live so the badge updates. */
+  const linkedTaskTime: TaskTime = (() => {
+    if (!focusLink) return {};
+    if (focusLink.kind === 'todo') return todoInbox.find((t) => t.id === focusLink.id) ?? {};
+    const day = weekData.days[focusLink.date];
+    return (day && findLinkedGoal(day, focusLink)) || {};
+  })();
+
+  const pomodoroLinkedTask: PomodoroLinkedTask | null = focusLink
+    ? {
+        label: focusLink.text,
+        tag: focusLink.tag,
+        spentMins: linkedTaskTime.spentMins,
+        estimateMins: linkedTaskTime.estimateMins,
+        nonce: focusLinkNonce
+      }
+    : null;
+
+  const handleSetLinkedEstimate = (mins: number | undefined) => {
+    if (!focusLink) return;
+    if (focusLink.kind === 'todo') {
+      setTodoEstimate(focusLink.id, mins);
+    } else {
+      updateDayOn(focusLink.date, (day) => creditGoalInDay(day, focusLink, (g) => withEstimate(g, mins)).day);
+    }
+  };
+
+  /** Called when a linked session is saved: add its minutes, strike the task if finished. */
+  const handleCreditLinkedTask = (minutes: number, finished: boolean) => {
+    if (!focusLink) return;
+    let found = true;
+    if (focusLink.kind === 'todo') {
+      found = creditTodoSession(focusLink.id, minutes, finished);
+    } else {
+      const loadedDay = weekData.days[focusLink.date];
+      if (loadedDay) found = !!findLinkedGoal(loadedDay, focusLink);
+      if (found) {
+        updateDayOn(focusLink.date, (day) => creditGoalInDay(day, focusLink, sessionUpdate(minutes, finished)).day);
+      }
+    }
+    if (!found) {
+      setSaveStatus(
+        lang === 'ar'
+          ? '⚠️ لم أجد المهمة المربوطة (تغيّر نصها أو حُذفت) — سُجّلت الجلسة في الساعة فقط'
+          : '⚠️ Linked task not found (renamed or deleted) — the session was logged to the hour only'
+      );
+      setTimeout(() => setSaveStatus(''), 4000);
+      setFocusLink(null);
+      return;
+    }
+    if (finished) {
+      setFocusLink(null);
+      setTimeout(() => {
+        setSaveStatus(lang === 'ar' ? '✅ أحسنت! تم شطب المهمة كمنجزة' : '✅ Well done! Task marked as finished');
+        setTimeout(() => setSaveStatus(''), 3000);
+      }, 3200);
+    }
+  };
 
   // Keyboard shortcuts (useKeyboardShortcuts); Esc closes the top-most open window
   const handleCloseTopModal = (): boolean => {
@@ -1008,6 +1117,7 @@ export default function App() {
             priorities={currentDayData.priorities}
             onChangePriorities={handleChangePriorities}
             onPromoteToGolden={handlePromoteToGolden}
+            onStartFocus={handleStartFocusOnGoal}
             onRollover={handleRollover}
             onOpenTodoInbox={showTodoInbox ? () => setTodoDrawerOpen(true) : undefined}
             todoCount={todoInbox.filter((t) => !t.done).length}
@@ -1264,6 +1374,10 @@ export default function App() {
         onLogToCurrentHour={handleLogPomodoroToCurrentHour}
         onLogPomodoroSplits={handleLogPomodoroSplits}
         goldenGoalText={currentDayData.goldenGoal.text}
+        linkedTask={pomodoroLinkedTask}
+        onUnlinkTask={() => setFocusLink(null)}
+        onSetLinkedEstimate={handleSetLinkedEstimate}
+        onCreditLinkedTask={handleCreditLinkedTask}
         themeMode={themeMode}
         isDarkEffective={isDarkEffective}
         onCycleThemeMode={handleCycleThemeMode}
@@ -1281,6 +1395,8 @@ export default function App() {
         onDeleteTodo={handleDeleteTodo}
         onPromoteToGolden={handlePromoteTodoToGolden}
         onPromoteToQuad={handlePromoteTodoToQuad}
+        onSetEstimate={setTodoEstimate}
+        onStartFocus={(todo) => handleStartFocus({ kind: 'todo', id: todo.id, text: todo.text, tag: todo.tag })}
         lang={lang}
       />
 

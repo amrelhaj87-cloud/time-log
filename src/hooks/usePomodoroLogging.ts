@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { HourEntry, TagCode, WeekData, WeekStartDay } from '../types';
+import type { DayData, HourEntry, TagCode, WeekData, WeekStartDay } from '../types';
 import {
   emptyDay,
   getCurrentHourKey,
@@ -38,23 +38,23 @@ export function usePomodoroLogging({
   lang,
   setSaveStatus
 }: Deps) {
-  const logToToday = (update: (hours: Record<string, HourEntry>) => Record<string, HourEntry>) => {
-    const now = new Date();
-    const todayStr = isoDate(now);
+  /**
+   * Updates one day (by date) wherever it lives: in the loaded week if it's
+   * there, otherwise in that day's own week in the background (localStorage +
+   * cloud) without switching what's on screen.
+   */
+  const updateDayOn = (dateStr: string, update: (day: DayData) => DayData) => {
     setWeekData((prevWeek) => {
-      const todayDay = prevWeek.days[todayStr];
-      if (todayDay) {
-        const newWeek: WeekData = {
-          ...prevWeek,
-          days: { ...prevWeek.days, [todayStr]: { ...todayDay, hours: update(todayDay.hours) } }
-        };
+      const loadedDay = prevWeek.days[dateStr];
+      if (loadedDay) {
+        const newWeek: WeekData = { ...prevWeek, days: { ...prevWeek.days, [dateStr]: update(loadedDay) } };
         saveWeekData(newWeek, weekStart, currentUser, true);
         return newWeek;
       }
 
-      // Today is in another week than the one on screen: save it in the background.
-      const todayWs = startOfWeekFor(now, weekStartDay);
-      const localKey = `time_log_week_${currentUser ? currentUser.uid : 'guest'}_${isoDate(mondayOf(todayWs))}`;
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const targetWs = startOfWeekFor(new Date(y, m - 1, d), weekStartDay);
+      const localKey = `time_log_week_${currentUser ? currentUser.uid : 'guest'}_${isoDate(mondayOf(targetWs))}`;
       let targetWeek: WeekData = { days: {} };
       const raw = localStorage.getItem(localKey);
       if (raw) {
@@ -64,12 +64,16 @@ export function usePomodoroLogging({
           /* corrupt cache — start from an empty week */
         }
       }
-      targetWeek = normalizeWeekData(targetWeek, todayWs);
-      const existingDay = targetWeek.days[todayStr] || emptyDay();
-      targetWeek.days[todayStr] = { ...existingDay, hours: update(existingDay.hours) };
-      saveWeekData(targetWeek, todayWs, currentUser, true);
+      targetWeek = normalizeWeekData(targetWeek, targetWs);
+      const existingDay = targetWeek.days[dateStr] || emptyDay();
+      targetWeek.days[dateStr] = update(existingDay);
+      saveWeekData(targetWeek, targetWs, currentUser, true);
       return prevWeek;
     });
+  };
+
+  const logToToday = (update: (hours: Record<string, HourEntry>) => Record<string, HourEntry>) => {
+    updateDayOn(isoDate(new Date()), (day) => ({ ...day, hours: update(day.hours) }));
   };
 
   const flash = (message: string, ms: number) => {
@@ -100,5 +104,5 @@ export function usePomodoroLogging({
     flash(lang === 'ar' ? `✅ تم تسجيل جلسة تركيز: ${summaryStr}` : `✅ Logged focus session: ${summaryStr}`, 4000);
   };
 
-  return { handleLogPomodoroToCurrentHour, handleLogPomodoroSplits };
+  return { handleLogPomodoroToCurrentHour, handleLogPomodoroSplits, updateDayOn };
 }

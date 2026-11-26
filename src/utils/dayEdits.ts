@@ -1,4 +1,5 @@
 import type { DayData, GoalItem, HourEntry, TagCode } from '../types';
+import { readTaskTime } from './focusTasks';
 
 /** One block of a focus session to log: which hour, and how many minutes of it. */
 export interface FocusBlock {
@@ -73,11 +74,11 @@ export function rolloverIncomplete(today: DayData, tomorrow: DayData): { tomorro
   if (golden && isFilled(golden) && !golden.done) {
     const cleanGolden = golden.text.trim();
     if (!isFilled(next.goldenGoal)) {
-      next.goldenGoal = { text: cleanGolden, done: false, tag: golden.tag || '' };
+      next.goldenGoal = { text: cleanGolden, done: false, tag: golden.tag || '', ...readTaskTime(golden) };
       movedCount++;
     } else if (next.goldenGoal.text.trim() !== cleanGolden) {
       if (!next.priorities.q1.some((t) => t.text.trim() === cleanGolden)) {
-        placeInList(next.priorities.q1, { text: cleanGolden, done: false, tag: golden.tag || '' });
+        placeInList(next.priorities.q1, { text: cleanGolden, done: false, tag: golden.tag || '', ...readTaskTime(golden) });
         movedCount++;
       }
     }
@@ -90,7 +91,7 @@ export function rolloverIncomplete(today: DayData, tomorrow: DayData): { tomorro
       if (!isFilled(item) || item.done) continue;
       const cleanText = item.text.trim();
       if (list.some((t) => t.text.trim() === cleanText)) continue;
-      placeInList(list, { text: cleanText, done: false, tag: item.tag || '' });
+      placeInList(list, { text: cleanText, done: false, tag: item.tag || '', ...readTaskTime(item) });
       movedCount++;
     }
     if (list.length === 0) next.priorities[q] = [{ text: '', done: false, tag: '' }];

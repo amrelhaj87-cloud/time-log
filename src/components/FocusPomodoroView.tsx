@@ -38,8 +38,20 @@ import {
   AmbientSoundType
 } from '../utils/ambientAudio';
 import { calculatePomodoroHourSplits, PomodoroSplit } from '../utils/dateUtils';
+import { formatMins, progressPct } from '../utils/focusTasks';
+import { TaskTimeBadge } from './TaskTime';
 
 export type PomodoroMode = 'focus' | 'break';
+
+/** A task (inbox idea / golden goal / priority) this Pomodoro is working on (#48). */
+export interface PomodoroLinkedTask {
+  label: string;
+  tag: TagCode;
+  spentMins?: number;
+  estimateMins?: number;
+  /** Changes every time the user presses the tomato so the timer re-applies the task. */
+  nonce: number;
+}
 
 interface FocusPomodoroViewProps {
   isOpen: boolean;
@@ -49,6 +61,10 @@ interface FocusPomodoroViewProps {
   onLogToCurrentHour?: (text: string, minutes: number, tag: TagCode, updateTagOnly?: boolean) => void;
   onLogPomodoroSplits?: (text: string, splits: PomodoroSplit[], tag: TagCode) => void;
   goldenGoalText?: string;
+  linkedTask?: PomodoroLinkedTask | null;
+  onUnlinkTask?: () => void;
+  onSetLinkedEstimate?: (mins: number | undefined) => void;
+  onCreditLinkedTask?: (minutes: number, finished: boolean) => void;
   themeMode?: ThemeMode;
   isDarkEffective?: boolean;
   onCycleThemeMode?: () => void;
@@ -70,6 +86,10 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   onLogToCurrentHour,
   onLogPomodoroSplits,
   goldenGoalText,
+  linkedTask,
+  onUnlinkTask,
+  onSetLinkedEstimate,
+  onCreditLinkedTask,
   themeMode = 'light',
   isDarkEffective = false,
   onCycleThemeMode,
@@ -117,6 +137,8 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   const [customMinInput, setCustomMinInput] = useState<string>('30');
   const [notifyEnabled, setNotifyEnabledState] = useState<boolean>(() => isNotifyEnabled());
   const [isAlertFlashing, setIsAlertFlashing] = useState<boolean>(false);
+  // #48: answer to "Did you finish the task?" in the completion window (default: not yet)
+  const [taskFinished, setTaskFinished] = useState<boolean>(false);
 
   const handleToggleNotify = () => {
     const next = !notifyEnabled;
@@ -278,6 +300,7 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
   // Fix 1: إلغاء وتجاهل الجلسة بالكامل دون كتابة أي شيء في ساعات اليوم
   const handleDiscardCompletedSession = () => {
     soundManager.playClick();
+    setTaskFinished(false);
     setShowDiscardConfirm(false);
     setShowCompletedPrompt(false);
     sessionStartTimeRef.current = null;
@@ -294,6 +317,11 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
     } else if (onLogToCurrentHour) {
       onLogToCurrentHour(cleanText, lastCompletedMins, selectedTag);
     }
+    // #48: add the minutes to the linked task, and strike it if the user says it's done
+    if (linkedTask && onCreditLinkedTask) {
+      onCreditLinkedTask(lastCompletedMins, taskFinished);
+    }
+    setTaskFinished(false);
     setShowDiscardConfirm(false);
     setShowCompletedPrompt(false);
     sessionStartTimeRef.current = null;
@@ -363,6 +391,14 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
       setTimeLeft(secs);
     }
   };
+
+  // #48: pressing the tomato on a task fills in its name and tag (and returns to focus if idle on a break)
+  useEffect(() => {
+    if (!linkedTask) return;
+    setTaskText(linkedTask.label);
+    if (POMO_TAG_KEYS.includes(linkedTask.tag)) setSelectedTag(linkedTask.tag);
+    if (mode === 'break' && !isRunning) handleSwitchMode('focus');
+  }, [linkedTask?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps -- re-apply only when a new tomato press happens
 
   const handleTimerFinishRef = useRef(handleTimerFinish);
   handleTimerFinishRef.current = handleTimerFinish;
@@ -975,6 +1011,34 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
           </div>
         </div>
 
+        {/* #48: the task this timer is linked to (minutes are added to it when the session is saved) */}
+        {linkedTask && (
+          <div className="w-full mt-2 px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/30 flex items-center gap-2 text-[11px]">
+            <span className="shrink-0">🔗</span>
+            <span className="font-semibold text-[var(--ink)] truncate flex-1 min-w-0" title={linkedTask.label}>
+              {lang === 'ar' ? 'تعمل على: ' : 'Working on: '}
+              {linkedTask.label}
+            </span>
+            <TaskTimeBadge
+              spentMins={linkedTask.spentMins}
+              estimateMins={linkedTask.estimateMins}
+              lang={lang}
+              onSetEstimate={onSetLinkedEstimate}
+              showWhenEmpty
+            />
+            {onUnlinkTask && (
+              <button
+                type="button"
+                onClick={onUnlinkTask}
+                className="shrink-0 p-0.5 rounded-md text-[var(--ink-soft)] hover:text-rose-600 cursor-pointer"
+                title={lang === 'ar' ? 'فك الربط — الجلسة لن تُضاف للمهمة' : 'Unlink — the session will not be added to the task'}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Focus Task Note Input (Hidden during Break — replaced by calm unlogged break notice; task text stays preserved for return to Focus) */}
         <div className="w-full mt-2">
           {mode === 'focus' ? (
@@ -1138,6 +1202,60 @@ export const FocusPomodoroView: React.FC<FocusPomodoroViewProps> = ({
                 </div>
               )}
             </div>
+
+            {/* #48: linked task — add the minutes and ask whether it's finished */}
+            {linkedTask && (
+              <div className="w-full bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-2xl p-3 text-start flex flex-col gap-2">
+                <div className="text-[11px] text-[var(--ink-soft)]">
+                  <span className="font-bold text-[var(--ink)]">🔗 {linkedTask.label}</span>
+                  <span className="block mt-0.5">
+                    {(() => {
+                      const after = (linkedTask.spentMins ?? 0) + lastCompletedMins;
+                      const pct = progressPct(after, linkedTask.estimateMins);
+                      const add = formatMins(lastCompletedMins, lang);
+                      const total = formatMins(after, lang);
+                      if (lang === 'ar') {
+                        const est = linkedTask.estimateMins ? ` من ${formatMins(linkedTask.estimateMins, 'ar')}` : '';
+                        return `⏱ +${add} — المجموع ${total}${est}${pct !== null ? ` (${pct}%)` : ''}`;
+                      }
+                      const est = linkedTask.estimateMins ? ` of ${formatMins(linkedTask.estimateMins, 'en')}` : '';
+                      return `⏱ +${add} — total ${total}${est}${pct !== null ? ` (${pct}%)` : ''}`;
+                    })()}
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-[var(--ink)]">
+                  {lang === 'ar' ? 'هل أنهيت هذه المهمة؟' : 'Did you finish this task?'}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5" role="radiogroup">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!taskFinished}
+                    onClick={() => setTaskFinished(false)}
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      !taskFinished
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                        : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    {lang === 'ar' ? '⏳ ليس بعد، سأكمل' : '⏳ Not yet'}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={taskFinished}
+                    onClick={() => setTaskFinished(true)}
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      taskFinished
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-xs'
+                        : 'border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    {lang === 'ar' ? '✅ نعم، اشطبها' : '✅ Yes, strike it'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Fix 2: Tag Selection for Logging */}
             <div className="w-full bg-[var(--bg)] border border-[var(--line)] rounded-2xl p-3 text-start">

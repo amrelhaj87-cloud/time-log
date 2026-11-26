@@ -1,5 +1,6 @@
 import { DayData, HourEntry, GoalItem, WeekData, WeekStartDay } from '../types';
 import { HOURS_LIST } from '../constants/config';
+import { readTaskTime } from './focusTasks';
 
 export function startOfWeekFor(d: Date, startDay: WeekStartDay = 'saturday'): Date {
   const dt = new Date(d);
@@ -80,7 +81,8 @@ export function normalizeDayData(rawDay: any): DayData {
   const goldenGoal: GoalItem = {
     text: typeof rawDay.goldenGoal?.text === 'string' ? rawDay.goldenGoal.text : '',
     done: !!rawDay.goldenGoal?.done,
-    tag: (rawDay.goldenGoal?.tag || '') as any
+    tag: (rawDay.goldenGoal?.tag || '') as any,
+    ...readTaskTime(rawDay.goldenGoal)
   };
 
   // 3. Normalize priorities matrix
@@ -91,7 +93,8 @@ export function normalizeDayData(rawDay: any): DayData {
     return list.map((item) => ({
       text: typeof item?.text === 'string' ? item.text : '',
       done: !!item?.done,
-      tag: (item?.tag || '') as any
+      tag: (item?.tag || '') as any,
+      ...readTaskTime(item)
     }));
   };
 

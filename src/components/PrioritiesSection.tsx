@@ -4,6 +4,23 @@ import { QUADS_CONFIG, STRINGS } from '../constants/config';
 import { TagPicker } from './TagPicker';
 import { ArrowRight, Trash2, Plus, Star, Inbox } from 'lucide-react';
 import { focusCurrentHourInput } from '../utils/dateUtils';
+import { withEstimate } from '../utils/focusTasks';
+import { TaskTimeBadge } from './TaskTime';
+
+type QuadKey = 'q1' | 'q2' | 'q3' | 'q4';
+
+/** Small tomato button that starts a Pomodoro on a goal (#48). */
+const FocusButton: React.FC<{ onClick: () => void; lang: 'ar' | 'en' }> = ({ onClick, lang }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="p-1 rounded-md shrink-0 text-sm leading-none opacity-70 hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:scale-110 transition-all cursor-pointer"
+    title={lang === 'ar' ? 'ابدأ بومودورو على هذه المهمة 🍅' : 'Start a Pomodoro on this task 🍅'}
+    aria-label={lang === 'ar' ? 'ابدأ بومودورو على هذه المهمة' : 'Start a Pomodoro on this task'}
+  >
+    🍅
+  </button>
+);
 
 interface PrioritiesSectionProps {
   goldenGoal: GoalItem;
@@ -16,6 +33,7 @@ interface PrioritiesSectionProps {
   };
   onChangePriorities: (quadKey: 'q1' | 'q2' | 'q3' | 'q4', items: GoalItem[], immediate?: boolean) => void;
   onPromoteToGolden: (item: GoalItem, quadKey: 'q1' | 'q2' | 'q3' | 'q4', itemIdx: number) => void;
+  onStartFocus?: (target: { kind: 'golden' } | { kind: 'quad'; quad: QuadKey; idx: number }) => void;
   onRollover: () => void;
   onOpenTodoInbox?: () => void;
   todoCount?: number;
@@ -30,6 +48,7 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
   priorities,
   onChangePriorities,
   onPromoteToGolden,
+  onStartFocus,
   onRollover,
   onOpenTodoInbox,
   todoCount,
@@ -150,6 +169,10 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
             lang={lang}
           />
 
+          {onStartFocus && !isGoldenEmpty && !goldenGoal.done && (
+            <FocusButton onClick={() => onStartFocus({ kind: 'golden' })} lang={lang} />
+          )}
+
           {goldenGoal.text && (
             <button
               type="button"
@@ -161,6 +184,19 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
             </button>
           )}
         </div>
+
+        {/* #48: time spent / estimate for the golden goal */}
+        {!isGoldenEmpty && (
+          <div className="flex items-center ps-6">
+            <TaskTimeBadge
+              spentMins={goldenGoal.spentMins}
+              estimateMins={goldenGoal.estimateMins}
+              lang={lang}
+              onSetEstimate={goldenGoal.done ? undefined : (m) => onChangeGoldenGoal(withEstimate(goldenGoal, m), true)}
+              showWhenEmpty={!goldenGoal.done}
+            />
+          </div>
+        )}
       </div>
       )}
 
@@ -228,8 +264,9 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                 {items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-1.5 bg-[var(--card)] p-2 rounded-lg border border-[var(--line)] group shadow-xs"
+                    className="flex flex-col gap-1 bg-[var(--card)] p-2 rounded-lg border border-[var(--line)] group shadow-xs"
                   >
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="checkbox"
                       checked={item.done}
@@ -286,6 +323,11 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                       </button>
                     )}
 
+                    {/* #48: start a Pomodoro on this priority */}
+                    {onStartFocus && !item.done && item.text && item.text.trim() !== '' && (
+                      <FocusButton onClick={() => onStartFocus({ kind: 'quad', quad: q.key, idx })} lang={lang} />
+                    )}
+
                     {/* Clear / Delete Button for priority item (just like Golden Goal) */}
                     {(item.text || item.tag || items.length > 1) && (
                       <button
@@ -303,6 +345,19 @@ export const PrioritiesSection: React.FC<PrioritiesSectionProps> = ({
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
+                  </div>
+
+                  {/* #48: time spent / estimate (shown once it has any) */}
+                  {item.text && item.text.trim() !== '' && (item.spentMins || item.estimateMins) ? (
+                    <div className="flex items-center ps-5">
+                      <TaskTimeBadge
+                        spentMins={item.spentMins}
+                        estimateMins={item.estimateMins}
+                        lang={lang}
+                        onSetEstimate={item.done ? undefined : (m) => handleUpdateItem(idx, withEstimate(item, m), true)}
+                      />
+                    </div>
+                  ) : null}
                   </div>
                 ))}
               </div>

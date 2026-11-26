@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { db, doc, onSnapshot, setDoc } from '../services/firebase';
 import type { TagCode, TodoItem } from '../types';
+import { sessionUpdate, withEstimate } from '../utils/focusTasks';
 
 const LOCAL_KEY = 'time_log_todo_inbox';
 
@@ -68,14 +69,17 @@ export function useTodoInbox({
     [currentUser]
   );
 
-  const handleAddTodo = (text: string, tag: TagCode) => {
-    const newItem: TodoItem = {
-      id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      text,
-      tag,
-      done: false,
-      createdAt: Date.now()
-    };
+  const handleAddTodo = (text: string, tag: TagCode, estimateMins?: number) => {
+    const newItem = withEstimate<TodoItem>(
+      {
+        id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        text,
+        tag,
+        done: false,
+        createdAt: Date.now()
+      },
+      estimateMins
+    );
     saveTodoInbox([newItem, ...todoInbox]);
     setSaveStatus(lang === 'ar' ? '✨ تمت إضافة الفكرة للصندوق' : '✨ Added to Brain Dump Inbox');
     setTimeout(() => setSaveStatus(''), 2500);
@@ -117,5 +121,31 @@ export function useTodoInbox({
     );
   };
 
-  return { todoInbox, saveTodoInbox, handleAddTodo, handleToggleTodo, handleDeleteTodo, markTodoPromoted };
+  /** Sets (or clears) a todo's time estimate (#48). */
+  const setTodoEstimate = (id: string, mins: number | undefined) => {
+    saveTodoInbox(todoInbox.map((item) => (item.id === id ? withEstimate(item, mins) : item)));
+  };
+
+  /**
+   * Credits a finished Pomodoro session to a todo (#48): adds the minutes and,
+   * when the user says it's finished, strikes it through (done, not deleted).
+   * Returns false when the todo no longer exists.
+   */
+  const creditTodoSession = (id: string, minutes: number, finished: boolean): boolean => {
+    if (!todoInbox.some((item) => item.id === id)) return false;
+    const update = sessionUpdate<TodoItem>(minutes, finished);
+    saveTodoInbox(todoInbox.map((item) => (item.id === id ? update(item) : item)));
+    return true;
+  };
+
+  return {
+    todoInbox,
+    saveTodoInbox,
+    handleAddTodo,
+    handleToggleTodo,
+    handleDeleteTodo,
+    markTodoPromoted,
+    setTodoEstimate,
+    creditTodoSession
+  };
 }

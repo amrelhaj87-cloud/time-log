@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { TodoItem, TagCode } from '../../types';
 import { TAGS_CONFIG, QUADS_CONFIG } from '../../constants/config';
+import { EstimatePicker, TaskTimeBadge } from '../TaskTime';
 import {
   X,
   Plus,
@@ -20,7 +21,9 @@ interface TodoInboxDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   todos: TodoItem[];
-  onAddTodo: (text: string, tag: TagCode) => void;
+  onAddTodo: (text: string, tag: TagCode, estimateMins?: number) => void;
+  onSetEstimate?: (id: string, mins: number | undefined) => void;
+  onStartFocus?: (todo: TodoItem) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
   onPromoteToGolden: (todo: TodoItem) => void;
@@ -40,6 +43,8 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
   onDeleteTodo,
   onPromoteToGolden,
   onPromoteToQuad,
+  onSetEstimate,
+  onStartFocus,
   lang
 }) => {
   const [inputText, setInputText] = useState('');
@@ -50,6 +55,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
   // Tag selection modal upon pressing Enter
   const [isTagPickerOpen, setIsTagPickerOpen] = useState(false);
   const [pendingTodoText, setPendingTodoText] = useState('');
+  const [pendingEstimate, setPendingEstimate] = useState<number | undefined>(undefined);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -87,6 +93,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
         if (isTagPickerOpen) {
           setIsTagPickerOpen(false);
           setPendingTodoText('');
+          setPendingEstimate(undefined);
         } else if (activeQuadMenuId) {
           setActiveQuadMenuId(null);
         } else {
@@ -168,8 +175,9 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
 
   const handleConfirmCreate = (tag: TagCode) => {
     if (!pendingTodoText.trim()) return;
-    onAddTodo(pendingTodoText.trim(), tag);
+    onAddTodo(pendingTodoText.trim(), tag, pendingEstimate);
     setPendingTodoText('');
+    setPendingEstimate(undefined);
     setInputText('');
     setIsTagPickerOpen(false);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -509,6 +517,15 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                             </span>
                           )}
 
+                          {/* Time spent / estimate (#48) */}
+                          <TaskTimeBadge
+                            spentMins={item.spentMins}
+                            estimateMins={item.estimateMins}
+                            lang={lang}
+                            onSetEstimate={!item.done && onSetEstimate ? (m) => onSetEstimate(item.id, m) : undefined}
+                            showWhenEmpty={!item.done}
+                          />
+
                           {/* Distinct Status Badges for completed / transferred tasks */}
                           {isPromotedToQuad && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/60 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 shadow-2xs">
@@ -571,6 +588,19 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                   {/* Promotion Actions Bar for Active Tasks */}
                   {!item.done && (
                     <div className="pt-2 border-t border-[var(--line)]/70 flex items-center justify-between gap-1 text-xs">
+                      {/* Start a Pomodoro on this task (#48) */}
+                      {onStartFocus && (
+                        <button
+                          type="button"
+                          onClick={() => onStartFocus(item)}
+                          className="flex-1 py-1 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-300/80 dark:border-rose-700/60 font-semibold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer hover:scale-[1.01] active:scale-95 shadow-2xs"
+                          title={lang === 'ar' ? 'ابدأ جلسة بومودورو على هذه المهمة — تُسجَّل في ساعة اليوم وتُضاف دقائقها للمهمة' : 'Start a Pomodoro on this task — logged to the hour and added to the task'}
+                        >
+                          <span>🍅</span>
+                          <span>{lang === 'ar' ? 'ركّز الآن' : 'Focus'}</span>
+                        </button>
+                      )}
+
                       {/* Promote to Golden Goal Button */}
                       <button
                         type="button"
@@ -659,6 +689,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
           onClick={() => {
             setIsTagPickerOpen(false);
             setPendingTodoText('');
+            setPendingEstimate(undefined);
           }}
         >
           <div
@@ -679,6 +710,7 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
                 onClick={() => {
                   setIsTagPickerOpen(false);
                   setPendingTodoText('');
+                  setPendingEstimate(undefined);
                 }}
                 className="text-[var(--ink-soft)] hover:text-[var(--ink)] p-1 rounded-lg cursor-pointer"
               >
@@ -690,6 +722,14 @@ export const TodoInboxDrawer: React.FC<TodoInboxDrawerProps> = ({
             <div className="p-2.5 rounded-xl bg-[var(--bg)] border border-[var(--line)] text-xs text-[var(--ink)] font-medium max-h-18 overflow-y-auto">
               <span className="opacity-60 text-[10px] block mb-0.5">{lang === 'ar' ? 'نص المهمة:' : 'Task:'}</span>
               <p className="line-clamp-2 italic font-semibold">"{pendingTodoText}"</p>
+            </div>
+
+            {/* Optional time estimate (#48) */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-[var(--ink-soft)] px-1">
+                {lang === 'ar' ? '⏱ كم تحتاج من الوقت؟ (اختياري — اختره قبل التصنيف):' : '⏱ How long will it take? (optional — pick before the tag):'}
+              </span>
+              <EstimatePicker value={pendingEstimate} onChange={setPendingEstimate} lang={lang} />
             </div>
 
             {/* 5 Core Life Tags Buttons */}

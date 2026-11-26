@@ -9,6 +9,10 @@ export interface TodoItem {
   promotedTo?: 'golden' | 'quad';
   promotedQuad?: 'q1' | 'q2' | 'q3' | 'q4';
   promotedAt?: number;
+  /** Optional time estimate in minutes (#48). */
+  estimateMins?: number;
+  /** Focus minutes logged against this task via the Pomodoro (#48). */
+  spentMins?: number;
 }
 
 export interface HourEntry {
@@ -20,6 +24,10 @@ export interface GoalItem {
   text: string;
   done: boolean;
   tag: TagCode;
+  /** Optional time estimate in minutes (#48). */
+  estimateMins?: number;
+  /** Focus minutes logged against this goal via the Pomodoro (#48). */
+  spentMins?: number;
 }
 
 export interface DayData {
